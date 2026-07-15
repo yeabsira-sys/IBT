@@ -1,0 +1,10 @@
+amoxicillin,400
+ibuprofen,120
+metformin,300
+omeprazol,350
+amlodipine,321
+atorvastin,10
+cetirizine,5
+salbutamol,65
+ORS,600
+atorvastine,43
