@@ -27,6 +27,7 @@ class AddisBank:
     return f"Account Statement for {self.name}:\nAccount Number: {self.account_number}\nBalance: {self.__balance}"
 
 ac1 = AddisBank("Abebe", "123456", 1000)
+ac2 = AddisBank("Mulat", "123678", 2000)
 
 print(ac1.balance)
 ac1.deposit(500)
@@ -35,3 +36,4 @@ ac1.withdraw(200)
 # ac1.deposit(-100)
 print(ac1.statement())
 # ac1.withdraw(2000)
+print(ac2.statement())
