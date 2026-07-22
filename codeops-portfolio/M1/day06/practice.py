@@ -1,16 +1,16 @@
 class Report:
     def build(self):
-        print("Building report")
+        print("Dear Customer you have successfully withdraw 100 birr")
 
 
 class ReportSaver:
     def save(self, report):
-        print("Saving report")
+        print("Dear Customer you have successfully withdraw 100 birr")
 
 
 class ReportEmailer:
     def send(self, report):
-        print("Sending report by email")
+        print("Dear Customer you have successfully withdraw 100 birr")
 
 
 # Usage
@@ -164,4 +164,4 @@ mobile = MobileSubscriber()
 agency.subscribe(tv)
 agency.subscribe(mobile)
 
-agency.notify("Breaking News: Python 3.15 Released!")
+agency.notify("Breaking News")
