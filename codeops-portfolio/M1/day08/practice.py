@@ -26,7 +26,7 @@ def binary_search(items, target):
   else:
     return False
   
-print(binary_search([1,2,3,4,5,6,7], 5))
+# print(binary_search([1,2,3,4,5,6,7], 5))
 
 def merge_sort(list):
   if len(list) <= 1:
@@ -36,9 +36,19 @@ def merge_sort(list):
   right = merge_sort(list[mid:])
   return merge(left, right)
 
-def merge(num1, num2):
-  if num1 < num2:
-    return [num1, num2]
-  return [num2, num1]
+def merge(left, right):
+  sorted = []
+  i = j = 0
+  while i < len(left) and j < len(right):
+    if left[i] <= right[j]:
+      sorted.append(left[i])
+      i += 1
+    else:
+      sorted.append(right[j])
+      j += 1
+  sorted.extend(left[i:])
+  sorted.extend(right[j:])
+  return sorted
 
-print(merge_sort[2,4,5,1,7,4,2,4,9,2,])
+print(merge_sort([2,4,5,1,7,4,2,4,9,2,]))
+
