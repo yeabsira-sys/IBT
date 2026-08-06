@@ -1,5 +1,5 @@
 #Given an array of numbers, write a function that prints in the console another arraywhich contains all the even numbers in the original array, which also have even indexes only.
-#  ○ Test 1: getOnlyEvens([1, 2, 3, 6, 4, 8]) prints [ 4]
+# ○ Test 1: getOnlyEvens([1, 2, 3, 6, 4, 8]) prints [ 4]
 # ○ Test 2: getOnlyEvens([0, 1, 2, 3, 4]) prints [0, 2, 4]
 
 def get_only_evens(lst):
@@ -8,7 +8,6 @@ def get_only_evens(lst):
   for l in range(0, len(lst), 2):
     if lst[l]%2 == 0:
       even.append(lst[l])
-
   return even
 
 print(get_only_evens([1, 2, 3, 6, 4, 8]))
@@ -19,9 +18,16 @@ print(get_only_evens([0, 1, 2, 3, 4]))
     # ○ Test 1: reverseCompare(72) prints "ok" because 72 > 27
     # ○ reverseCompare(23) prints "Not ok", because 23 is not greater than 32
 
-def reverse_compare(num1):
-  str_num = str(num1)
-  if int(str_num[::-1]) > num1:
+def reverse_compare(num):
+  # str_num = str(num1)
+  # if int(str_num[::-1]) > num1:
+  org_num = num
+  rev_num = 0
+  while num > 0:
+    rev_num = rev_num * 10 + num % 10
+    num //= 10
+  if rev_num > org_num:
+    print(rev_num)
     print("OK")
   else:
     print("NOT OK")
@@ -60,7 +66,7 @@ def meera_array(lst):
   for i in lst:
     for j in lst:
       if 2 * j == i:
-        return " I am Not a Meera array"
+        return "I am Not a Meera array"
   return "I am a Meera array"
 
 print(meera_array([10, 4, 0, 5]))
