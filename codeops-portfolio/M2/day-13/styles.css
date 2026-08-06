@@ -1,0 +1,111 @@
+:root {
+  --brand: hsl(212, 68%, 33%);
+  --brand-hover: hsl(212, 68%, 45%);
+  --accent: hsl(42, 90%, 50%);
+
+  --text: hsl(220, 20%, 20%);
+  --background: hsl(210, 40%, 98%);
+  --border: hsl(210, 30%, 85%);
+
+  --space: 16px;
+  --radius: 12px;
+}
+
+/* Global reset */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: var(--background);
+
+  font-family: "Inter", sans-serif;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+/* Business card */
+.card {
+  max-width: 360px;
+
+  margin: 40px auto;
+
+  padding: calc(var(--space) * 2);
+
+  border: 1px solid var(--border);
+
+  border-radius: var(--radius);
+
+  background: white;
+}
+
+/* Pseudo-element requirement */
+.card::before {
+  content: "";
+
+  display: block;
+
+  width: 60px;
+  height: 5px;
+
+  margin-bottom: var(--space);
+
+  background: var(--accent);
+
+  border-radius: var(--radius);
+}
+
+/* Typography hierarchy */
+h1 {
+  margin-top: 0;
+
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.tagline {
+  font-size: 1.1rem;
+  font-weight: 500;
+
+  color: var(--brand);
+}
+
+p {
+  margin-bottom: var(--space);
+}
+
+/* Button */
+.btn {
+  background: var(--brand);
+
+  color: white;
+
+  padding: var(--space);
+
+  border: none;
+
+  border-radius: var(--radius);
+
+  font-size: 1rem;
+
+  cursor: pointer;
+}
+
+/* Hover changes only lightness */
+.btn:hover {
+  background: var(--brand-hover);
+}
+
+/* Keyboard accessibility */
+.btn:focus {
+  outline: 3px solid var(--accent);
+
+  outline-offset: 3px;
+}
