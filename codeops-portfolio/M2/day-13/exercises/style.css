@@ -1,0 +1,16 @@
+:root {
+  --primary-color: #8b0000;
+  --secondary-color: #ffd700;
+  --spacing: 16px;
+  --font-stack: Arial, Helvetica, sans-serif;
+}
+
+button {
+  background-color: var(--primary-color);
+  color: var(--secondary-color);
+  padding: var(--spacing);
+  font-family: var(--font-stack);
+  border: 2px solid var(--secondary-color);
+  border-radius: 8px;
+  cursor: pointer;
+}
