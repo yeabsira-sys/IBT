@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Habesha Eatery | Authentic Ethiopian Cuisine</title>
+
+    <meta
+      name="description"
+      content="Experience authentic Ethiopian cuisine in Bole, Addis Ababa. Reserve your table and enjoy traditional dishes prepared fresh every day."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <header>
+      <nav class="navbar">
+        <h1 class="logo">Habesha Eatery</h1>
+
+        <ul class="nav-links">
+          <li><a href="#about">About</a></li>
+          <li><a href="#menu">Menu</a></li>
+          <li><a href="#reservation">Reserve</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <!-- Hero -->
+
+      <section class="hero">
+        <div class="hero-text">
+          <h2>Authentic Ethiopian Food</h2>
+
+          <p>
+            Fresh Injera, Doro Wot, Kitfo and traditional Ethiopian coffee
+            served daily in Bole.
+          </p>
+
+          <a href="#reservation" class="btn"> Reserve a Table </a>
+        </div>
+
+        <img
+          src="images/hero.jpg"
+          alt="Traditional Ethiopian meal served on injera."
+        />
+      </section>
+
+      <!-- About -->
+
+      <section id="about" class="about">
+        <h2>Our Story</h2>
+
+        <p>
+          Habesha Eatery has proudly served authentic Ethiopian cuisine in Addis
+          Ababa for years. We combine traditional recipes with fresh, locally
+          sourced ingredients to create unforgettable dining experiences.
+        </p>
+      </section>
+
+      <!-- Menu -->
+
+      <section id="menu">
+        <h2>Popular Dishes</h2>
+
+        <div class="menu-grid">
+          <article class="menu-card">
+            <img src="images/doro-wot.jpeg" alt="Doro Wot" />
+
+            <h3>Doro Wot</h3>
+
+            <p>Traditional spicy chicken stew.</p>
+
+            <strong>450 ETB</strong>
+          </article>
+
+          <article class="menu-card">
+            <img src="images/shiro.jpeg" alt="Shiro" />
+
+            <h3>Shiro</h3>
+
+            <p>Classic chickpea stew.</p>
+
+            <strong>280 ETB</strong>
+          </article>
+
+          <article class="menu-card">
+            <img src="images/kitfo.jpeg" alt="Kitfo" />
+
+            <h3>Kitfo</h3>
+
+            <p>Minced beef with Ethiopian spices.</p>
+
+            <strong>520 ETB</strong>
+          </article>
+
+          <article class="menu-card">
+            <img src="images/tibs.jpeg" alt="Tibs" />
+
+            <h3>Tibs</h3>
+
+            <p>Sautéed beef served with vegetables.</p>
+
+            <strong>480 ETB</strong>
+          </article>
+        </div>
+      </section>
+
+      <!-- Reservation -->
+
+      <section id="reservation">
+        <h2>Reserve Your Table</h2>
+
+        <form>
+          <label for="name">Full Name</label>
+          <input id="name" type="text" required />
+
+          <label for="phone">Phone Number</label>
+          <input
+            id="phone"
+            type="tel"
+            pattern="09[0-9]{8}"
+            placeholder="09XXXXXXXX"
+            required
+          />
+
+          <label for="guests">Guests</label>
+          <input id="guests" type="number" min="1" max="20" required />
+
+          <label for="date">Reservation Date</label>
+          <input id="date" type="date" required />
+
+          <button class="btn">Book Table</button>
+        </form>
+      </section>
+    </main>
+
+    <footer id="contact">
+      <h2>Visit Us</h2>
+
+      <p>Bole Road, Addis Ababa, Ethiopia</p>
+
+      <p>Phone: +251 911 123 456</p>
+
+      <p>Open Daily: 8:00 AM – 10:00 PM</p>
+    </footer>
+  </body>
+</html>

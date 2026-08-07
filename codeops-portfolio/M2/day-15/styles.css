@@ -1,0 +1,204 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Variables */
+
+:root {
+  --primary: #8b0000;
+  --secondary: #ffd700;
+
+  --light: #fafafa;
+
+  --dark: #222;
+
+  --space: 1rem;
+
+  --radius: 12px;
+}
+
+/* Base */
+
+body {
+  font-family: "Inter", sans-serif;
+
+  background: var(--light);
+
+  color: var(--dark);
+
+  line-height: 1.6;
+}
+
+img {
+  max-width: 100%;
+
+  display: block;
+}
+
+/* Sticky Navbar */
+
+.navbar {
+  position: sticky;
+
+  top: 0;
+
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  background: white;
+
+  padding: 1rem 5%;
+
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.nav-links {
+  list-style: none;
+
+  display: flex;
+
+  gap: 1.5rem;
+}
+
+.nav-links a {
+  text-decoration: none;
+
+  color: var(--dark);
+}
+
+/* Hero */
+
+.hero {
+  display: grid;
+
+  gap: 2rem;
+
+  align-items: center;
+
+  padding: 3rem 5%;
+}
+
+.hero h2 {
+  font-size: clamp(2rem, 6vw, 4rem);
+
+  margin-bottom: 1rem;
+}
+
+/* Button */
+
+.btn {
+  display: inline-block;
+
+  margin-top: 1rem;
+
+  background: var(--primary);
+
+  color: white;
+
+  padding: 0.8rem 1.4rem;
+
+  border-radius: var(--radius);
+
+  text-decoration: none;
+
+  border: none;
+
+  cursor: pointer;
+
+  transition: 0.3s;
+}
+
+.btn:hover {
+  background: #a60000;
+}
+
+/* Sections */
+
+section {
+  padding: 4rem 5%;
+}
+
+.about {
+  max-width: 800px;
+
+  margin: auto;
+}
+
+/* Menu Grid */
+
+.menu-grid {
+  display: grid;
+
+  gap: 1.5rem;
+
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.menu-card {
+  background: white;
+
+  border-radius: var(--radius);
+
+  overflow: hidden;
+
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.menu-card h3,
+.menu-card p,
+.menu-card strong {
+  padding: 0 1rem;
+}
+
+.menu-card strong {
+  display: block;
+
+  padding-bottom: 1rem;
+}
+
+/* Form */
+
+form {
+  max-width: 500px;
+
+  display: grid;
+
+  gap: 1rem;
+}
+
+input {
+  padding: 0.8rem;
+}
+
+/* Footer */
+
+footer {
+  background: #333;
+
+  color: white;
+
+  text-align: center;
+
+  padding: 3rem;
+}
+
+/* Tablet */
+
+@media (min-width: 768px) {
+  .hero {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Desktop */
+
+@media (min-width: 1024px) {
+  .menu-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
