@@ -1,9 +1,7 @@
-localStorage.setItem("theme", "Dark");
-sessionStorage.setItem("theme", "Dark");
-
 let selectedTheme = localStorage.getItem("theme") || "light";
 
 const themeToggler = document.getElementById("theme");
+
 themeToggler.addEventListener("change", () => {
   selectedTheme = themeToggler.value.toLowerCase();
   localStorage.setItem("theme", selectedTheme);
