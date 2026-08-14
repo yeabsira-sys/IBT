@@ -1,7 +1,16 @@
-// localStorage.setItem("theme", "Dark");
-// sessionStorage.setItem("theme", "Dark");
+localStorage.setItem("theme", "Dark");
+sessionStorage.setItem("theme", "Dark");
 
-// let selectedTheme = localStorage.getItem("theme") || "light";
+let selectedTheme = localStorage.getItem("theme") || "light";
+
+const themeToggler = document.getElementById("theme");
+themeToggler.addEventListener("change", () => {
+  selectedTheme = themeToggler.value.toLowerCase();
+  localStorage.setItem("theme", selectedTheme);
+  document.body.className = selectedTheme;
+});
+
+document.body.className = selectedTheme;
 
 const PhonePattern = /^(\+?^251?|0?)(\9|7)\d{8}$/;
 
@@ -10,14 +19,17 @@ const PhonePattern = /^(\+?^251?|0?)(\9|7)\d{8}$/;
 // console.log(PhonePattern.test("+251792112121"));
 // console.log(PhonePattern.test("0792112122"));
 
-let signupCount = localStorage.getItem("signupCount") || 0;
-
 const form = document.getElementById("signup-form");
 const usernameInput = document.getElementById("username");
 const phoneInput = document.getElementById("phone");
 const signupCountSpan = document.getElementById("signup-count");
-let users = [];
-
+let users = localStorage.getItem("users")
+  ? JSON.parse(localStorage.getItem("users"))
+  : [];
+signupCountSpan.textContent =
+  users.length > 1
+    ? `${users.length} Users have signedup`
+    : `${users.length} User have signedup`;
 const handleSubmit = (e) => {
   e.preventDefault();
   const name = document.getElementById("username").value;
@@ -57,6 +69,7 @@ const handleNameChange = (e) => {
   const isValid = validateName(name);
   const nameSpan = document.getElementById("username-span");
   nameSpan.textContent = isValid ? "" : "Invalid name format";
+  nameSpan.classList.toggle("error", !isValid);
 };
 
 form.addEventListener("submit", (e) => handleSubmit(e));

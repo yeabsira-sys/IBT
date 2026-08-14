@@ -1,25 +1,274 @@
-.dark {
-  background-color: #333;
-  color: #fff;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
+
+:root {
+  --bg: #f4f7fb;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --text: #172033;
+  --muted: #64748b;
+  --border: #dbe2ea;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --input-bg: #ffffff;
+  --shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+  --radius: 16px;
+}
+
+.dark {
+  --bg: #141518;
+  --card-bg: rgba(15, 23, 42, 0.9);
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --border: #334155;
+  --primary: #818cf8;
+  --primary-hover: #6366f1;
+  --input-bg: #1e293b;
+  --shadow: 0 20px 50px rgba(15, 23, 42, 0.4);
+}
+
 .light {
-  background-color: #fff;
-  color: #000;
+  --bg: #f4f7fb;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --text: #172033;
+  --muted: #64748b;
+  --border: #dbe2ea;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --input-bg: #ffffff;
+  --shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  color: var(--text);
+
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(99, 102, 241, 0.18),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(139, 92, 246, 0.15),
+      transparent 35%
+    ),
+    var(--bg);
+
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+
+#theme {
+  position: fixed;
+  top: 25px;
+  right: 25px;
+
+  padding: 10px 35px 10px 14px;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  background: var(--card-bg);
+  color: var(--text);
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+  outline: none;
+
+  box-shadow: 0 5px 20px rgba(15, 23, 42, 0.08);
+
+  transition: all 0.2s ease;
+}
+
+#theme:hover {
+  border-color: var(--primary);
+}
+
+#theme:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
 .signup-form {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 20px;
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 430px;
+
+  padding: 40px;
+
   display: flex;
   flex-direction: column;
+  gap: 22px;
+
+  background: var(--card-bg);
+
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius);
+
+  box-shadow: var(--shadow);
+
+  backdrop-filter: blur(15px);
+
+  animation: formAppear 0.6s ease;
 }
 
-.error {
-  color: red;
-  font-size: 0.9em;
-  margin-top: 5px;
-  border: red 1px solid red;
+.signup-form > div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.signup-form input[type="text"],
+.signup-form input[type="phone"] {
+  width: 100%;
+
+  padding: 15px 16px;
+
+  border: 1px solid var(--border);
+  border-radius: 11px;
+
+  background: var(--input-bg);
+  color: var(--text);
+
+  font-size: 15px;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.signup-form input::placeholder {
+  color: #94a3b8;
+}
+
+.signup-form input[type="text"]:hover,
+.signup-form input[type="phone"]:hover {
+  border-color: #a5b4fc;
+}
+
+.signup-form input[type="text"]:focus,
+.signup-form input[type="phone"]:focus {
+  border-color: var(--primary);
+
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+
+  transform: translateY(-1px);
+}
+
+.signup-form input[type="submit"] {
+  width: 100%;
+
+  padding: 15px;
+
+  border: none;
+  border-radius: 11px;
+
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+
+  color: white;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  letter-spacing: 0.2px;
+
+  cursor: pointer;
+
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.signup-form input[type="submit"]:hover {
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+
+  transform: translateY(-2px);
+
+  box-shadow: 0 12px 25px rgba(79, 70, 229, 0.35);
+}
+
+.signup-form input[type="submit"]:active {
+  transform: translateY(0);
+}
+
+#username-span,
+#phone-span {
+  min-height: 18px;
+
+  color: #ef4444;
+
+  font-size: 13px;
+  font-weight: 500;
+}
+
+#signup-count {
+  position: fixed;
+  bottom: 25px;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  color: var(--muted);
+
+  font-size: 14px;
+  font-weight: 600;
+
+  text-align: center;
+}
+
+@keyframes formAppear {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 500px) {
+  body {
+    padding: 15px;
+  }
+
+  #theme {
+    top: 15px;
+    right: 15px;
+  }
+
+  .signup-form {
+    padding: 28px 22px;
+    border-radius: 14px;
+  }
+
+  #signup-count {
+    bottom: 15px;
+  }
 }
