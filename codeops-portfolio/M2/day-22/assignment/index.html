@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ETB Currency Converter</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <main>
+      <h1>ETB Currency Converter</h1>
+
+      <p id="status">Loading rates...</p>
+
+      <form id="converter-form">
+        <input
+          type="number"
+          id="amount"
+          placeholder="Enter amount"
+          min="0"
+          step="any"
+        />
+
+        <select id="currency">
+          <option value="">Select currency</option>
+        </select>
+
+        <button type="submit">Convert</button>
+      </form>
+      <button type="button" id="add-watchlist">Add to Watchlist</button>
+      <p id="result"></p>
+
+      <section>
+        <h2>My Watchlist</h2>
+        <ul id="watchlist"></ul>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
