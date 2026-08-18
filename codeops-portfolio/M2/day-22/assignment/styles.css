@@ -1,16 +1,8 @@
-/* =========================
-   Reset
-========================= */
-
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
-
-/* =========================
-   Body
-========================= */
 
 body {
   min-height: 100vh;
@@ -25,10 +17,6 @@ body {
   padding: 20px;
 }
 
-/* =========================
-   Main Container
-========================= */
-
 main {
   width: 100%;
   max-width: 550px;
@@ -40,10 +28,6 @@ main {
 
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
-
-/* =========================
-   Heading
-========================= */
 
 h1 {
   text-align: center;
@@ -57,10 +41,6 @@ h2 {
   margin-bottom: 15px;
   font-size: 20px;
 }
-
-/* =========================
-   Status
-========================= */
 
 #status {
   text-align: center;
@@ -76,19 +56,11 @@ h2 {
   font-size: 14px;
 }
 
-/* =========================
-   Form
-========================= */
-
 #converter-form {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-
-/* =========================
-   Inputs & Select
-========================= */
 
 input,
 select {
@@ -223,10 +195,6 @@ section {
 #watchlist .remove:hover {
   background: #dc2626;
 }
-
-/* =========================
-   Mobile
-========================= */
 
 @media (max-width: 500px) {
   body {
