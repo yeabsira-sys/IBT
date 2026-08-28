@@ -10,7 +10,7 @@ const menu = [
   },
   {
     id: 2,
-    // name: "Shiro",
+    name: "Shiro",
     category: "Vegetarian",
     price: 120,
     spicy: false,
@@ -131,10 +131,17 @@ const menu = [
   },
 ];
 
-const Menu = () => {
+const Menu = ({ searchKey }) => {
+  const filterdMenu =
+    searchKey && searchKey !== "all"
+      ? menu.filter(({ category }) =>
+          category.toLowerCase().includes(searchKey.toLowerCase()),
+        )
+      : menu;
+
   return (
     <div className="menu-container">
-      {menu.map(({ id, name, price, spicy }) => {
+      {filterdMenu.map(({ id, name, price, spicy }) => {
         return <Dish key={id} name={name} price={price} spicy={spicy} />;
       })}
     </div>

@@ -1,12 +1,13 @@
 import Sidebar from "../sidebar/Sidebar";
 import Menu from "../menu/Menu";
+
 import "./main.css";
 
-const Main = () => {
+const Main = ({ searchKey }) => {
   return (
     <div className="main-container">
       <Sidebar />
-      <Menu />
+      <Menu searchKey={searchKey} />
     </div>
   );
 };
