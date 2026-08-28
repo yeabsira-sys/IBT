@@ -1,10 +1,9 @@
 import "./header.css";
 
-const handleSearch = () => {
-  console.log("searching");
-};
-
-const Header = () => {
+const Header = ({ handleSearchInput }) => {
+  const handleSearch = (e) => {
+    handleSearchInput(e.target.value);
+  };
   return (
     <div className="header-container">
       <h1>Header</h1>
@@ -13,7 +12,7 @@ const Header = () => {
         name="search-food"
         id="search-food"
         placeholder="search food by category"
-        onInput={() => handleSearch()}
+        onInput={(e) => handleSearch(e)}
       />
     </div>
   );

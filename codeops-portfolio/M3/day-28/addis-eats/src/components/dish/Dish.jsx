@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import Counter from "../counter/Counter";
 import "./dish.css";
 
 const Dish = ({ name, price, currency = "ETB", spicy = false }) => {
@@ -11,13 +12,14 @@ const Dish = ({ name, price, currency = "ETB", spicy = false }) => {
         {name} {spicy && <small> spicy</small>}
       </h4>
       <p>{price + " " + currency} </p>
+      <Counter />
     </div>
   );
 };
 
 Dish.propTypes = {
   name: PropTypes.string.isRequired,
-  price: PropTypes.isRequired,
+  price: PropTypes.number.isRequired,
   spicy: PropTypes.bool,
 };
 
