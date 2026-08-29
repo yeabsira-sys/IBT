@@ -1,0 +1,24 @@
+.category-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.category-bar button {
+  border: none;
+  padding: 10px 18px;
+  border-radius: 20px;
+  background: #eee;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.category-bar button:hover {
+  background: #ddd;
+}
+
+.category-bar button.active {
+  background: #b83b1d;
+  color: white;
+}
