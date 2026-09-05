@@ -1,0 +1,56 @@
+.order-form {
+  max-width: 500px;
+  margin: 40px auto;
+  padding: 25px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+.order-form h2 {
+  margin-bottom: 20px;
+}
+
+.order-form div {
+  margin-bottom: 16px;
+}
+
+.order-form label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.order-form input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.order-form button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #b83b1d;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.order-form button:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+.valid-phone {
+  display: block;
+  margin-top: 5px;
+}
+
+.invalid-phone {
+  display: block;
+  margin-top: 5px;
+}
