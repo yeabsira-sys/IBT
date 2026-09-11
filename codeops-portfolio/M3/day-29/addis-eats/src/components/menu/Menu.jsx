@@ -14,7 +14,6 @@ const Menu = ({ searchKey = "" }) => {
   const { data: dishes, loading, error } = useFetch("/dishes.json");
 
   const { dispatch } = useCart();
-
   useEffect(() => {
     document.title = `Addis Eats — ${dishes.length} dishes`;
   }, [dishes]);

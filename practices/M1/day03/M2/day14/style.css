@@ -1,0 +1,641 @@
+/* =====================================================
+   GENERAL STYLES
+===================================================== */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f5f5;
+  color: #24201d;
+  line-height: 1.6;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  border: none;
+  cursor: pointer;
+}
+
+/* =====================================================
+   GRID — PAGE SKELETON
+===================================================== */
+
+/*
+  CSS GRID is used here because we are arranging
+  TWO dimensions:
+
+  columns:
+  sidebar | main
+
+  rows:
+  header
+  content
+  footer
+*/
+
+.layout {
+  min-height: 100vh;
+
+  display: grid;
+
+  grid-template-columns: 220px 1fr;
+
+  grid-template-rows: 70px 1fr auto;
+
+  grid-template-areas:
+    "header header"
+    "side main"
+    "footer footer";
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.header {
+  grid-area: header;
+
+  /*
+    FLEXBOX is perfect here because the header
+    mainly arranges items along ONE axis.
+  */
+
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 0 30px;
+
+  background: #ffffff;
+  border-bottom: 1px solid #ddd;
+}
+
+/* FLEX ITEM */
+
+.logo {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+}
+
+.logo span {
+  font-size: 30px;
+}
+
+.logo h1 {
+  font-size: 22px;
+}
+
+/* NESTED FLEXBOX */
+
+.nav-links {
+  display: flex;
+
+  align-items: center;
+
+  gap: 24px;
+}
+
+.nav-links a {
+  font-weight: 600;
+}
+
+.nav-links a:hover {
+  color: #b83b1d;
+}
+
+/* CALL TO ACTION */
+
+.order-button {
+  padding: 10px 18px;
+
+  background: #b83b1d;
+  color: white;
+
+  border-radius: 8px;
+}
+
+.order-button:hover {
+  background: #8f2d16;
+}
+
+/* =====================================================
+   SIDEBAR
+===================================================== */
+
+.sidebar {
+  grid-area: side;
+
+  padding: 25px 18px;
+
+  background: #24201d;
+  color: white;
+}
+
+.sidebar h2 {
+  margin-bottom: 20px;
+}
+
+/*
+  FLEXBOX COLUMN
+
+  flex-direction: column changes the
+  main axis from horizontal to vertical.
+*/
+
+.sidebar-links {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 12px;
+}
+
+.sidebar-links a {
+  padding: 10px;
+
+  border-radius: 6px;
+}
+
+.sidebar-links a:hover {
+  background: #514a45;
+}
+
+/* =====================================================
+   MAIN
+===================================================== */
+
+.main {
+  grid-area: main;
+
+  padding: 30px;
+
+  min-width: 0;
+}
+
+/* =====================================================
+   HERO
+===================================================== */
+
+/*
+  HERO uses FLEXBOX.
+
+  flex-direction: row is the default.
+
+  Main axis:
+  left → right
+
+  Cross axis:
+  top → bottom
+*/
+
+.hero {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 30px;
+
+  padding: 45px;
+
+  margin-bottom: 40px;
+
+  background: #fff8ed;
+
+  border-radius: 15px;
+}
+
+.hero-text {
+  /*
+    flex: 1 means this item can grow
+    and share available space.
+  */
+
+  flex: 1;
+}
+
+.small-title {
+  font-size: 13px;
+
+  font-weight: bold;
+
+  letter-spacing: 2px;
+
+  color: #b83b1d;
+}
+
+.hero h2 {
+  font-size: 42px;
+
+  line-height: 1.1;
+
+  margin: 10px 0 15px;
+}
+
+.hero h2 span {
+  color: #b83b1d;
+}
+
+.hero-text > p:not(.small-title) {
+  max-width: 550px;
+
+  color: #514a45;
+
+  margin-bottom: 20px;
+}
+
+.hero-button {
+  padding: 12px 22px;
+
+  background: #b83b1d;
+
+  color: white;
+
+  border-radius: 8px;
+
+  font-weight: bold;
+}
+
+.hero-image {
+  /*
+    Flexbox centers the emoji perfectly.
+  */
+
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+
+  width: 180px;
+  height: 180px;
+
+  font-size: 90px;
+
+  background: white;
+
+  border-radius: 50%;
+}
+
+/* =====================================================
+   SECTION
+===================================================== */
+
+.section {
+  margin-bottom: 45px;
+}
+
+.section-title {
+  margin-bottom: 20px;
+}
+
+.section-title h2 {
+  margin-bottom: 5px;
+}
+
+.section-title p {
+  color: #777;
+}
+
+/* =====================================================
+   FLEXBOX DEMO
+===================================================== */
+
+/*
+  FLEXBOX = ONE DIMENSION
+
+  Three boxes are arranged horizontally.
+
+  flex: 1
+  flex: 2
+  flex: 1
+
+  The middle box receives twice as much
+  available space as each of the others.
+*/
+
+.flex-demo {
+  display: flex;
+
+  gap: 15px;
+}
+
+.flex-box {
+  flex: 1;
+
+  padding: 30px;
+
+  text-align: center;
+
+  background: white;
+
+  border-radius: 10px;
+}
+
+/*
+  This box has flex: 2.
+  It takes twice the available space
+  compared with flex: 1.
+*/
+
+.flex-box:nth-child(2) {
+  flex: 2;
+}
+
+/* =====================================================
+   CSS GRID — FOOD CARDS
+===================================================== */
+
+/*
+  GRID is used because we are arranging
+  cards in BOTH rows AND columns.
+
+  auto-fit:
+  automatically fits as many columns as possible.
+
+  minmax(200px, 1fr):
+  each card cannot become smaller than 200px
+  but can grow to fill available space.
+
+  This makes the grid responsive WITHOUT
+  writing media queries.
+*/
+
+.food-grid {
+  display: grid;
+
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+
+  gap: 20px;
+}
+
+/* =====================================================
+   FOOD CARD
+===================================================== */
+
+.food-card {
+  background: white;
+
+  border-radius: 12px;
+
+  overflow: hidden;
+
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+/* Food image */
+
+.food-image {
+  height: 150px;
+
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+
+  font-size: 70px;
+
+  background: #fff8ed;
+}
+
+/* =====================================================
+   FLEXBOX INSIDE GRID ITEM
+===================================================== */
+
+/*
+  This is the important real-world pattern:
+
+  GRID → controls the cards
+
+  FLEXBOX → controls the content INSIDE
+             each card
+*/
+
+.card-content {
+  padding: 18px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 12px;
+}
+
+/*
+  Another nested FLEXBOX.
+
+  Food name → left
+  Price → right
+*/
+
+.card-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  gap: 10px;
+}
+
+.card-header h3 {
+  font-size: 18px;
+}
+
+.price {
+  font-weight: bold;
+
+  color: #b83b1d;
+}
+
+.card-content p {
+  color: #666;
+
+  font-size: 14px;
+}
+
+/* Card button */
+
+.card-content button {
+  width: 100%;
+
+  padding: 10px;
+
+  background: #b83b1d;
+
+  color: white;
+
+  border-radius: 7px;
+}
+
+.card-content button:hover {
+  background: #8f2d16;
+}
+
+/* =====================================================
+   FLEXBOX WRAP
+===================================================== */
+
+/*
+  flex-wrap: wrap
+
+  When there isn't enough horizontal space,
+  the items move onto another line.
+*/
+
+.tags {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 12px;
+}
+
+.tags span {
+  padding: 8px 15px;
+
+  background: white;
+
+  border-radius: 20px;
+
+  border: 1px solid #ddd;
+}
+
+/* =====================================================
+   FOOTER
+===================================================== */
+
+.footer {
+  grid-area: footer;
+
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 20px;
+
+  padding: 25px 30px;
+
+  background: #24201d;
+
+  color: white;
+}
+
+.footer p {
+  color: #ccc;
+}
+
+.footer-links {
+  display: flex;
+
+  gap: 20px;
+}
+
+.footer-links a:hover {
+  color: #d89b2b;
+}
+
+/* =====================================================
+   RESPONSIVE DESIGN
+===================================================== */
+
+/*
+  At smaller screen sizes, we change the PAGE GRID
+  so that the sidebar goes above the main content.
+
+  Notice that the individual components still
+  use Flexbox.
+*/
+
+@media (max-width: 700px) {
+  .layout {
+    grid-template-columns: 1fr;
+
+    grid-template-rows: auto auto 1fr auto;
+
+    grid-template-areas:
+      "header"
+      "side"
+      "main"
+      "footer";
+  }
+
+  /* Header becomes vertical */
+
+  .header {
+    flex-direction: column;
+
+    gap: 15px;
+
+    padding: 20px;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+
+    justify-content: center;
+  }
+
+  /* Sidebar becomes horizontal */
+
+  .sidebar {
+    padding: 20px;
+  }
+
+  .sidebar-links {
+    flex-direction: row;
+
+    flex-wrap: wrap;
+  }
+
+  /* Hero becomes vertical */
+
+  .hero {
+    flex-direction: column;
+
+    text-align: center;
+
+    padding: 30px;
+  }
+
+  .hero h2 {
+    font-size: 32px;
+  }
+
+  /* Flex demo wraps */
+
+  .flex-demo {
+    flex-wrap: wrap;
+  }
+
+  .flex-box {
+    min-width: 150px;
+  }
+
+  /* Footer becomes vertical */
+
+  .footer {
+    flex-direction: column;
+
+    text-align: center;
+  }
+
+  .footer-links {
+    flex-wrap: wrap;
+
+    justify-content: center;
+  }
+}

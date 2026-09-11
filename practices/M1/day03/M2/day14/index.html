@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Addis Eats - Flexbox & Grid Demo</title>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <!--
+    PAGE SKELETON
+    CSS GRID controls the overall page:
+    header | sidebar | main | footer
+  -->
+
+    <div class="layout">
+      <!-- ================= HEADER ================= -->
+      <header class="header">
+        <!-- FLEXBOX: logo + navigation -->
+        <div class="logo">
+          <span>🍽️</span>
+          <h1>Addis Eats</h1>
+        </div>
+
+        <nav class="nav-links">
+          <a href="#">Home</a>
+          <a href="#">Menu</a>
+          <a href="#">Orders</a>
+          <a href="#">Contact</a>
+          <button class="order-button">Order Now</button>
+        </nav>
+      </header>
+
+      <!-- ================= SIDEBAR ================= -->
+      <aside class="sidebar">
+        <h2>Categories</h2>
+
+        <!-- FLEXBOX: vertical navigation -->
+        <div class="sidebar-links">
+          <a href="#">🍲 Ethiopian Food</a>
+          <a href="#">🥩 Tibs</a>
+          <a href="#">🍛 Wat</a>
+          <a href="#">🥗 Vegetarian</a>
+          <a href="#">☕ Drinks</a>
+        </div>
+      </aside>
+
+      <!-- ================= MAIN ================= -->
+      <main class="main">
+        <!-- HERO -->
+        <section class="hero">
+          <div class="hero-text">
+            <p class="small-title">WELCOME TO ADDIS EATS</p>
+
+            <h2>
+              Delicious Ethiopian
+              <span>Food</span>
+            </h2>
+
+            <p>
+              Discover traditional Ethiopian dishes prepared with fresh
+              ingredients and authentic flavors.
+            </p>
+
+            <button class="hero-button">Explore Menu</button>
+          </div>
+
+          <div class="hero-image">🍛</div>
+        </section>
+
+        <!-- ================= FLEXBOX DEMO ================= -->
+        <section class="section">
+          <div class="section-title">
+            <h2>Flexbox Example</h2>
+            <p>One-dimensional layout — items arranged in a row.</p>
+          </div>
+
+          <!-- FLEX CONTAINER -->
+          <div class="flex-demo">
+            <div class="flex-box">
+              <strong>flex: 1</strong>
+              <p>Equal space</p>
+            </div>
+
+            <div class="flex-box">
+              <strong>flex: 2</strong>
+              <p>Twice the space</p>
+            </div>
+
+            <div class="flex-box">
+              <strong>flex: 1</strong>
+              <p>Equal space</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= GRID DEMO ================= -->
+        <section class="section">
+          <div class="section-title">
+            <h2>CSS Grid Example</h2>
+            <p>Two-dimensional layout — rows and columns.</p>
+          </div>
+
+          <!-- GRID CONTAINER -->
+          <div class="food-grid">
+            <article class="food-card">
+              <div class="food-image">🍗</div>
+
+              <!-- FLEXBOX INSIDE CARD -->
+              <div class="card-content">
+                <div class="card-header">
+                  <h3>Doro Wat</h3>
+                  <span class="price">350 ETB</span>
+                </div>
+
+                <p>Spicy Ethiopian chicken stew served with injera.</p>
+
+                <button>Add to Cart</button>
+              </div>
+            </article>
+
+            <article class="food-card">
+              <div class="food-image">🥩</div>
+
+              <div class="card-content">
+                <div class="card-header">
+                  <h3>Kitfo</h3>
+                  <span class="price">450 ETB</span>
+                </div>
+
+                <p>Traditional minced beef seasoned with Ethiopian spices.</p>
+
+                <button>Add to Cart</button>
+              </div>
+            </article>
+
+            <article class="food-card">
+              <div class="food-image">🍖</div>
+
+              <div class="card-content">
+                <div class="card-header">
+                  <h3>Tibs</h3>
+                  <span class="price">400 ETB</span>
+                </div>
+
+                <p>Fried beef served with vegetables and Ethiopian spices.</p>
+
+                <button>Add to Cart</button>
+              </div>
+            </article>
+
+            <article class="food-card">
+              <div class="food-image">🥗</div>
+
+              <div class="card-content">
+                <div class="card-header">
+                  <h3>Beyaynetu</h3>
+                  <span class="price">300 ETB</span>
+                </div>
+
+                <p>A colorful combination of delicious vegetarian dishes.</p>
+
+                <button>Add to Cart</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- ================= FLEX WRAP ================= -->
+        <section class="section">
+          <div class="section-title">
+            <h2>Flexbox Wrap Example</h2>
+            <p>
+              Items automatically move to another line when space is limited.
+            </p>
+          </div>
+
+          <div class="tags">
+            <span>Spicy 🌶️</span>
+            <span>Vegetarian 🌱</span>
+            <span>Traditional 🇪🇹</span>
+            <span>Popular ⭐</span>
+            <span>Breakfast 🍳</span>
+            <span>Lunch 🍛</span>
+            <span>Dinner 🍽️</span>
+          </div>
+        </section>
+      </main>
+
+      <!-- ================= FOOTER ================= -->
+      <footer class="footer">
+        <div>
+          <strong>Addis Eats</strong>
+          <p>Authentic Ethiopian food in Addis Ababa.</p>
+        </div>
+
+        <!-- FLEXBOX -->
+        <div class="footer-links">
+          <a href="#">Instagram</a>
+          <a href="#">Facebook</a>
+          <a href="#">Contact</a>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
