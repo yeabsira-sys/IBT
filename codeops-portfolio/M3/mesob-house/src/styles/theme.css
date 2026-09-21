@@ -1,0 +1,158 @@
+/* ============================================================
+   Mesob House — design tokens
+   Change values here and the whole UI follows.
+   ============================================================ */
+
+:root {
+  /* Brand */
+  --c-brand: #8c2116;
+  --c-brand-strong: #6d1710;
+  --c-brand-tint: #fbe6dc;
+  --c-brand-tint-strong: #f4cdbd;
+
+  /* Accents */
+  --c-gold: #a9761a;
+  --c-gold-soft: #f0dcb4;
+  --c-green: #1e4634;
+  --c-green-soft: #d8e6de;
+
+  /* Text */
+  --c-ink: #2f1e17;
+  --c-ink-soft: #6a564c;
+  --c-ink-muted: #8f7a6e;
+
+  /* Surfaces */
+  --c-page: #fdf7f2;
+  --c-surface: #ffffff;
+  --c-panel: #f8e7dc;
+  --c-panel-2: #fbefe7;
+  --c-footer: #fbeee5;
+  --c-field: #fdf1ea;
+
+  /* Lines */
+  --c-line: #eed8c9;
+  --c-line-strong: #e2c3b0;
+
+  /* Type */
+  --font-display: "Source Serif 4", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Radii */
+  --r-xs: 5px;
+  --r-sm: 8px;
+  --r-md: 11px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(74, 34, 20, 0.06);
+  --shadow-md: 0 10px 24px -16px rgba(74, 34, 20, 0.35);
+  --shadow-lg: 0 26px 60px -34px rgba(74, 34, 20, 0.45);
+
+  /* Rhythm */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --container: 1180px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* Sticky-footer layout: every page renders <Navbar/><main/><Footer/> as
+   direct children of #root (Fragments and context providers add no DOM of
+   their own). Without this, a page shorter than the viewport leaves the
+   space below the footer unpainted instead of showing the page background. */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+#root > main {
+  flex: 1 0 auto;
+}
+
+body {
+  margin: 0;
+  background: var(--c-page);
+  color: var(--c-ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  color: var(--c-brand);
+  margin: 0;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-brand);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Shared helpers */
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--space-5);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
