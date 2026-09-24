@@ -1,54 +1,64 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-export default function useFetch(
-  url,
-  { skip = false, parse, ...fetchOptions } = {},
-) {
+export default function useFetch(url) {
   const [state, setState] = useState({
     data: null,
-    loading: !skip,
+    loading: true,
     error: null,
   });
 
-  // Kept in refs so changing them doesn't retrigger the effect below —
-  // only `url`, `skip`, and an explicit `refetch()` call should do that.
-  const optionsRef = useRef(fetchOptions);
-  optionsRef.current = fetchOptions;
-  const parseRef = useRef(parse);
-  parseRef.current = parse;
+  const [refetchKey, setRefetchKey] = useState(0);
 
-  const [reloadToken, setReloadToken] = useState(0);
-  const refetch = useCallback(() => setReloadToken((n) => n + 1), []);
+  const refetch = useCallback(() => {
+    setRefetchKey((key) => key + 1);
+  }, []);
 
   useEffect(() => {
-    if (skip || !url) return undefined;
+    if (!url) return;
 
     const controller = new AbortController();
-    setState((prev) => ({ ...prev, loading: true, error: null }));
 
-    (async () => {
+    async function fetchData() {
       try {
+        setState({
+          data: null,
+          loading: true,
+          error: null,
+        });
+
         const response = await fetch(url, {
-          ...optionsRef.current,
           signal: controller.signal,
         });
+
         if (!response.ok) {
-          throw new Error(
-            `Request to ${url} failed with status ${response.status}`,
-          );
+          throw new Error(`Request failed: ${response.status}`);
         }
-        const body = parseRef.current
-          ? await parseRef.current(response)
-          : await response.json();
-        setState({ data: body, loading: false, error: null });
-      } catch (err) {
-        if (err.name === "AbortError") return; // superseded by a newer request
-        setState({ data: null, loading: false, error: err });
+
+        const result = await response.json();
+
+        setState({
+          data: result.data,
+          loading: false,
+          error: null,
+        });
+      } catch (error) {
+        if (error.name === "AbortError") return;
+
+        setState({
+          data: null,
+          loading: false,
+          error,
+        });
       }
-    })();
+    }
+
+    fetchData();
 
     return () => controller.abort();
-  }, [url, skip, reloadToken]);
+  }, [url, refetchKey]);
 
-  return { ...state, refetch };
+  return {
+    ...state,
+    refetch,
+  };
 }

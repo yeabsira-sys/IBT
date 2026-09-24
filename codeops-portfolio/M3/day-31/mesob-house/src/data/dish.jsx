@@ -48,7 +48,11 @@ export const order = {
     "Tender slow-braised free-range chicken drumstick and thigh infused with aromatic Ethiopian berbere, nit'ir qibe, and a whole simmered seasoned farm egg.",
   info: [
     { icon: <FaBowlFood />, label: "Serves 1–2", sub: "generously" },
-    { icon: <FaReceipt />, label: "Unlimited table injera refill", sub: "included" },
+    {
+      icon: <FaReceipt />,
+      label: "Unlimited table injera refill",
+      sub: "included",
+    },
     { icon: <FaShieldHeart />, label: "Taxes", sub: "included", tone: "green" },
   ],
   groups: [
@@ -60,14 +64,24 @@ export const order = {
       badge: "Required",
       columns: 3,
       options: [
-        { value: "mild", title: "Mild", description: "Alicha touch, fragrant cardamoms", note: "1/3" },
+        {
+          value: "mild",
+          title: "Mild",
+          description: "Alicha touch, fragrant cardamoms",
+          note: "1/3",
+        },
         {
           value: "traditional",
           title: "Traditional",
           description: "Berbere warmth (recommended)",
           note: "2/3",
         },
-        { value: "fiery", title: "Fiery Awaze", description: "Served with awaze & mitmita dip", note: "3/3" },
+        {
+          value: "fiery",
+          title: "Fiery Awaze",
+          description: "Served with awaze & mitmita dip",
+          note: "3/3",
+        },
       ],
     },
     {
@@ -102,9 +116,24 @@ export const order = {
       multi: true,
       max: 2,
       options: [
-        { value: "ayib", title: "Fresh Ayib", description: "Mild fresh cottage curd", note: "Free" },
-        { value: "gomen", title: "Stewed Gomen", description: "Garlic-infused collard greens", note: "Free" },
-        { value: "awaze", title: "House Awaze Paste", description: "Aged tej and berbere sauce", note: "Free" },
+        {
+          value: "ayib",
+          title: "Fresh Ayib",
+          description: "Mild fresh cottage curd",
+          note: "Free",
+        },
+        {
+          value: "gomen",
+          title: "Stewed Gomen",
+          description: "Garlic-infused collard greens",
+          note: "Free",
+        },
+        {
+          value: "awaze",
+          title: "House Awaze Paste",
+          description: "Aged tej and berbere sauce",
+          note: "Free",
+        },
         {
           value: "egg",
           title: "Extra Braised Egg",
@@ -125,21 +154,24 @@ export const pairing = {
     {
       name: "House Traditional Tej",
       price: "350",
-      description: "Pure golden fermented highland honey wine infused with gesho leaves. Served in a traditional round-bottom flask.",
+      description:
+        "Pure golden fermented highland honey wine infused with gesho leaves. Served in a traditional round-bottom flask.",
       image: photo("1514362545857-3bc16c4c7d1b", 500),
       label: { text: "Signature Sip", tone: "gold" },
     },
     {
       name: "Fresh Timatim Fitfit",
       price: "180",
-      description: "Crisp ripe heirloom tomatoes, minced red shallots, and sliced green peppers tossed with torn cold injera.",
+      description:
+        "Crisp ripe heirloom tomatoes, minced red shallots, and sliced green peppers tossed with torn cold injera.",
       image: photo("1591814468924-caf88d1232e1", 500),
       label: { text: "Vegan / Tsom", tone: "green" },
     },
     {
       name: "Jebena Spiced Coffee",
       price: "70",
-      description: "Addis-style freshly pan-roasted Yirgacheffe arabica beans boiled in clay jebena with a hint of tenadam rue.",
+      description:
+        "Addis-style freshly pan-roasted Yirgacheffe arabica beans boiled in clay jebena with a hint of tenadam rue.",
       image: photo("1447933601403-0c6688de566e", 500),
       label: { text: "Fresh Roast", tone: "dark" },
     },

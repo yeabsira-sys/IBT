@@ -1,16 +1,30 @@
 import { FiTrash2 } from "react-icons/fi";
 import QuantityStepper from "../ui/QuantityStepper";
 import { PriceTag, Tag } from "../ui/Primitives";
+import { Link } from "react-router-dom";
 
-/**
- * BasketLineItem — thumbnail, tags, price, quantity stepper and remove.
- */
 export default function BasketLineItem({ item, onQuantityChange, onRemove }) {
-  const { name, note, price, currency = "ETB", description, image, imageAlt, tags = [], quantity } = item;
+  const {
+    name,
+    note,
+    price,
+    currency = "ETB",
+    description,
+    image,
+    imageAlt,
+    tags = [],
+    quantity,
+  } = item;
 
   return (
     <article className="basket-line">
-      <img className="basket-line__image" src={image} alt={imageAlt ?? name} />
+      <Link to={`/dish/${item.id}`} className="basket-line__image">
+        <img
+          className="basket-line__image"
+          src={image}
+          alt={imageAlt ?? name}
+        />
+      </Link>
 
       <div className="basket-line__body">
         <div className="basket-line__tags">
@@ -28,7 +42,10 @@ export default function BasketLineItem({ item, onQuantityChange, onRemove }) {
 
       <div className="basket-line__aside">
         <PriceTag currency={currency} amount={price} />
-        <QuantityStepper value={quantity} onChange={(q) => onQuantityChange(item.id, q)} />
+        <QuantityStepper
+          value={quantity}
+          onChange={(q) => onQuantityChange(item.id, q)}
+        />
         <button
           type="button"
           className="basket-line__remove"

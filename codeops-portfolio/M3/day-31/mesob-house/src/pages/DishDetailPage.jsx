@@ -30,9 +30,6 @@ import { useStore } from "../stores/useStores";
 import { useToast } from "../context/ToastContext";
 import useNavbarState from "../hooks/useNavbarState";
 
-/**
- * Reads a "+ETB 40" style note and returns the numeric add-on, or 0.
- */
 function priceDelta(note) {
   const match = /\+ETB\s?(\d+)/.exec(note ?? "");
 
@@ -101,19 +98,13 @@ export default function DishDetailPage() {
 
   const { cart: navCart, user: navUser } = useNavbarState();
 
-  /*
-   * Only the fields the API actually returns are overridden.
-   *
-   * The heat/injera/side-accent options, heritage note,
-   * and pairings remain curated frontend content.
-   */
   const orderContent = liveDish
     ? {
         ...order,
 
         name: liveDish.nameEn,
 
-        note: liveDish.nameAm ? `(${liveDish.nameAm})` : order.note,
+        note: liveDish.nameAm ? order.note : `(${liveDish.nameAm})`,
 
         price: String(liveDish.priceETB),
 
@@ -131,11 +122,6 @@ export default function DishDetailPage() {
 
   const stillLooking = (menuLoading || specialsLoading) && !liveDish;
 
-  /*
-   * A dish detail page always has a real dish id:
-   * the live slug when the API resolved one, otherwise
-   * the URL parameter used by the demo content.
-   */
   const currentDishId = liveDish?.slug ?? dishId;
 
   const isFavorite = favorites.some((item) => item.id === currentDishId);
@@ -151,23 +137,6 @@ export default function DishDetailPage() {
     }));
   };
 
-  /*
-   * Turns:
-   *
-   * {
-   *   heat: "traditional",
-   *   sides: ["ayib"]
-   * }
-   *
-   * into:
-   *
-   * {
-   *   heat: "Traditional",
-   *   sides: ["Fresh Ayib"]
-   * }
-   *
-   * and calculates any "+ETB NN" option deltas.
-   */
   const { selectionTitles, optionDelta } = order.groups.reduce(
     (acc, group) => {
       const selected = values[group.key];
@@ -265,11 +234,6 @@ export default function DishDetailPage() {
 
     toast(`Added ${item.name} to your basket`);
   };
-
-  /* ========================================================
-     RENDER
-  ======================================================== */
-
   return (
     <>
       <Navbar links={navLinks} cart={navCart} user={navUser} />

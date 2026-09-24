@@ -32,12 +32,6 @@ const JEBENA_BUNA_ADDON = {
     "https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=300&q=70",
 };
 
-/**
- * BasketPage — the cart / basket review step.
- *
- * Cart state lives in the shared Zustand store so it persists across
- * reloads and stays synchronized with the rest of the application.
- */
 export default function BasketPage() {
   const cartItems = useStore((state) => state.cartItems);
   const cartNote = useStore((state) => state.cartNote);

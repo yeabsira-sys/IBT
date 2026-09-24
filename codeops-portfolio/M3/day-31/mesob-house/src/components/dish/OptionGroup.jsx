@@ -1,10 +1,5 @@
 import { OptionCard, OptionCardGroup } from "../ui/OptionCard";
 
-/**
- * OptionGroup — "n. Title" heading, a required/optional/count badge, and a
- * row of OptionCards. Works for single-select (radio) or multi-select
- * (checkbox, with a `max` cap) groups.
- */
 export default function OptionGroup({
   step,
   title,

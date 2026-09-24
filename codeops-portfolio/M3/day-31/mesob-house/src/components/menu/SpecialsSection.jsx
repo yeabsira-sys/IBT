@@ -5,12 +5,17 @@ import Button from "../ui/Button";
 import ChipGroup from "../ui/ChipGroup";
 import { PriceTag, SectionHeading, Tag } from "../ui/Primitives";
 
-/**
- * DishCard — photo, labels, price, description and the add-to-cart row.
- * Reuse anywhere a menu item appears (menu page, search results, upsells).
- */
 export function DishCard({ dish, onAdd, onView }) {
-  const { name, price, currency = "ETB", description, image, imageAlt, label, heat } = dish;
+  const {
+    name,
+    price,
+    currency = "ETB",
+    description,
+    image,
+    imageAlt,
+    label,
+    heat,
+  } = dish;
 
   return (
     <article className="dish">
@@ -42,7 +47,11 @@ export function DishCard({ dish, onAdd, onView }) {
         <Link className="link-quiet" to={`/dish/${dish.id}`}>
           View Details
         </Link>
-        <Button size="sm" leftIcon={<FiShoppingBag />} onClick={() => onAdd?.(dish)}>
+        <Button
+          size="sm"
+          leftIcon={<FiShoppingBag />}
+          onClick={() => onAdd?.(dish)}
+        >
           Quick Add
         </Button>
       </div>
@@ -50,10 +59,6 @@ export function DishCard({ dish, onAdd, onView }) {
   );
 }
 
-/**
- * SpecialsSection — heading, filter pills and the dish grid.
- * Filtering is local; pass `onFilterChange` if the server should do it instead.
- */
 export default function SpecialsSection({
   eyebrow,
   title,
@@ -67,8 +72,11 @@ export default function SpecialsSection({
   const [filter, setFilter] = useState(filters[0]?.value ?? "all");
 
   const visible = useMemo(
-    () => (filter === "all" ? dishes : dishes.filter((d) => d.tags?.includes(filter))),
-    [dishes, filter]
+    () =>
+      filter === "all"
+        ? dishes
+        : dishes.filter((d) => d.tags?.includes(filter)),
+    [dishes, filter],
   );
 
   const handleFilter = (value) => {

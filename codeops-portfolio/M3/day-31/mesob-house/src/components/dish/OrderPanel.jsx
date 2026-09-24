@@ -5,10 +5,6 @@ import QuantityStepper from "../ui/QuantityStepper";
 import InfoStrip from "./InfoStrip";
 import OptionGroup from "./OptionGroup";
 
-/**
- * OrderPanel — the dish detail page's right column: name, price, info strip,
- * every OptionGroup, the quantity stepper and the add-to-order button.
- */
 export default function OrderPanel({
   name,
   note,
@@ -51,15 +47,29 @@ export default function OrderPanel({
       ))}
 
       <div className="order-panel__cta">
-        <QuantityStepper value={quantity} onChange={onQuantityChange} size="lg" />
-        <Button variant="primary" size="lg" block leftIcon={<FiShoppingBag />} onClick={onAddToOrder}>
+        <QuantityStepper
+          value={quantity}
+          onChange={onQuantityChange}
+          size="lg"
+        />
+        <Button
+          variant="primary"
+          size="lg"
+          block
+          leftIcon={<FiShoppingBag />}
+          onClick={onAddToOrder}
+        >
           Add to Order · {currency} {price}
         </Button>
       </div>
 
       <div className="order-panel__foot">
         <button type="button" className="link-quiet" onClick={onSaveFavorite}>
-          {isFavorite ? <FaHeart aria-hidden="true" color="var(--c-brand)" /> : <FaRegHeart aria-hidden="true" />}{" "}
+          {isFavorite ? (
+            <FaHeart aria-hidden="true" color="var(--c-brand)" />
+          ) : (
+            <FaRegHeart aria-hidden="true" />
+          )}{" "}
           {isFavorite ? "Saved to Favorites" : "Save to Favorites"}
         </button>
         <button type="button" className="link-brand" onClick={onOrderAsGroup}>
