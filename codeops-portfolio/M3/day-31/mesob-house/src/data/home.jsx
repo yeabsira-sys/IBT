@@ -17,8 +17,7 @@ export const hero = {
   badge: "Traditional Habesha Hearth",
   title: "Communal Warmth,",
   titleAccent: "Slow-Cooked Heritage.",
-  lede:
-    "Handcrafted wats, ancient stone-ground teff injera, and 72-hour simmered stews infused with nitre kibbeh and heirloom berbere harvested from the Ethiopian highlands.",
+  lede: "Handcrafted wats, ancient stone-ground teff injera, and 72-hour simmered stews infused with nitre kibbeh and heirloom berbere harvested from the Ethiopian highlands.",
   primaryAction: { label: "Explore today's specials", to: "/menu" },
   secondaryAction: { label: "Full banquet menu", to: "/menu" },
   ceremonyNote: "Coffee ceremony · 4:00 PM daily",
@@ -38,62 +37,60 @@ export const hero = {
   },
 };
 
-export const specials = {
-  eyebrow: "From the clay pots",
-  title: "Today's Curated Chef Specials",
-  lede:
-    "Carefully balanced stews prepared in slow-burning clay pots, served piping hot on hand-stretched injera.",
-  filters: [
-    { value: "all", label: "All" },
-    { value: "popular", label: "Popular" },
-    { value: "fasting", label: "Fasting (Tsom)" },
-  ],
-  dishes: [
-    {
-      id: "doro-wat",
-      name: "Royal Doro Wat",
-      price: "550",
-      description:
-        "Free-range poultry slow-simmered for six hours in clarified nitre kibbeh, organic spiced butter, bitter kibbeh, house-cured berbere and ayib.",
-      image: photo("1580651315530-69c8e0026377", 700),
-      label: { text: "Chef's special today", tone: "gold" },
-      heat: "Spicy",
-      tags: ["popular"],
-    },
-    {
-      id: "meat-combo",
-      name: "Mesob Meat Combo",
-      price: "990",
-      description:
-        "The ultimate highland feast: siga tibs, prime kitfo cuts, derek tibs with rosemary, garlic and fresh jalapeño, served on a shared mesob tray.",
-      image: photo("1604909052743-94e838986d24", 700),
-      label: { text: "Chef's special today", tone: "gold" },
-      heat: "Medium heat",
-      tags: ["popular"],
-    },
-    {
-      id: "beyaynetu",
-      name: "Special Fasting Beyaynetu",
-      price: "480",
-      description:
-        "A colourful spectrum of twelve fasting-season dishes: misir wat, spicy shiro, kik alicha, gomen, tikil gomen and more, built on pure teff injera.",
-      image: photo("1591814468924-caf88d1232e1", 700),
-      label: { text: "100% pure teff", tone: "green" },
-      heat: "Fasting / vegan",
-      tags: ["fasting"],
-    },
-  ],
-};
+// export const specials = {
+//   eyebrow: "From the clay pots",
+//   title: "Today's Curated Chef Specials",
+//   lede:
+//     "Carefully balanced stews prepared in slow-burning clay pots, served piping hot on hand-stretched injera.",
+//   filters: [
+//     { value: "all", label: "All" },
+//     { value: "popular", label: "Popular" },
+//     { value: "fasting", label: "Fasting (Tsom)" },
+//   ],
+//   dishes: [
+//     {
+//       id: "doro-wat",
+//       name: "Royal Doro Wat",
+//       price: "550",
+//       description:
+//         "Free-range poultry slow-simmered for six hours in clarified nitre kibbeh, organic spiced butter, bitter kibbeh, house-cured berbere and ayib.",
+//       image: photo("1580651315530-69c8e0026377", 700),
+//       label: { text: "Chef's special today", tone: "gold" },
+//       heat: "Spicy",
+//       tags: ["popular"],
+//     },
+//     {
+//       id: "meat-combo",
+//       name: "Mesob Meat Combo",
+//       price: "990",
+//       description:
+//         "The ultimate highland feast: siga tibs, prime kitfo cuts, derek tibs with rosemary, garlic and fresh jalapeño, served on a shared mesob tray.",
+//       image: photo("1604909052743-94e838986d24", 700),
+//       label: { text: "Chef's special today", tone: "gold" },
+//       heat: "Medium heat",
+//       tags: ["popular"],
+//     },
+//     {
+//       id: "beyaynetu",
+//       name: "Special Fasting Beyaynetu",
+//       price: "480",
+//       description:
+//         "A colourful spectrum of twelve fasting-season dishes: misir wat, spicy shiro, kik alicha, gomen, tikil gomen and more, built on pure teff injera.",
+//       image: photo("1591814468924-caf88d1232e1", 700),
+//       label: { text: "100% pure teff", tone: "green" },
+//       heat: "Fasting / vegan",
+//       tags: ["fasting"],
+//     },
+//   ],
+// };
 
 export const gursha = {
   eyebrow: "The spirit of gursha",
   quote: "Those Who Share a Mesob Never Walk Alone.",
-  body:
-    "Gursha is the cherished act of honouring a companion by rolling choice morsels of wat with warm injera and feeding them directly by hand. At Mesob House, every table is configured for communal warmth and slow gratitude.",
+  body: "Gursha is the cherished act of honouring a companion by rolling choice morsels of wat with warm injera and feeding them directly by hand. At Mesob House, every table is configured for communal warmth and slow gratitude.",
   ceremony: {
     title: "Authentic clay jebena buna ceremony",
-    text:
-      "Every day at 4:00 PM. Watch our own green coffee beans roast over clay coals, ground fresh by hand, then brewed in a traditional clay jebena and poured with popcorn and frankincense.",
+    text: "Every day at 4:00 PM. Watch our own green coffee beans roast over clay coals, ground fresh by hand, then brewed in a traditional clay jebena and poured with popcorn and frankincense.",
     action: { label: "Reserve ceremony seating", href: "/ceremony" },
   },
   beverages: [
@@ -118,7 +115,8 @@ export const gursha = {
   ],
   addOn: {
     name: "Extra teff injera rolls (basket of 3)",
-    description: "Naturally gluten-friendly ancient grain, fermented three days for its signature tang.",
+    description:
+      "Naturally gluten-friendly ancient grain, fermented three days for its signature tang.",
     price: "90",
     action: "Add extra",
   },
@@ -155,9 +153,11 @@ export const reflections = {
 export const closingCta = {
   eyebrow: "Join our table",
   title: "Experience Authentic Habesha Warmth Tonight",
-  text:
-    "Whether you are gathering around our circular mesob for communal dining or ordering freshly baked injera to your home in Addis Ababa.",
-  actions: [{ label: "Book a mesob table", to: "/cart" }, { label: "View complete menu", to: "/menu" }],
+  text: "Whether you are gathering around our circular mesob for communal dining or ordering freshly baked injera to your home in Addis Ababa.",
+  actions: [
+    { label: "Book a mesob table", to: "/cart" },
+    { label: "View complete menu", to: "/menu" },
+  ],
 };
 
 export const dietaryColumn = {

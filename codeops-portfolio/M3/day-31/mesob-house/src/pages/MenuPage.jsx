@@ -12,13 +12,7 @@ import {
 } from "../components/menu/CommunalBanner";
 
 import { footer, navLinks } from "../data/content";
-import {
-  categories as demoCategories,
-  communal,
-  dishes as demoDishes,
-  menuHero,
-  stickyNote,
-} from "../data/menu";
+import { communal, menuHero, stickyNote } from "../data/menu";
 
 import { useEffect } from "react";
 import { mapApiDishToCard } from "../lib/dishAdapters";
@@ -60,21 +54,12 @@ export default function MenuPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState({});
 
-  /*
-   * Use the live API catalog when available.
-   * Otherwise fall back to the demo catalog.
-   */
-  const dishes =
-    liveDishes.length > 0 ? liveDishes.map(mapApiDishToCard) : demoDishes;
+  const dishes = liveDishes.map(mapApiDishToCard);
 
   /*
    * Build categories dynamically from the API response.
    */
   const categories = useMemo(() => {
-    if (liveDishes.length === 0) {
-      return demoCategories;
-    }
-
     const counts = new Map();
 
     for (const dish of dishes) {
@@ -94,7 +79,7 @@ export default function MenuPage() {
         count,
       })),
     ];
-  }, [dishes, liveDishes.length]);
+  }, [dishes, liveDishes]);
 
   /*
    * Filter by category and search term.

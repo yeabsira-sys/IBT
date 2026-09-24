@@ -18,7 +18,6 @@ import {
   gursha,
   hero,
   reflections,
-  specials,
 } from "../data/home";
 
 import { mapApiDishToCard } from "../lib/dishAdapters";
@@ -67,10 +66,7 @@ export default function HomePage() {
   // SPECIALS
   // ==========================================
 
-  const specialsDishes =
-    liveSpecials.length > 0
-      ? liveSpecials.map(mapApiDishToCard)
-      : specials.dishes;
+  const specialsDishes = liveSpecials && liveSpecials.map(mapApiDishToCard);
 
   return (
     <>
@@ -94,7 +90,7 @@ export default function HomePage() {
         )}
 
         <SpecialsSection
-          {...specials}
+          {...liveSpecials}
           dishes={specialsDishes}
           onAdd={handleAdd}
         />

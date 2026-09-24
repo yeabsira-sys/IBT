@@ -34,8 +34,10 @@
   --c-line-strong: #e2c3b0;
 
   /* Type */
-  --font-display: "Source Serif 4", "Iowan Old Style", Georgia, "Times New Roman", serif;
-  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display:
+    "Source Serif 4", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-body:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* Radii */
   --r-xs: 5px;
@@ -73,10 +75,6 @@ body,
   height: 100%;
 }
 
-/* Sticky-footer layout: every page renders <Navbar/><main/><Footer/> as
-   direct children of #root (Fragments and context providers add no DOM of
-   their own). Without this, a page shorter than the viewport leaves the
-   space below the footer unpainted instead of showing the page background. */
 #root {
   display: flex;
   flex-direction: column;
@@ -155,4 +153,51 @@ input {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+.error-page {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-4);
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+}
+
+.error-page__icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--c-surface);
+  font-size: 28px;
+}
+
+.error-page h1 {
+  margin: 0;
+}
+
+.error-page p {
+  max-width: 480px;
+  color: var(--c-ink-soft);
+}
+
+.error-page .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-page__details {
+  width: min(100%, 700px);
+  margin-top: var(--space-4);
+  text-align: left;
+}
+
+.error-page__details pre {
+  overflow-x: auto;
+  padding: var(--space-4);
+  font-size: 12px;
 }
