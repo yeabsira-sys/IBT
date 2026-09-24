@@ -8,27 +8,25 @@ import { Card } from "../components/ui/Surface";
 import { Avatar } from "../components/ui/Primitives";
 
 import { dietaryOptions, footer, navLinks } from "../data/content";
-import { useStore } from "../context/StoreContext";
+import { useStore } from "../stores/useStores";
 import { useToast } from "../context/ToastContext";
 import useNavbarState from "../hooks/useNavbarState";
 
 const accountBreadcrumbs = [{ label: "Home", to: "/" }, { label: "Account" }];
 
-/** Turns a stored preference slug like "all-heritage" into its display label. */
 function preferenceLabel(value) {
   return (
     dietaryOptions.find((option) => option.value === value)?.label ?? value
   );
 }
 
-/**
- * AccountPage — signed-in guest's basic info, their saved favorites, and
- * sign out. Anyone not signed in sees a prompt to sign in or register
- * instead of a blank/broken page.
- */
 export default function AccountPage() {
   const navigate = useNavigate();
-  const { session, signOut, favorites, toggleFavorite } = useStore();
+  // const { session, signOut, favorites, toggleFavorite } = useStore();
+  const session = useStore((state) => state.session);
+  const signOut = useStore((state) => state.signOut);
+  const favorites = useStore((state) => state.favorites);
+  const toggleFavorite = useStore((state) => state.toggleFavorite);
   const toast = useToast();
   const { cart: navCart, user: navUser } = useNavbarState();
 
