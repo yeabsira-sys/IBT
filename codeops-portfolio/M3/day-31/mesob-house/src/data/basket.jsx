@@ -16,61 +16,21 @@ export const basketBreadcrumbs = [
 ];
 
 export const deliveryBanner = {
-  message: "Complimentary delivery across Bole, Kazanchis, and Sarbet on orders over ETB 1,200.",
+  message:
+    "Complimentary delivery across Bole, Kazanchis, and Sarbet on orders over ETB 1,200.",
   note: "Threshold unlocked",
 };
 
-export const checkoutSteps = ["Review Basket", "Delivery Details", "Confirmation"];
+export const checkoutSteps = [
+  "Review Basket",
+  "Delivery Details",
+  "Confirmation",
+];
 
 export const basketGroup = {
   heading: "Clay Pot Stews & Provisions",
   count: "3 handcrafted selections",
 };
-
-export const initialItems = [
-  {
-    id: "royal-doro-wat",
-    name: "Royal Doro Wat",
-    note: "(ያዶሮ ወጥ)",
-    price: "710",
-    quantity: 1,
-    description:
-      "Slow-simmered highland rooster, whole spiced boiled egg, 100% pure teff injera rolls, ayib cheese crumb & berbere jus.",
-    image: photo("1580651315530-69c8e0026377"),
-    tags: [
-      { text: "Heritage Feast", tone: "brand" },
-      { text: "Berbere Grade 3", tone: "gold" },
-    ],
-  },
-  {
-    id: "siga-derek-tibs",
-    name: "Siga Derek Tibs",
-    note: "(ስጋ ደረቅ ጥብስ)",
-    price: "620",
-    quantity: 1,
-    description:
-      "Flash-charred prime pasture beef, garden rosemary sprigs, seared jalapeño rounds, served with house awaze mustard emulsion.",
-    image: photo("1604909052743-94e838986d24"),
-    tags: [
-      { text: "Skillet Sizzle", tone: "gold" },
-      { text: "Well Done + Awaze", tone: "dark" },
-    ],
-  },
-  {
-    id: "house-brewed-tej",
-    name: "House Brewed Tej",
-    note: "(500ml)",
-    price: "350",
-    quantity: 1,
-    description:
-      "Fermented Tigray floral honey, gesho leaf bittering, poured chilled in an authentic berele glass decanter.",
-    image: photo("1514362545857-3bc16c4c7d1b"),
-    tags: [
-      { text: "House Cellar", tone: "gold" },
-      { text: "Natural Wild Ferment", tone: "green" },
-    ],
-  },
-];
 
 export const etiquette = {
   heading: "Gursha Hospitality & Dining Etiquette",
@@ -111,7 +71,10 @@ export const ledger = {
   exploreTo: "/menu",
   trust: [
     { icon: <FaBox />, text: "Piping warm delivery in woven mesob packaging" },
-    { icon: <FaTruckFast />, text: "Telebirr, CBE Birr, cash & card on delivery" },
+    {
+      icon: <FaTruckFast />,
+      text: "Telebirr, CBE Birr, cash & card on delivery",
+    },
     { icon: <FaLock />, text: "Encrypted checkout & real-time dispatcher SMS" },
   ],
   upsell: {

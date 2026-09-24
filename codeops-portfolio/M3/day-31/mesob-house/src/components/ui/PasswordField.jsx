@@ -5,32 +5,32 @@ import TextField from "./TextField";
 /** 0–4 score: length, mixed case, digit, symbol. */
 export function scorePassword(value = "") {
   let score = 0;
+
   if (value.length >= 8) score += 1;
   if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
   if (/\d/.test(value)) score += 1;
   if (/[^A-Za-z0-9]/.test(value)) score += 1;
+
   return score;
 }
 
 const LABELS = ["8+ chars", "Weak", "Fair", "Good", "Strong"];
 
-/**
- * PasswordField — password input with show/hide and an optional strength meter.
- */
 export default function PasswordField({
   showStrength = false,
-  value = "",
+  passwordValue = "",
   ...rest
 }) {
   const [visible, setVisible] = useState(false);
-  const score = scorePassword(value);
+
+  const score = scorePassword(passwordValue);
 
   return (
     <div>
       <TextField
+        {...rest}
         type={visible ? "text" : "password"}
         icon={<FiLock />}
-        value={value}
         trailing={
           <button
             type="button"
@@ -41,7 +41,6 @@ export default function PasswordField({
             {visible ? <FiEyeOff /> : <FiEye />}
           </button>
         }
-        {...rest}
       />
 
       {showStrength && (
@@ -50,10 +49,13 @@ export default function PasswordField({
             {[0, 1, 2, 3].map((i) => (
               <span
                 key={i}
-                className={`strength__bar${i < score ? " strength__bar--on" : ""}`}
+                className={`strength__bar${
+                  i < score ? " strength__bar--on" : ""
+                }`}
               />
             ))}
           </div>
+
           <span className="strength__label">{LABELS[score]}</span>
         </div>
       )}

@@ -1,9 +1,15 @@
-import { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
+
 import { FiArrowRight, FiMail, FiMessageSquare, FiUser } from "react-icons/fi";
+
 import { FaMobileScreenButton } from "react-icons/fa6";
 
 import { Link } from "react-router-dom";
+
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
 import Button from "../ui/Button";
 import Checkbox from "../ui/Checkbox";
 import ChipGroup from "../ui/ChipGroup";
@@ -11,9 +17,42 @@ import PasswordField from "../ui/PasswordField";
 import PhoneField from "../ui/PhoneField";
 import SocialButton from "../ui/SocialButton";
 import TextField from "../ui/TextField";
+
 import { Card, Divider } from "../ui/Surface";
 
-const EMPTY = {
+const registerSchema = z
+  .object({
+    fullName: z
+      .string()
+      .trim()
+      .min(2, "Enter the name to reserve tables under."),
+
+    phone: z
+      .string()
+      .transform((value) => value.replace(/\s/g, ""))
+      .refine(
+        (value) => /^\d{9}$/.test(value),
+        "Enter 9 digits after +251, e.g. 911 234 567.",
+      ),
+
+    email: z.string().trim().email("Enter a valid email address."),
+
+    password: z.string().min(8, "Use at least 8 characters."),
+
+    confirmPassword: z.string().min(1, "Confirm your password."),
+
+    preference: z.string(),
+
+    agreed: z
+      .boolean()
+      .refine((value) => value === true, "Accept the terms to continue."),
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    message: "Both passwords must match.",
+    path: ["confirmPassword"],
+  });
+
+const DEFAULT_VALUES = {
   fullName: "",
   phone: "",
   email: "",
@@ -23,23 +62,6 @@ const EMPTY = {
   agreed: false,
 };
 
-function validate(values) {
-  const errors = {};
-  if (!values.fullName.trim()) errors.fullName = "Enter the name to reserve tables under.";
-  if (!/^\d{9}$/.test(values.phone.replace(/\s/g, "")))
-    errors.phone = "Enter 9 digits after +251, e.g. 911 234 567.";
-  if (!/^\S+@\S+\.\S+$/.test(values.email)) errors.email = "Enter a valid email address.";
-  if (values.password.length < 8) errors.password = "Use at least 8 characters.";
-  if (values.confirmPassword !== values.password)
-    errors.confirmPassword = "Both passwords must match.";
-  if (!values.agreed) errors.agreed = "Accept the terms to continue.";
-  return errors;
-}
-
-/**
- * RegisterForm — the account-creation card.
- * Props: dietaryOptions, onSubmit(values), onTelebirr, onGoogle, onSignIn.
- */
 export default function RegisterForm({
   dietaryOptions = [],
   onSubmit,
@@ -47,26 +69,48 @@ export default function RegisterForm({
   onGoogle,
   onSignIn,
 }) {
-  const [values, setValues] = useState(EMPTY);
-  const [errors, setErrors] = useState({});
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: DEFAULT_VALUES,
+    mode: "onBlur",
+  });
 
-  const set = (key) => (event) => {
-    const value = event?.target ? event.target.value : event;
-    setValues((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => ({ ...prev, [key]: undefined }));
+  const preference = watch("preference");
+  const agreed = watch("agreed");
+  const password = watch("password");
+  const confirmPassword = watch("confirmPassword");
+
+  const submitForm = (values) => {
+    onSubmit?.(values);
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const nextErrors = validate(values);
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length === 0) onSubmit?.(values);
+  const handlePreferenceChange = (value) => {
+    setValue("preference", value, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+  };
+
+  const handleAgreedChange = (event) => {
+    const value = event?.target?.checked ?? Boolean(event);
+
+    setValue("agreed", value, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
   };
 
   return (
     <Card variant="raised" className="register" as="div">
       <div>
         <h2 className="register__title">Create Your Mesob House Account</h2>
+
         <p className="register__lede">
           Join our culinary heritage circle in less than a minute.
         </p>
@@ -78,20 +122,28 @@ export default function RegisterForm({
           label="Telebirr Quick Sign"
           onClick={onTelebirr}
         />
-        <SocialButton logo={<FcGoogle />} label="Continue with Google" onClick={onGoogle} />
+
+        <SocialButton
+          logo={<FcGoogle />}
+          label="Continue with Google"
+          onClick={onGoogle}
+        />
       </div>
 
       <Divider>Or register with your details</Divider>
 
-      <form className="register__fields" onSubmit={handleSubmit} noValidate>
+      <form
+        className="register__fields"
+        onSubmit={handleSubmit(submitForm)}
+        noValidate
+      >
         <TextField
           label="Full Name"
           optionalText="(ሙሉ ስም)"
           icon={<FiUser />}
           placeholder="e.g. Abebe Bikila or Genet Tadesse"
-          value={values.fullName}
-          onChange={set("fullName")}
-          error={errors.fullName}
+          {...register("fullName")}
+          error={errors.fullName?.message}
           autoComplete="name"
         />
 
@@ -99,9 +151,8 @@ export default function RegisterForm({
           label="Ethiopian Mobile Number"
           optionalText="(ስልክ)"
           placeholder="911 234 567"
-          value={values.phone}
-          onChange={set("phone")}
-          error={errors.phone}
+          {...register("phone")}
+          error={errors.phone?.message}
           hint="We'll send a 4-digit code to verify your Ethiopian mobile number."
           hintIcon={<FiMessageSquare />}
           autoComplete="tel-national"
@@ -112,9 +163,8 @@ export default function RegisterForm({
           icon={<FiMail />}
           type="email"
           placeholder="guest@mesobhouse.com"
-          value={values.email}
-          onChange={set("email")}
-          error={errors.email}
+          {...register("email")}
+          error={errors.email?.message}
           autoComplete="email"
         />
 
@@ -122,47 +172,65 @@ export default function RegisterForm({
           <PasswordField
             label="Password"
             placeholder="Minimum 8 characters"
-            value={values.password}
-            onChange={set("password")}
-            error={errors.password}
+            {...register("password")}
+            passwordValue={password}
+            error={errors.password?.message}
             showStrength
             autoComplete="new-password"
           />
+
           <PasswordField
             label="Confirm Password"
             placeholder="Repeat password"
-            value={values.confirmPassword}
-            onChange={set("confirmPassword")}
-            error={errors.confirmPassword}
+            {...register("confirmPassword")}
+            passwordValue={confirmPassword}
+            error={errors.confirmPassword?.message}
             autoComplete="new-password"
           />
         </div>
 
-        <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+        <fieldset
+          style={{
+            border: 0,
+            padding: 0,
+            margin: 0,
+          }}
+        >
           <legend className="field__label" style={{ padding: 0 }}>
-            Primary Dining Preference
+            Primary Dining Preference{" "}
             <span className="field__optional">(optional)</span>
           </legend>
+
           <p className="register__section-note">
-            Helps our chefs tailor your banquet offerings and fasting recommendations.
+            Helps our chefs tailor your banquet offerings and fasting
+            recommendations.
           </p>
+
           <ChipGroup
             label="Primary Dining Preference"
             options={dietaryOptions}
-            value={values.preference}
-            onChange={set("preference")}
+            value={preference}
+            onChange={handlePreferenceChange}
           />
         </fieldset>
 
-        <Checkbox checked={values.agreed} onChange={set("agreed")}>
-          I agree to the <Link to="/terms">Mesob House Hospitality Terms</Link> and{" "}
-          <Link to="/privacy">Privacy Guidelines</Link>.
+        <Checkbox checked={agreed} onChange={handleAgreedChange}>
+          I agree to the <Link to="/terms">Mesob House Hospitality Terms</Link>{" "}
+          and <Link to="/privacy">Privacy Guidelines</Link>.
           {errors.agreed && (
-            <span className="field__hint field__hint--error">{errors.agreed}</span>
+            <span className="field__hint field__hint--error">
+              {errors.agreed.message}
+            </span>
           )}
         </Checkbox>
 
-        <Button type="submit" variant="primary" size="lg" block rightIcon={<FiArrowRight />}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          rightIcon={<FiArrowRight />}
+        >
           Create Account &amp; Receive Welcome Gursha
         </Button>
       </form>

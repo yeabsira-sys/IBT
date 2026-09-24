@@ -22,7 +22,6 @@ import useNavbarState from "../hooks/useNavbarState";
 export default function CreateAccountPage() {
   const navigate = useNavigate();
 
-  // Zustand store
   const register = useStore((state) => state.register);
   const socialSignIn = useStore((state) => state.socialSignIn);
 

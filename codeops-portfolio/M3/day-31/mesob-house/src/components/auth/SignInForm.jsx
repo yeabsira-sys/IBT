@@ -26,10 +26,6 @@ const EMPTY = {
   rememberAddress: false,
 };
 
-/**
- * SignInForm — the member portal card: social sign-in, phone/email toggle,
- * password, remember options, and the guest / register fallbacks.
- */
 export default function SignInForm({
   onSubmit,
   onTelebirr,
