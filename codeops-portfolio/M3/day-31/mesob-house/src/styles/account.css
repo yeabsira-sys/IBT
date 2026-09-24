@@ -1,0 +1,142 @@
+/* ============================================================
+   Mesob House — account page styles
+   ============================================================ */
+
+.account-page-wrap {
+  padding-bottom: var(--space-7);
+}
+
+.account-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+  margin-top: var(--space-5);
+}
+
+.account-card,
+.account-favorites,
+.account-guest {
+  padding: var(--space-6);
+}
+
+.account-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.account-card__head h1 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--c-ink);
+  margin: 0 0 3px;
+}
+.account-card__head p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c-ink-soft);
+}
+
+.account-details {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  background: var(--c-panel-2);
+  border-radius: var(--r-md);
+}
+.account-details div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-size: 13px;
+}
+.account-details dt {
+  color: var(--c-ink-muted);
+  font-weight: 600;
+}
+.account-details dd {
+  margin: 0;
+  color: var(--c-ink);
+  font-weight: 600;
+  text-align: right;
+}
+
+.account-favorites h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--c-ink);
+  margin: 0 0 var(--space-4);
+}
+.account-favorites h2 svg { color: var(--c-brand); }
+.account-favorites__empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c-ink-soft);
+}
+.account-favorites__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.account-favorites__list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+}
+.account-favorites__list a {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--c-ink);
+  text-decoration: none;
+}
+.account-favorites__list a:hover { color: var(--c-brand); }
+.account-favorites__list button {
+  border: none;
+  background: none;
+  color: var(--c-ink-muted);
+  cursor: pointer;
+  display: grid;
+  padding: 2px;
+}
+.account-favorites__list button:hover { color: var(--c-brand); }
+
+.account-guest {
+  max-width: 480px;
+  margin: var(--space-6) auto 0;
+  text-align: center;
+}
+.account-guest h1 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--c-ink);
+  margin: 0 0 8px;
+}
+.account-guest p {
+  margin: 0 0 var(--space-5);
+  font-size: 13.5px;
+  color: var(--c-ink-soft);
+}
+.account-guest__actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+@media (max-width: 800px) {
+  .account-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .account-guest__actions { flex-direction: column; }
+}
