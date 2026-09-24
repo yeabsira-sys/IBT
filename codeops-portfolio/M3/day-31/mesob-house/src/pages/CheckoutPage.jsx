@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -155,7 +154,14 @@ export default function CheckoutPage() {
     toast(`Verification code sent to +251 ${phone}`, "info");
   };
 
+  const session = useStore((state) => state.session);
   const handleConfirm = (values) => {
+    if (!session) {
+      console.log("No session");
+      toast("please sign in to finish the check out", "info");
+      navigate("/sign-in");
+      return;
+    }
     updateCheckout("contact", {
       name: values.name,
       phone: values.phone,
