@@ -100,6 +100,7 @@ export default function CheckoutSummary({
       )}
 
       <Button
+        type="submit"
         variant="primary"
         size="lg"
         block

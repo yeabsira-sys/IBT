@@ -14,10 +14,18 @@ import {
 const photo = (id, w = 200) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=70`;
 
-export const checkoutBreadcrumbSteps = ["Review Order", "Delivery & Payment", "Confirmation"];
+export const checkoutBreadcrumbSteps = [
+  "Review Order",
+  "Delivery & Payment",
+  "Confirmation",
+];
 
 export const fulfillmentOptions = [
-  { value: "delivery", label: "Prompt Delivery across Addis", icon: <FaTruckFast /> },
+  {
+    value: "delivery",
+    label: "Prompt Delivery across Addis",
+    icon: <FaTruckFast />,
+  },
   { value: "pickup", label: "Dine-in Pickup (Bole)", icon: <FaStore /> },
 ];
 
@@ -75,7 +83,8 @@ export const payment = {
     icon: <FaQrcode />,
     qrIcon: <FaQrcode size={44} />,
     panelTitle: "Telebirr Quick Merchant Pay",
-    panelText: "Merchant ID: MESOB-7781. Enter your Telebirr-registered phone to authorize instant debit.",
+    panelText:
+      "Merchant ID: MESOB-7781. Enter your Telebirr-registered phone to authorize instant debit.",
   },
   otherMethods: [
     {
@@ -117,7 +126,8 @@ export const summary = {
       name: "Royal Doro Wat",
       price: "710",
       quantity: 1,
-      description: "Free-range chicken, spiced butter (Niter Qibe), boiled organic egg.",
+      description:
+        "Free-range chicken, spiced butter (Niter Qibe), boiled organic egg.",
       image: photo("1580651315530-69c8e0026377"),
       tag: { text: "Spicy Berbere", tone: "brand" },
     },
@@ -125,7 +135,8 @@ export const summary = {
       name: "Siga Derek Tibs",
       price: "620",
       quantity: 1,
-      description: "Crispy pan-fried prime beef, rosemary, fresh green chilies.",
+      description:
+        "Crispy pan-fried prime beef, rosemary, fresh green chilies.",
       image: photo("1604909052743-94e838986d24"),
       tag: { text: "Chef Signature", tone: "gold" },
     },
@@ -133,7 +144,8 @@ export const summary = {
       name: "House Tej Honey Wine",
       price: "350",
       quantity: 1,
-      description: "Artisanal fermented wild highland honey & Gesho herbs (500ml).",
+      description:
+        "Artisanal fermented wild highland honey & Gesho herbs (500ml).",
       image: photo("1514362545857-3bc16c4c7d1b"),
       tag: { text: "Berele Flask", tone: "green" },
     },
@@ -146,7 +158,11 @@ export const summary = {
   costs: [
     { label: "Items Subtotal", value: "ETB 1,680" },
     { label: "Express Delivery (Bole Radius)", value: "ETB 158" },
-    { label: "Complimentary Injera (4 Rolls)", value: "Included", tone: "positive" },
+    {
+      label: "Complimentary Injera (4 Rolls)",
+      value: "Included",
+      tone: "positive",
+    },
     { label: "Clay Stew Thermal Packaging", value: "Free", tone: "positive" },
   ],
   total: "1,838",

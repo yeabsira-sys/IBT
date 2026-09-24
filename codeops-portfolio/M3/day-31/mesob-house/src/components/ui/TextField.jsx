@@ -1,11 +1,5 @@
 import { useId } from "react";
 
-/**
- * TextField — labelled input with an optional leading icon, hint and error.
- *
- * <TextField label="Email address" icon={<FiMail />} type="email"
- *            value={email} onChange={...} hint="We never share it." />
- */
 export default function TextField({
   label,
   optionalText,
@@ -28,11 +22,15 @@ export default function TextField({
       {label && (
         <label className="field__label" htmlFor={inputId}>
           {label}
-          {optionalText && <span className="field__optional">{optionalText}</span>}
+          {optionalText && (
+            <span className="field__optional">{optionalText}</span>
+          )}
         </label>
       )}
 
-      <div className={`field__control${error ? " field__control--invalid" : ""}`}>
+      <div
+        className={`field__control${error ? " field__control--invalid" : ""}`}
+      >
         {icon && (
           <span className="field__icon" aria-hidden="true">
             {icon}
@@ -49,7 +47,10 @@ export default function TextField({
       </div>
 
       {message && (
-        <p id={hintId} className={`field__hint${error ? " field__hint--error" : ""}`}>
+        <p
+          id={hintId}
+          className={`field__hint${error ? " field__hint--error" : ""}`}
+        >
           {!error && hintIcon}
           {message}
         </p>

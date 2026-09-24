@@ -93,21 +93,21 @@ const initialCheckout = {
   fulfillment: "delivery",
 
   contact: {
-    name: "Abebe Bekele",
-    phone: "911 45 7890",
-    email: "abebe.b@example.com",
+    name: "",
+    phone: "",
+    email: "",
   },
 
   delivery: {
-    subCity: "Bole Medhanialem (Near Mesob House)",
-    street: "Behind Edna Mall, House No. 402, 3rd Floor",
-    landmark: "Opposite to Boston Day Spa, entrance through dark green gate",
-    timing: "immediate",
+    subCity: "",
+    street: "",
+    landmark: "",
+    timing: "",
   },
 
   method: "telebirr",
 
-  telebirrPhone: "911 45 7890",
+  telebirrPhone: "",
 };
 
 /* =========================================================

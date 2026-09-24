@@ -14,13 +14,16 @@ function PaymentOptionRow({ method, selected, onSelect }) {
       onClick={onSelect}
     >
       <span className="payment-row__radio" aria-hidden="true" />
+
       <span className="payment-row__logo" style={{ background: method.tint }}>
         {method.mark}
       </span>
+
       <span className="payment-row__body">
         <b>{method.name}</b>
         <small>{method.text}</small>
       </span>
+
       <span className="payment-row__icon" aria-hidden="true">
         {method.icon}
       </span>
@@ -28,14 +31,10 @@ function PaymentOptionRow({ method, selected, onSelect }) {
   );
 }
 
-/**
- * PaymentMethodCard — step 3: Telebirr as the expanded default method, then
- * a stacked list of alternative radio methods.
- */
 export default function PaymentMethodCard({
   telebirr,
-  phone,
-  onPhoneChange,
+  register,
+  errors,
   onVerify,
   otherMethods,
   selectedMethod,
@@ -55,7 +54,9 @@ export default function PaymentMethodCard({
       }
     >
       <div
-        className={`payment-row payment-row--expanded${telebirrSelected ? " payment-row--selected" : ""}`}
+        className={`payment-row payment-row--expanded${
+          telebirrSelected ? " payment-row--selected" : ""
+        }`}
       >
         <button
           type="button"
@@ -65,18 +66,21 @@ export default function PaymentMethodCard({
           onClick={() => onSelectMethod("telebirr")}
         >
           <span className="payment-row__radio" aria-hidden="true" />
+
           <span
             className="payment-row__logo"
             style={{ background: telebirr.tint }}
           >
             {telebirr.mark}
           </span>
+
           <span className="payment-row__body">
             <b>
               {telebirr.name} <Tag tone="gold">{telebirr.badge}</Tag>
             </b>
             <small>{telebirr.text}</small>
           </span>
+
           <span className="payment-row__icon" aria-hidden="true">
             {telebirr.icon}
           </span>
@@ -87,20 +91,35 @@ export default function PaymentMethodCard({
             <div className="telebirr-panel__qr" aria-hidden="true">
               {telebirr.qrIcon}
             </div>
+
             <div className="telebirr-panel__body">
               <h4>{telebirr.panelTitle}</h4>
               <p>{telebirr.panelText}</p>
+
               <div className="telebirr-panel__row">
                 <input
                   type="tel"
                   inputMode="numeric"
-                  value={phone}
-                  onChange={(e) => onPhoneChange(e.target.value)}
+                  placeholder="911 234 567"
+                  autoComplete="tel-national"
+                  {...register("telebirrPhone")}
                 />
-                <Button size="sm" variant="dark" onClick={onVerify}>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="dark"
+                  onClick={onVerify}
+                >
                   Verify
                 </Button>
               </div>
+
+              {errors.telebirrPhone?.message && (
+                <p className="field__error" role="alert">
+                  {errors.telebirrPhone.message}
+                </p>
+              )}
             </div>
           </div>
         )}
