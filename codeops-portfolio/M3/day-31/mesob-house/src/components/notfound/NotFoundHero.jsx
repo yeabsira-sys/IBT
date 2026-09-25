@@ -5,10 +5,6 @@ import Button from "../ui/Button";
 import { Tag } from "../ui/Primitives";
 import MesobIllustration from "./MesobIllustration";
 
-/**
- * NotFoundHero — the top of the 404 page: illustration, big numeral, a short
- * apology line, a reassurance callout, and three way-out actions.
- */
 export default function NotFoundHero({ eyebrow, lede, message, actions }) {
   return (
     <section className="notfound-hero">
@@ -31,13 +27,28 @@ export default function NotFoundHero({ eyebrow, lede, message, actions }) {
       {message && <p className="notfound-hero__message">{message}</p>}
 
       <div className="notfound-hero__actions">
-        <Button as={Link} to={actions.primary.to} variant="primary" leftIcon={<FaUtensils />}>
+        <Button
+          as={Link}
+          to={actions.primary.to}
+          variant="primary"
+          leftIcon={<FaUtensils />}
+        >
           {actions.primary.label}
         </Button>
-        <Button as={Link} to={actions.secondary.to} variant="soft" leftIcon={<FiBookOpen />}>
+        <Button
+          as={Link}
+          to={actions.secondary.to}
+          variant="soft"
+          leftIcon={<FiBookOpen />}
+        >
           {actions.secondary.label}
         </Button>
-        <Button as={Link} to={actions.tertiary.to} variant="soft" leftIcon={<FaBagShopping />}>
+        <Button
+          as={Link}
+          to={actions.tertiary.to}
+          variant="soft"
+          leftIcon={<FaBagShopping />}
+        >
           {actions.tertiary.label}
         </Button>
       </div>

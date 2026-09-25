@@ -1,9 +1,5 @@
 import { FiArrowRight } from "react-icons/fi";
 
-/**
- * SocialButton — third-party sign-up/sign-in option (Telebirr, Google, …).
- * Pass `sub` for a second line ("Continue with Google").
- */
 export default function SocialButton({ logo, label, sub, onClick, ...rest }) {
   return (
     <button type="button" className="social-btn" onClick={onClick} {...rest}>

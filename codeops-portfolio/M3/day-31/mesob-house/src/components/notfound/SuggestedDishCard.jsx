@@ -2,13 +2,17 @@ import { Link } from "react-router-dom";
 import Button from "../ui/Button";
 import { PriceTag, Tag } from "../ui/Primitives";
 
-/**
- * SuggestedDishCard — a compact dish card for the 404 page's "you might like
- * this instead" grid: name + price share a row, a short note sits above the
- * order button.
- */
 export default function SuggestedDishCard({ dish, onOrder }) {
-  const { id, name, price, currency = "ETB", description, image, label, note } = dish;
+  const {
+    id,
+    name,
+    price,
+    currency = "ETB",
+    description,
+    image,
+    label,
+    note,
+  } = dish;
 
   return (
     <article className="suggested-card">

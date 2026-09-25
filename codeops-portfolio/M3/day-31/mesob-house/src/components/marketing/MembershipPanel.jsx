@@ -4,7 +4,6 @@ import TestimonialCard from "./TestimonialCard";
 
 /**
  * MembershipPanel — the value-proposition column beside the sign-up form.
- * Feed it `benefits` (first one renders featured) and an optional testimonial.
  */
 export default function MembershipPanel({
   badge,
@@ -15,7 +14,11 @@ export default function MembershipPanel({
 }) {
   return (
     <Card variant="panel" className="membership">
-      {badge && <div><Badge>{badge}</Badge></div>}
+      {badge && (
+        <div>
+          <Badge>{badge}</Badge>
+        </div>
+      )}
 
       <div>
         <h1 className="membership__title">{title}</h1>
@@ -26,7 +29,11 @@ export default function MembershipPanel({
 
       <ul className="benefits">
         {benefits.map((benefit, index) => (
-          <BenefitItem key={benefit.title} featured={index === 0} {...benefit} />
+          <BenefitItem
+            key={benefit.title}
+            featured={index === 0}
+            {...benefit}
+          />
         ))}
       </ul>
 

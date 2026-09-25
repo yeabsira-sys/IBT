@@ -42,13 +42,6 @@ export function UserChip({
   );
 }
 
-/**
- * Navbar — brand, primary navigation, cart and account actions.
- * The cart pill and account action (user chip, or sign in/register) always
- * stay visible in the bar itself, at every screen size. Only the text nav
- * links collapse behind a hamburger button below the `--nav-collapse`
- * breakpoint (see components.css), since those are what stop fitting first.
- */
 export default function Navbar({
   brand = "Mesob House",
   links = [],

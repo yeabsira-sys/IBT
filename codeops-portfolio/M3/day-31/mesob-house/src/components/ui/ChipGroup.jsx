@@ -1,10 +1,3 @@
-/**
- * ChipGroup — single- or multi-select pill group.
- *
- * <ChipGroup options={[{value:'all', label:'All Heritage Delicacies'}]}
- *            value={pref} onChange={setPref} />
- * Pass `multiple` for a multi-select (value becomes an array).
- */
 export function Chip({ selected = false, children, ...rest }) {
   return (
     <button type="button" className="chip" aria-pressed={selected} {...rest}>
@@ -33,7 +26,7 @@ export default function ChipGroup({
     onChange(
       current.includes(option.value)
         ? current.filter((v) => v !== option.value)
-        : [...current, option.value]
+        : [...current, option.value],
     );
   };
 

@@ -16,7 +16,6 @@ function FeatureImage({ image, alt, title, note, icon }) {
   );
 }
 
-/** MemberQuote — a short testimonial with a decorative mark, no photo. */
 function MemberQuote({ mark, quote, source }) {
   return (
     <div className="member-quote">

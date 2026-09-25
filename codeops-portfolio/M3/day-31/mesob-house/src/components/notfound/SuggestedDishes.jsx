@@ -2,11 +2,14 @@ import { Link } from "react-router-dom";
 import { FiArrowRight } from "react-icons/fi";
 import SuggestedDishCard from "./SuggestedDishCard";
 
-/**
- * SuggestedDishes — "House Favorites" recovery section: a heading with a
- * catalog link, and a row of dish cards to redirect the visitor's appetite.
- */
-export default function SuggestedDishes({ eyebrow, title, viewAllHref, viewAllLabel, dishes = [], onOrder }) {
+export default function SuggestedDishes({
+  eyebrow,
+  title,
+  viewAllHref,
+  viewAllLabel,
+  dishes = [],
+  onOrder,
+}) {
   return (
     <section className="section suggested">
       <div className="suggested__head">

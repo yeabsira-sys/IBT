@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 
 /**
  * Breadcrumbs — items: [{ label, to }]. The last item renders as current.
- * Pass `trailing` for a right-aligned note (e.g. a status badge).
  */
 export default function Breadcrumbs({ items = [], trailing }) {
   return (
@@ -16,7 +15,10 @@ export default function Breadcrumbs({ items = [], trailing }) {
                 /
               </span>
               {isLast || !item.to ? (
-                <span className="breadcrumbs__item--current" aria-current="page">
+                <span
+                  className="breadcrumbs__item--current"
+                  aria-current="page"
+                >
                   {item.label}
                 </span>
               ) : (

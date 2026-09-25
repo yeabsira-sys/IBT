@@ -3,7 +3,6 @@ import { FiArrowRight } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import Button from "../ui/Button";
 
-/** LedgerRow — a single label/value row, optionally struck-through or accented. */
 function LedgerRow({ label, value, tone, hint }) {
   return (
     <div className={`ledger-row${tone ? ` ledger-row--${tone}` : ""}`}>
@@ -16,9 +15,6 @@ function LedgerRow({ label, value, tone, hint }) {
   );
 }
 
-/**
- * OrderLedger — the basket page's right-hand summary card.
- */
 export default function OrderLedger({
   title,
   rows = [],
@@ -58,7 +54,11 @@ export default function OrderLedger({
           onChange={(e) => setCouponInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onApplyCoupon?.(couponInput)}
         />
-        <Button size="sm" variant="soft" onClick={() => onApplyCoupon?.(couponInput)}>
+        <Button
+          size="sm"
+          variant="soft"
+          onClick={() => onApplyCoupon?.(couponInput)}
+        >
           Apply
         </Button>
       </div>
@@ -80,7 +80,14 @@ export default function OrderLedger({
         </span>
       </div>
 
-      <Button as={Link} to={ctaTo} variant="primary" size="lg" block rightIcon={<FiArrowRight />}>
+      <Button
+        as={Link}
+        to={ctaTo}
+        variant="primary"
+        size="lg"
+        block
+        rightIcon={<FiArrowRight />}
+      >
         {ctaLabel}
       </Button>
 

@@ -1,10 +1,6 @@
 import { useId } from "react";
 import FlagET from "./FlagET";
 
-/**
- * PhoneField — dial-code prefix + national number.
- * Defaults to Ethiopia (+251); pass `dialCode` / `flag` for other markets.
- */
 export default function PhoneField({
   label,
   optionalText,
@@ -26,7 +22,9 @@ export default function PhoneField({
       {label && (
         <label className="field__label" htmlFor={inputId}>
           {label}
-          {optionalText && <span className="field__optional">{optionalText}</span>}
+          {optionalText && (
+            <span className="field__optional">{optionalText}</span>
+          )}
         </label>
       )}
 
@@ -35,7 +33,9 @@ export default function PhoneField({
           {flag}
           {dialCode}
         </span>
-        <div className={`field__control${error ? " field__control--invalid" : ""}`}>
+        <div
+          className={`field__control${error ? " field__control--invalid" : ""}`}
+        >
           <input
             id={inputId}
             className="field__input"
@@ -49,7 +49,10 @@ export default function PhoneField({
       </div>
 
       {message && (
-        <p id={hintId} className={`field__hint${error ? " field__hint--error" : ""}`}>
+        <p
+          id={hintId}
+          className={`field__hint${error ? " field__hint--error" : ""}`}
+        >
           {!error && hintIcon}
           {message}
         </p>

@@ -1,7 +1,7 @@
 import Button from "../ui/Button";
 import { PriceTag, Tag } from "../ui/Primitives";
 
-/** PairingCard — a suggested drink or side to order alongside the main dish. */
+// PairingCard
 export default function PairingCard({ item, onAdd }) {
   const { name, price, currency = "ETB", description, image, label } = item;
   return (
