@@ -217,14 +217,15 @@ export default function BasketPage() {
                   {itemCount === 1 ? "" : "s"})
                 </span>
               </h2>
-
-              <button
-                type="button"
-                className="link-quiet"
-                onClick={handleClearTable}
-              >
-                <FiX aria-hidden="true" /> Clear Table
-              </button>
+              {cartItems.length > 0 && (
+                <button
+                  type="button"
+                  className="link-quiet"
+                  onClick={handleClearTable}
+                >
+                  <FiX aria-hidden="true" /> Clear Table
+                </button>
+              )}
             </div>
 
             <div className="basket-lines">
