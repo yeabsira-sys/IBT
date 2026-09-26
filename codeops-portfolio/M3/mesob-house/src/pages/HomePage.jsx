@@ -24,12 +24,13 @@ import { useStore } from "../context/StoreContext";
 import { useToast } from "../context/ToastContext";
 import useNavbarState from "../hooks/useNavbarState";
 
-/**
- * HomePage — the storefront. Every section takes its content as props, so this
- * file is only wiring: swap the data imports for API calls when you hook it up.
- */
 export default function HomePage() {
-  const { specials: liveSpecials, specialsLoading, specialsError, refetch } = useDishes();
+  const {
+    specials: liveSpecials,
+    specialsLoading,
+    specialsError,
+    refetch,
+  } = useDishes();
   const { addToCart } = useStore();
   const toast = useToast();
   const { cart: navCart, user: navUser } = useNavbarState();
@@ -39,11 +40,10 @@ export default function HomePage() {
     toast(`Added ${item.name} to your basket`);
   };
 
-  // Live data from GET /menu/specials once it arrives; the curated demo
-  // dishes from data/home.jsx cover the loading state and any fetch error
-  // so the section is never empty.
   const specialsDishes =
-    liveSpecials.length > 0 ? liveSpecials.map(mapApiDishToCard) : specials.dishes;
+    liveSpecials.length > 0
+      ? liveSpecials.map(mapApiDishToCard)
+      : specials.dishes;
 
   return (
     <>
@@ -64,7 +64,11 @@ export default function HomePage() {
           <AsyncNotice variant="loading" message="Loading today's specials…" />
         )}
 
-        <SpecialsSection {...specials} dishes={specialsDishes} onAdd={handleAdd} />
+        <SpecialsSection
+          {...specials}
+          dishes={specialsDishes}
+          onAdd={handleAdd}
+        />
       </main>
 
       <GurshaSection {...gursha} onAdd={handleAdd} />
@@ -75,10 +79,7 @@ export default function HomePage() {
 
       <CtaBanner {...closingCta} />
 
-      <Footer
-        {...footer}
-        columns={[footer.columns[0], dietaryColumn]}
-      />
+      <Footer {...footer} columns={[footer.columns[0], dietaryColumn]} />
     </>
   );
 }

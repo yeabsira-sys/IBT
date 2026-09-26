@@ -1,0 +1,13 @@
+.menu-container {
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.order-total {
+  margin: 20px 0;
+  padding: 15px;
+  border-radius: 10px;
+  background: #fff8ed;
+  font-size: 20px;
+}

@@ -15,10 +15,7 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   white-space: nowrap;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .btn[disabled] {
@@ -121,9 +118,7 @@
   color: var(--c-ink);
   font-size: 14px;
   font-weight: 600;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 .social-btn:hover {
   border-color: var(--c-brand);
@@ -134,25 +129,10 @@
   font-size: 17px;
   flex-shrink: 0;
 }
-.social-btn__text {
-  display: grid;
-  text-align: left;
-  gap: 1px;
-}
-.social-btn__text b {
-  font-size: 13px;
-  font-weight: 700;
-}
-.social-btn__text small {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--c-ink-muted);
-}
-.social-btn__arrow {
-  margin-left: auto;
-  flex-shrink: 0;
-  color: var(--c-ink-muted);
-}
+.social-btn__text { display: grid; text-align: left; gap: 1px; }
+.social-btn__text b { font-size: 13px; font-weight: 700; }
+.social-btn__text small { font-size: 10.5px; font-weight: 500; color: var(--c-ink-muted); }
+.social-btn__arrow { margin-left: auto; flex-shrink: 0; color: var(--c-ink-muted); }
 
 /* ---------- Field ----------------------------------------- */
 .field {
@@ -184,9 +164,7 @@
   background: var(--c-field);
   border: 1px solid var(--c-line);
   border-radius: var(--r-sm);
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .field__control:focus-within {
@@ -319,9 +297,7 @@
   color: var(--c-brand);
   font-size: 13px;
   font-weight: 600;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 .chip:hover {
   background: var(--c-brand-tint-strong);
@@ -493,10 +469,7 @@
   cursor: pointer;
   flex-shrink: 0;
 }
-.navbar__toggle:hover {
-  border-color: var(--c-brand);
-  color: var(--c-brand);
-}
+.navbar__toggle:hover { border-color: var(--c-brand); color: var(--c-brand); }
 
 .navbar__backdrop {
   position: fixed;
@@ -539,19 +512,10 @@
 }
 
 @media (max-width: 900px) {
-  .navbar {
-    position: relative;
-  }
-  .navbar__inner {
-    flex-wrap: wrap;
-    row-gap: var(--space-3);
-  }
-  .navbar__links {
-    display: none;
-  }
-  .navbar__toggle {
-    display: inline-flex;
-  }
+  .navbar { position: relative; }
+  .navbar__inner { flex-wrap: wrap; row-gap: var(--space-3); }
+  .navbar__links { display: none; }
+  .navbar__toggle { display: inline-flex; }
 }
 @media (min-width: 901px) {
   .navbar__backdrop,
@@ -560,16 +524,9 @@
   }
 }
 @media (max-width: 420px) {
-  .navbar__actions {
-    gap: var(--space-2);
-  }
-  .cart-pill {
-    padding: 6px 10px 6px 7px;
-    gap: 7px;
-  }
-  .user-chip__greeting {
-    display: none;
-  }
+  .navbar__actions { gap: var(--space-2); }
+  .cart-pill { padding: 6px 10px 6px 7px; gap: 7px; }
+  .user-chip__greeting { display: none; }
 }
 
 .cart-pill {
@@ -910,21 +867,15 @@
   color: var(--c-ink-soft);
   margin: 0 0 var(--space-4);
 }
-.async-notice--error {
-  color: var(--c-brand);
-}
+.async-notice--error { color: var(--c-brand); }
 .async-notice__spin {
   animation: async-notice-spin 1s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .async-notice__spin {
-    animation: none;
-  }
+  .async-notice__spin { animation: none; }
 }
 @keyframes async-notice-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 .async-notice__retry {
   border: none;
@@ -965,27 +916,13 @@
   cursor: pointer;
   animation: toast-in 0.18s ease-out;
 }
-.toast--success {
-  background: var(--c-green);
-}
-.toast--error {
-  background: var(--c-brand-strong);
-}
-.toast--info {
-  background: var(--c-ink);
-}
+.toast--success { background: var(--c-green); }
+.toast--error { background: var(--c-brand-strong); }
+.toast--info { background: var(--c-ink); }
 @keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .toast {
-    animation: none;
-  }
+  .toast { animation: none; }
 }

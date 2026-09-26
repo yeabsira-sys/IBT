@@ -1,0 +1,11 @@
+.dish-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.empty-state {
+  padding: 30px;
+  text-align: center;
+  font-size: 18px;
+}

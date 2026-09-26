@@ -4,15 +4,6 @@ import { API_ENDPOINTS } from "../lib/api";
 
 const DishesContext = createContext(null);
 
-/**
- * DishesProvider — fetches the full menu (`/menu`) and today's specials
- * (`/menu/specials`) once and shares both, plus loading/error state and a
- * `getDishBySlug` lookup, with every page beneath it via `useDishes()`.
- *
- * Wrap it once near the top of the app (see App.jsx) rather than per-page —
- * that way navigating between the menu, home, and a dish detail page reuses
- * the same request instead of re-fetching.
- */
 export function DishesProvider({ children }) {
   const menu = useFetch(API_ENDPOINTS.menu);
   const specials = useFetch(API_ENDPOINTS.specials);
@@ -51,10 +42,20 @@ export function DishesProvider({ children }) {
       },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dishes, specialDishes, menu.loading, menu.error, specials.loading, specials.error, bySlug]
+    [
+      dishes,
+      specialDishes,
+      menu.loading,
+      menu.error,
+      specials.loading,
+      specials.error,
+      bySlug,
+    ],
   );
 
-  return <DishesContext.Provider value={value}>{children}</DishesContext.Provider>;
+  return (
+    <DishesContext.Provider value={value}>{children}</DishesContext.Provider>
+  );
 }
 
 /** useDishes — read the shared menu/specials data. Must be used under DishesProvider. */

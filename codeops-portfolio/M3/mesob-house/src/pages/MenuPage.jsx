@@ -5,10 +5,19 @@ import { Chip } from "../components/ui/ChipGroup";
 import AsyncNotice from "../components/ui/AsyncNotice";
 import MenuHero from "../components/menu/MenuHero";
 import MenuDishCard from "../components/menu/MenuDishCard";
-import { CommunalBanner, StickyCartBar } from "../components/menu/CommunalBanner";
+import {
+  CommunalBanner,
+  StickyCartBar,
+} from "../components/menu/CommunalBanner";
 
 import { footer, navLinks } from "../data/content";
-import { categories as demoCategories, communal, dishes as demoDishes, menuHero, stickyNote } from "../data/menu";
+import {
+  categories as demoCategories,
+  communal,
+  dishes as demoDishes,
+  menuHero,
+  stickyNote,
+} from "../data/menu";
 import { useDishes } from "../context/DishesContext";
 import { mapApiDishToCard } from "../lib/dishAdapters";
 import { useStore } from "../context/StoreContext";
@@ -32,7 +41,8 @@ export default function MenuPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState({});
 
-  const dishes = liveDishes.length > 0 ? liveDishes.map(mapApiDishToCard) : demoDishes;
+  const dishes =
+    liveDishes.length > 0 ? liveDishes.map(mapApiDishToCard) : demoDishes;
 
   // Live categories come straight from the API's `category` field (already
   // human-readable, e.g. "Tibs & Grills"), so they're used as-is. The static
@@ -45,7 +55,11 @@ export default function MenuPage() {
     }
     return [
       { value: "all", label: "All Dishes", count: dishes.length },
-      ...Array.from(counts, ([value, count]) => ({ value, label: value, count })),
+      ...Array.from(counts, ([value, count]) => ({
+        value,
+        label: value,
+        count,
+      })),
     ];
   }, [dishes, liveDishes.length]);
 
@@ -65,7 +79,10 @@ export default function MenuPage() {
   };
 
   const selectedList = Object.values(selected);
-  const selectedTotal = selectedList.reduce((sum, dish) => sum + Number(dish.price), 0);
+  const selectedTotal = selectedList.reduce(
+    (sum, dish) => sum + Number(dish.price),
+    0,
+  );
 
   return (
     <>
@@ -87,12 +104,15 @@ export default function MenuPage() {
 
         <div className="menu-tabs" role="group" aria-label="Filter by category">
           {categories.map((cat) => (
-            <Chip key={cat.value} selected={category === cat.value} onClick={() => setCategory(cat.value)}>
+            <Chip
+              key={cat.value}
+              selected={category === cat.value}
+              onClick={() => setCategory(cat.value)}
+            >
               {cat.label} <span>({cat.count})</span>
             </Chip>
           ))}
         </div>
-
         <div className="menu-grid">
           {visible.map((dish) => (
             <MenuDishCard key={dish.id} dish={dish} onAdd={handleAdd} />
