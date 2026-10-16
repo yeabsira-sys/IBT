@@ -1,0 +1,127 @@
+.
+├── eslint.config.js
+├── file-structutre.txt
+├── index.html
+├── package.json
+├── package-lock.json
+├── public
+│   ├── favicon.png
+│   └── icons.svg
+├── README.md
+├── src
+│   ├── App.jsx
+│   ├── components
+│   │   ├── account
+│   │   │   └── RegisterForm.jsx
+│   │   ├── auth
+│   │   │   ├── AuthPanel.jsx
+│   │   │   ├── SignInForm.jsx
+│   │   │   └── TrustStrip.jsx
+│   │   ├── basket
+│   │   │   ├── BasketLineItem.jsx
+│   │   │   ├── EtiquettePanel.jsx
+│   │   │   ├── OrderLedger.jsx
+│   │   │   └── ProgressSteps.jsx
+│   │   ├── checkout
+│   │   │   ├── CheckoutSection.jsx
+│   │   │   ├── CheckoutSummary.jsx
+│   │   │   ├── ContactDetailsCard.jsx
+│   │   │   ├── DeliveryLocationCard.jsx
+│   │   │   ├── FulfillmentToggle.jsx
+│   │   │   ├── OrderSteps.jsx
+│   │   │   ├── PaymentMethodCard.jsx
+│   │   │   └── PromiseBanner.jsx
+│   │   ├── dish
+│   │   │   ├── Gallery.jsx
+│   │   │   ├── HeritageNote.jsx
+│   │   │   ├── InfoStrip.jsx
+│   │   │   ├── OptionGroup.jsx
+│   │   │   ├── OrderPanel.jsx
+│   │   │   └── PairingCard.jsx
+│   │   ├── error
+│   │   │   └── ErrorBoundary.jsx
+│   │   ├── layout
+│   │   │   ├── AnnouncementBar.jsx
+│   │   │   ├── Breadcrumbs.jsx
+│   │   │   ├── Footer.jsx
+│   │   │   └── Navbar.jsx
+│   │   ├── marketing
+│   │   │   ├── BenefitItem.jsx
+│   │   │   ├── CtaBanner.jsx
+│   │   │   ├── GurshaSection.jsx
+│   │   │   ├── Hero.jsx
+│   │   │   ├── MembershipPanel.jsx
+│   │   │   ├── ReflectionsSection.jsx
+│   │   │   └── TestimonialCard.jsx
+│   │   ├── menu
+│   │   │   ├── CommunalBanner.jsx
+│   │   │   ├── MenuDishCard.jsx
+│   │   │   ├── MenuHero.jsx
+│   │   │   └── SpecialsSection.jsx
+│   │   ├── notfound
+│   │   │   ├── ConciergeBanner.jsx
+│   │   │   ├── MesobIllustration.jsx
+│   │   │   ├── NotFoundHero.jsx
+│   │   │   ├── SuggestedDishCard.jsx
+│   │   │   └── SuggestedDishes.jsx
+│   │   └── ui
+│   │       ├── AsyncNotice.jsx
+│   │       ├── Button.jsx
+│   │       ├── Checkbox.jsx
+│   │       ├── ChipGroup.jsx
+│   │       ├── FlagET.jsx
+│   │       ├── OptionCard.jsx
+│   │       ├── PageLoader.jsx
+│   │       ├── PasswordField.jsx
+│   │       ├── PhoneField.jsx
+│   │       ├── Primitives.jsx
+│   │       ├── QuantityStepper.jsx
+│   │       ├── SocialButton.jsx
+│   │       ├── Surface.jsx
+│   │       └── TextField.jsx
+│   ├── context
+│   │   ├── DishesContext.jsx
+│   │   ├── StoreContext.jsx
+│   │   └── ToastContext.jsx
+│   ├── data
+│   │   ├── auth.jsx
+│   │   ├── basket.jsx
+│   │   ├── checkout.jsx
+│   │   ├── content.jsx
+│   │   ├── dish.jsx
+│   │   ├── home.jsx
+│   │   ├── menu.jsx
+│   │   └── notfound.jsx
+│   ├── hooks
+│   │   ├── useFetch.js
+│   │   └── useNavbarState.js
+│   ├── lib
+│   │   ├── api.js
+│   │   └── dishAdapters.js
+│   ├── main.jsx
+│   ├── pages
+│   │   ├── AccountPage.jsx
+│   │   ├── BasketPage.jsx
+│   │   ├── CheckoutPage.jsx
+│   │   ├── CreateAccountPage.jsx
+│   │   ├── DishDetailPage.jsx
+│   │   ├── HomePage.jsx
+│   │   ├── MenuPage.jsx
+│   │   ├── NotFoundPage.jsx
+│   │   └── SignInPage.jsx
+│   ├── stores
+│   │   └── useStores.js
+│   └── styles
+│       ├── account.css
+│       ├── auth.css
+│       ├── basket.css
+│       ├── checkout.css
+│       ├── components.css
+│       ├── dish.css
+│       ├── home.css
+│       ├── menu.css
+│       ├── notfound.css
+│       └── theme.css
+└── vite.config.js
+
+22 directories, 103 files

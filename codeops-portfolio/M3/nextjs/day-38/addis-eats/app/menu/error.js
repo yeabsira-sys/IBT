@@ -1,9 +1,10 @@
 "use client";
 
 export default function Error({ error, reset }) {
+  console.log("error", " ERROR");
   return (
     <main className="mx-auto max-w-2xl px-4 py-16 text-center">
-      <h2 className="text-2xl font-bold">Something went wrong!</h2>
+      <h2 className="text-2xl font-bold">Something went wrong! </h2>
 
       <button
         onClick={() => reset()}
