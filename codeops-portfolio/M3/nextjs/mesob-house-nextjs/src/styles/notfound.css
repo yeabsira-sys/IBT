@@ -1,0 +1,232 @@
+/* ============================================================
+   Mesob House — 404 page styles
+   Sections: Hero (illustration, numeral, actions) · Suggested
+             dishes grid · Concierge banner
+   ============================================================ */
+
+.notfound-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-7) 0 var(--space-6);
+  overflow: hidden;
+}
+
+/* A single soft glow behind the plate only — kept out of the text/button
+   area so it never muddies legibility. */
+.notfound-hero__glow {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, var(--c-gold-soft) 0%, transparent 70%);
+  opacity: 0.6;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.notfound-hero__plate {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-5);
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+.notfound-hero__plate figcaption { margin: 0; }
+
+.notfound-hero__code {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--c-gold);
+  margin: 0;
+}
+.notfound-hero__eyebrow {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-brand);
+}
+
+.notfound-hero__lede {
+  position: relative;
+  z-index: 1;
+  max-width: 46ch;
+  margin: var(--space-4) 0 0;
+  font-size: 14.5px;
+  color: var(--c-ink);
+}
+
+.notfound-hero__message {
+  position: relative;
+  z-index: 1;
+  max-width: 52ch;
+  margin: var(--space-4) 0 0;
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: var(--space-4);
+  font-size: 12.5px;
+  color: var(--c-ink-soft);
+}
+.notfound-hero__message b,
+.notfound-hero__message strong { color: var(--c-brand); }
+
+.notfound-hero__actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+/* ---------- Suggested dishes --------------------------------- */
+.suggested__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+.suggested__title {
+  font-family: var(--font-display);
+  color: var(--c-ink);
+  font-size: 24px;
+  margin: 4px 0 0;
+}
+.suggested__view-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--c-brand);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.suggested__view-all:hover { text-decoration: underline; }
+
+.suggested__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+}
+
+.suggested-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.suggested-card__media { position: relative; display: block; }
+.suggested-card__media img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--c-line-strong);
+  font-size: 0;
+}
+.suggested-card__media .tag { position: absolute; top: 10px; left: 10px; }
+.suggested-card__body { padding: var(--space-4); flex: 1; }
+.suggested-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: 6px;
+}
+.suggested-card__head h3 { margin: 0; font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+.suggested-card__head h3 a { color: var(--c-ink); text-decoration: none; }
+.suggested-card__head h3 a:hover { color: var(--c-brand); }
+.suggested-card__body p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--c-ink-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.suggested-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-4);
+  font-size: 11.5px;
+  color: var(--c-ink-muted);
+}
+
+/* ---------- Concierge banner ------------------------------------ */
+.concierge-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  padding: var(--space-4) var(--space-5);
+  margin: var(--space-6) 0 var(--space-7);
+}
+.concierge-banner__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-sm);
+  background: var(--c-brand-tint);
+  color: var(--c-brand);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.concierge-banner__body { flex: 1; }
+.concierge-banner__body h3 { margin: 0 0 3px; font-size: 13.5px; font-weight: 700; color: var(--c-ink); }
+.concierge-banner__body p { margin: 0; font-size: 12px; color: var(--c-ink-soft); }
+.concierge-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+.concierge-banner__actions .btn--light { color: var(--c-brand); font-weight: 700; }
+
+/* ---------- Responsive ------------------------------------------ */
+@media (max-width: 900px) {
+  .suggested__grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  .notfound-hero__code { font-size: 48px; }
+  .notfound-hero__actions { flex-direction: column; width: 100%; }
+  .notfound-hero__actions .btn { width: 100%; }
+  .suggested__grid { grid-template-columns: 1fr; }
+  .concierge-banner { flex-direction: column; align-items: flex-start; }
+  .concierge-banner__actions { width: 100%; }
+  .concierge-banner__actions .btn,
+  .concierge-banner__actions a { flex: 1; text-align: center; justify-content: center; }
+}

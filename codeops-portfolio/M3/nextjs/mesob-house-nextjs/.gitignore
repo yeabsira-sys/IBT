@@ -1,0 +1,9 @@
+.next
+node_modules
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+
+# Local file-backed database (users, sessions, orders). Never commit it.
+.data/

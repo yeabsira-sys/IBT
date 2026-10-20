@@ -1,0 +1,121 @@
+/* ============================================================
+   Mesob House — Next.js additions: skip link, loaders, skeletons,
+   error fallback, legal pages
+   ============================================================ */
+
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 300;
+  background: var(--c-brand);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: var(--r-sm);
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: 12px; }
+
+.page-loader {
+  display: grid;
+  place-items: center;
+  min-height: 55vh;
+}
+.page-loader__spinner {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 3px solid var(--c-line-strong);
+  border-top-color: var(--c-brand);
+  animation: page-loader-spin 0.8s linear infinite;
+}
+@keyframes page-loader-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .page-loader__spinner { animation-duration: 2.4s; }
+}
+
+/* Skeleton placeholders streamed in by loading.jsx / Suspense */
+.skeleton {
+  background: linear-gradient(90deg, var(--c-panel) 0%, var(--c-panel-2) 50%, var(--c-panel) 100%);
+  background-size: 200% 100%;
+  border-radius: var(--r-md);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+.skeleton--card { height: 330px; }
+.skeleton--line { height: 14px; margin-bottom: 10px; }
+.skeleton--title { height: 30px; width: 55%; margin-bottom: 14px; }
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+.skeleton-grid--3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 900px) { .skeleton-grid, .skeleton-grid--3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .skeleton-grid, .skeleton-grid--3 { grid-template-columns: 1fr; } }
+
+.error-fallback {
+  max-width: 520px;
+  margin: var(--space-7) auto;
+  padding: var(--space-6);
+  text-align: center;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+}
+.error-fallback--compact { margin: var(--space-4) 0; box-shadow: none; }
+.error-fallback__title { font-family: var(--font-display); font-size: 24px; color: var(--c-ink); margin: 0 0 10px; }
+.error-fallback--compact .error-fallback__title { font-size: 18px; }
+.error-fallback__text { margin: 0 0 var(--space-5); color: var(--c-ink-soft); font-size: 14px; }
+.error-fallback__actions { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
+
+.legal { max-width: 720px; padding-block: var(--space-6) var(--space-7); }
+.legal h1 { font-family: var(--font-display); font-size: 32px; color: var(--c-ink); margin: 0 0 var(--space-4); }
+.legal h2 { font-size: 16px; margin: var(--space-5) 0 6px; color: var(--c-ink); }
+.legal p { color: var(--c-ink-soft); font-size: 14px; margin: 0 0 var(--space-3); }
+.legal__note {
+  background: var(--c-gold-soft);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: #6b4c1f;
+}
+
+/* ---------- Clickable dish tiles --------------------------- */
+/* The dish-name link carries a stretched pseudo-element so the whole tile
+   navigates to /dish/[slug]; Add buttons and cart steppers sit above it. */
+.dish,
+.menu-card,
+.suggested-card,
+.pairing-card,
+.beverage,
+.basket-line,
+.summary-line {
+  position: relative;
+}
+.dish-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.dish .btn,
+.menu-card .btn,
+.suggested-card .btn,
+.pairing-card .btn,
+.beverage .btn,
+.basket-line__aside {
+  position: relative;
+  z-index: 2;
+}
+.dish__media,
+.pairing-card__media,
+.basket-line__media {
+  display: block;
+}
