@@ -5,7 +5,10 @@ import Link from "next/link";
 import useSWR from "swr";
 import { FiArrowRight, FiClock, FiRefreshCw } from "react-icons/fi";
 import Button from "../ui/Button";
+import OrderFilters from "./OrderFilters";
+import OrderPagination from "./OrderPagination";
 import OrderStatusBadge from "./OrderStatusBadge";
+import useOrderBrowser from "@/hooks/useOrderBrowser";
 import { fetcher } from "@/lib/fetcher";
 import { formatETB, formatOrderDate, isCancellable, isTerminal } from "@/lib/orderStatus";
 import { useToast } from "@/store/toastStore";
@@ -25,6 +28,7 @@ export default function OrdersLive({ initialOrders }) {
   });
 
   const orders = data?.data ?? initialOrders;
+  const browser = useOrderBrowser(orders);
 
   const cancel = async (id) => {
     setCancelling(id);
@@ -65,51 +69,76 @@ export default function OrdersLive({ initialOrders }) {
 
       {error && <p className="form-error">We could not refresh your orders. Showing the last known status.</p>}
 
-      <div className="order-list" aria-live="polite">
-        {orders.map((order) => (
-          <article className="order-card" key={order.id}>
-            <header className="order-card__head">
-              <div>
-                <p className="order-card__id">{order.id}</p>
-                <p className="order-card__date">
-                  {formatOrderDate(order.createdAt)} · {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
-                </p>
-              </div>
-              <OrderStatusBadge status={order.status} />
-            </header>
+      <OrderFilters
+        query={browser.query}
+        onQueryChange={browser.setQuery}
+        status={browser.status}
+        onStatusChange={browser.setStatus}
+        filteredCount={browser.filteredCount}
+        totalCount={orders.length}
+      />
 
-            <ul className="order-card__items">
-              {order.items.map((item) => (
-                <li key={item.id}>
-                  <span>
-                    {item.quantity} × {item.name}
-                  </span>
-                  <span>ETB {formatETB(Number(item.price) * item.quantity)}</span>
-                </li>
-              ))}
-            </ul>
+      {browser.filteredCount === 0 ? (
+        <div className="order-no-results">
+          <h2>No matching orders</h2>
+          <p>Try another search term or status filter.</p>
+          <Button type="button" variant="outline" size="sm" onClick={browser.reset}>
+            Clear filters
+          </Button>
+        </div>
+      ) : (
+        <div className="order-list" aria-live="polite">
+          {browser.pageOrders.map((order) => (
+            <article className="order-card" key={order.id}>
+              <header className="order-card__head">
+                <div>
+                  <p className="order-card__id">{order.id}</p>
+                  <p className="order-card__date">
+                    {formatOrderDate(order.createdAt)} · {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
+                  </p>
+                </div>
+                <OrderStatusBadge status={order.status} />
+              </header>
 
-            <footer className="order-card__foot">
-              <strong>ETB {formatETB(order.totals?.total)}</strong>
-              <div className="order-card__actions">
-                {isCancellable(order.status) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => cancel(order.id)}
-                    disabled={cancelling === order.id}
-                  >
-                    {cancelling === order.id ? "Cancelling…" : "Cancel order"}
+              <ul className="order-card__items">
+                {order.items.map((item) => (
+                  <li key={item.id}>
+                    <span>
+                      {item.quantity} × {item.name}
+                    </span>
+                    <span>ETB {formatETB(Number(item.price) * item.quantity)}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <footer className="order-card__foot">
+                <strong>ETB {formatETB(order.totals?.total)}</strong>
+                <div className="order-card__actions">
+                  {isCancellable(order.status) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => cancel(order.id)}
+                      disabled={cancelling === order.id}
+                    >
+                      {cancelling === order.id ? "Cancelling…" : "Cancel order"}
+                    </Button>
+                  )}
+                  <Button as={Link} href={`/orders/${order.id}`} variant="outline" size="sm" rightIcon={<FiArrowRight />}>
+                    View order
                   </Button>
-                )}
-                <Button as={Link} href={`/orders/${order.id}`} variant="outline" size="sm" rightIcon={<FiArrowRight />}>
-                  View order
-                </Button>
-              </div>
-            </footer>
-          </article>
-        ))}
-      </div>
+                </div>
+              </footer>
+            </article>
+          ))}
+        </div>
+      )}
+
+      <OrderPagination
+        page={browser.page}
+        totalPages={browser.totalPages}
+        onPageChange={browser.setPage}
+      />
     </div>
   );
 }

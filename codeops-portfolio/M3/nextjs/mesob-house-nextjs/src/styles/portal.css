@@ -60,6 +60,180 @@
   font-weight: 600;
 }
 .portal-back { margin-bottom: var(--space-3); }
+
+/* ---------- Order search, filters and pagination ---------- */
+.order-controls {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.order-controls__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.order-search {
+  display: flex;
+  flex: 1 1 320px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 12px;
+  color: var(--c-ink-muted);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--r-pill);
+}
+.order-search:focus-within {
+  border-color: var(--c-brand);
+  box-shadow: 0 0 0 3px rgba(140, 33, 22, 0.12);
+}
+.order-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 0;
+  color: var(--c-ink);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  font-size: 13.5px;
+}
+.order-search input::placeholder { color: var(--c-ink-muted); }
+.order-search__clear {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--c-ink-soft);
+  background: var(--c-panel);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.order-search__clear:hover { color: var(--c-brand); }
+.order-controls__count {
+  margin: 0;
+  color: var(--c-ink-muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.order-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.filter-chip {
+  padding: 7px 12px;
+  color: var(--c-ink-soft);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.filter-chip:hover {
+  color: var(--c-brand);
+  background: var(--c-panel-2);
+}
+.filter-chip.is-active {
+  color: #fff;
+  background: var(--c-brand);
+  border-color: var(--c-brand);
+}
+.order-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--c-line);
+}
+.order-pagination__label {
+  margin: 0;
+  color: var(--c-ink-muted);
+  font-size: 12px;
+}
+.order-pagination__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.order-pagination__pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.order-page-button,
+.order-pagination__step {
+  min-width: 34px;
+  padding: 7px 10px;
+  color: var(--c-ink-soft);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.order-page-button:hover,
+.order-pagination__step:hover:not(:disabled) {
+  color: var(--c-brand);
+  background: var(--c-panel-2);
+}
+.order-page-button[aria-current="page"] {
+  color: #fff;
+  background: var(--c-brand);
+  border-color: var(--c-brand);
+}
+.order-page-button:disabled,
+.order-pagination__step:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.order-pagination__gap {
+  padding: 0 3px;
+  color: var(--c-ink-muted);
+}
+.order-no-results {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  background: var(--c-surface);
+  border: 1px dashed var(--c-line-strong);
+  border-radius: var(--r-lg);
+}
+.order-no-results h2 {
+  margin: 0 0 6px;
+  color: var(--c-ink);
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+.order-no-results p {
+  margin: 0 0 var(--space-4);
+  color: var(--c-ink-soft);
+  font-size: 13.5px;
+}
+@media (max-width: 700px) {
+  .order-controls__top { align-items: stretch; }
+  .order-search { flex-basis: 100%; }
+  .order-controls__count { white-space: normal; }
+  .order-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .order-pagination__label { order: 2; }
+}
 .portal-subnav {
   display: flex;
   flex-wrap: wrap;
