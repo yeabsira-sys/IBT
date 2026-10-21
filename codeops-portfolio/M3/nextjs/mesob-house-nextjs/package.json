@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "seed:orders": "node scripts/seed-orders.mjs",
+    "seed:orders:clear": "node scripts/seed-orders.mjs --clear"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -14,6 +16,7 @@
     "react-dom": "^19.3.1",
     "react-hook-form": "^7.90.0",
     "react-icons": "^5.7.0",
+    "recharts": "^3.10.1",
     "server-only": "^0.0.1",
     "swr": "^2.5.1",
     "zod": "^3.25.76",

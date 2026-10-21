@@ -16,7 +16,7 @@ export default async function AdminPage() {
 
   return (
     <div className="container portal-page portal-page--wide">
-      <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: "Account", to: "/account" }, { label: "Admin" }]} />
+      <Breadcrumbs items={[{ label: "Account", to: "/account" }, { label: "Admin" }]} />
       <header className="portal-head">
         <p className="portal-eyebrow">Operations</p>
         <h1>Admin overview</h1>

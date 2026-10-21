@@ -5,6 +5,8 @@ import useSWR from "swr";
 import { FiClock, FiRefreshCw } from "react-icons/fi";
 import Button from "../ui/Button";
 import OrderStatusBadge from "../orders/OrderStatusBadge";
+import KitchenQueueChart from "../charts/KitchenQueueChart";
+import OrdersByHourChart from "../charts/OrdersByHourChart";
 import { fetcher } from "@/lib/fetcher";
 import { formatETB, formatOrderDate, nextStatuses } from "@/lib/orderStatus";
 import { useToast } from "@/store/toastStore";
@@ -24,16 +26,17 @@ const ACTION_LABEL = {
 };
 
 /** KitchenBoard — employee/admin queue, polled every 8 seconds with SWR. */
-export default function KitchenBoard({ initialOrders }) {
+export default function KitchenBoard({ initialOrders, initialCharts }) {
   const toast = useToast();
   const [busyId, setBusyId] = useState(null);
   const { data, error, mutate, isValidating } = useSWR("/api/kitchen/orders", fetcher, {
-    fallbackData: { data: initialOrders },
+    fallbackData: { data: initialOrders, charts: initialCharts },
     refreshInterval: 8000,
     revalidateOnFocus: true,
   });
 
   const orders = data?.data ?? initialOrders;
+  const charts = data?.charts ?? initialCharts;
 
   const update = async (id, status) => {
     setBusyId(id);
@@ -66,7 +69,19 @@ export default function KitchenBoard({ initialOrders }) {
         </p>
       </div>
 
-      {error && <p className="form-error">The queue could not refresh. Showing the last known orders.</p>}
+      {error && (
+        <p className="form-error">
+          The queue could not refresh. Showing the last known orders.
+          <button type="button" className="form-error__retry" onClick={() => mutate()}>
+            Retry
+          </button>
+        </p>
+      )}
+
+      <div className="chart-grid">
+        <KitchenQueueChart data={charts?.queueByStatus} />
+        <OrdersByHourChart data={charts?.ordersByHour} />
+      </div>
 
       <div className="kitchen-board" aria-live="polite">
         {COLUMNS.map((column) => {

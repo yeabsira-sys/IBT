@@ -247,7 +247,7 @@ function safeNext(value) {
 }
 ```
 
-Only same-site relative paths are accepted. Absolute URLs (`https://example.com`), protocol-relative URLs (`//evil.test`) and backslash tricks are reduced to `/`. The sanitized value is passed to the client form and used after a successful sign-in.
+Only same-site relative paths are accepted. Absolute URLs (`https://example.com`), protocol-relative URLs (`//evil.test`) and backslash tricks are reduced to `/`. The sanitized value is passed to the client form and used after a successful sign-in. If that value is the bare home page (`/`), `src/lib/roleHome.js` sends admins to `/admin` and employees to `/kitchen`; customers keep `/`. An explicit private destination such as `/admin/orders` is still honoured.
 
 ## 7. Attack tests and observed results
 

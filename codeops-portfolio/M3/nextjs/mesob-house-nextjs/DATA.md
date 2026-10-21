@@ -143,14 +143,33 @@ The order action calls `getAllDishes()` as well. That is deliberate: the same ca
 | `/account` | Server page guard + user prop | `mutate(SESSION_KEY)` after sign-out |
 | `/orders` | Server page guard + `getOrdersForUser` | SWR `/api/orders`, 10 s while active |
 | `/orders/[id]` | Server page guard + `getOrderForUser` | SWR `/api/orders/[id]`, 10 s while active |
-| `/kitchen` | Server page guard + `getKitchenOrders` | SWR `/api/kitchen/orders`, 8 s |
-| `/admin` | Server page guard + `getAdminStats` | SWR `/api/admin/stats`, 15 s |
+| `/kitchen` | Server page guard + `getKitchenOverview` (queue + chart summaries) | SWR `/api/kitchen/orders`, 8 s |
+| `/admin` | Server page guard + `getAdminStats` (metrics + chart summaries) | SWR `/api/admin/stats`, 15 s |
 | `/admin/orders` | Server page guard + `getAllOrders` | SWR `/api/admin/orders`, 10 s |
 | `/admin/users` | Server page guard + `listUsers` | SWR `/api/admin/users`, 30 s |
 
 ### Why not make every page client-rendered?
 
 The public catalogue is mostly static and benefits from ISR, streaming and zero client fetch on first paint. The private pages need a server session check before any HTML is sent, so they are dynamic. SWR then handles only the changing part, seeded with server data via `fallbackData` to avoid a loading flash.
+
+### Dashboard chart summaries
+
+`src/lib/analytics.js` is server-only. It turns the full order table into the
+small arrays the charts need; the browser never receives the raw orders just
+to draw a dashboard.
+
+| Summary | Used by | Shape | Rules |
+| --- | --- | --- | --- |
+| `ordersPerDay` | Admin | 14 rows: `{ date, label, orders }` | All orders placed in the last 14 Addis days |
+| `revenueByArea` | Admin | Up to 6 rows: `{ area, orders, revenue }` | Completed orders only; pickup is its own `Pickup (Bole)` bucket |
+| `queueByStatus` | Kitchen | 4 rows: `{ status, label, tickets }` | Active tickets only |
+| `ordersByHour` | Kitchen | 12 rows: `{ hour, label, orders }` | Every order received today, bucketed into two-hour Addis slots |
+
+Date and hour bucketing uses `Africa/Addis_Ababa`, not the server timezone.
+`getAdminStats()` returns these under `charts`; `getKitchenOverview()` returns
+`{ orders, charts }` and `/api/kitchen/orders` responds with
+`{ data: orders, charts }`. The existing SWR polls therefore refresh the
+charts with the queue/metrics instead of adding a second request.
 
 ## 5. SWR keys and intervals
 
@@ -160,8 +179,8 @@ The public catalogue is mostly static and benefits from ISR, streaming and zero 
 | `/api/menu/search?q=…&category=…` | `MenuBrowser` | on key change only | 300 ms debounce; `keepPreviousData: true`; no focus revalidation |
 | `/api/orders` | `OrdersLive` | 10 s while any order is active | stops when all orders are terminal |
 | `/api/orders/[id]` | `OrderDetailLive` | 10 s while not terminal | stops on `completed`/`cancelled` |
-| `/api/kitchen/orders` | `KitchenBoard` | 8 s | employee/admin queue |
-| `/api/admin/stats` | `AdminOverview` | 15 s | metrics |
+| `/api/kitchen/orders` | `KitchenBoard` | 8 s | employee/admin queue plus chart summaries |
+| `/api/admin/stats` | `AdminOverview` | 15 s | metrics plus chart summaries |
 | `/api/admin/orders` | `AdminOrders` | 10 s | all orders |
 | `/api/admin/users` | `AdminUsers` | 30 s | role management |
 
@@ -207,6 +226,33 @@ The search API itself filters name, native name, description and category, and r
 - Customer order APIs return `404` for another user's id rather than `403`, so the endpoint cannot confirm that an order exists.
 
 ## 9. Operational checklist
+
+### Date-dispersed test orders
+
+`scripts/seed-orders.mjs` fills the local database with realistic orders for
+chart and queue testing. It replaces the orders table by default, keeps the
+seeded admin/employee/guest accounts, and adds demo customers with the shared
+password `Guest123!`.
+
+```bash
+# 1,500 orders over 120 days, plus 24 demo customers
+npm run seed:orders
+
+# A bigger or smaller spread
+npm run seed:orders -- --count 2500 --days 180 --customers 30
+
+# Keep existing orders and append another batch
+npm run seed:orders -- --keep-orders
+
+# Remove all orders and the @mesob.test demo customers
+npm run seed:orders:clear
+```
+
+Every past day gets at least one order, with more weight on recent dates.
+Today receives a separate batch, including active tickets for the kitchen
+queue, so both dashboards have data immediately. Demo customers use addresses
+such as `diner01@mesob.test` through `diner24@mesob.test`; all use
+`Guest123!`.
 
 ```bash
 # Fresh seed (destructive)

@@ -4,6 +4,8 @@ import Link from "next/link";
 import useSWR from "swr";
 import { FiArrowRight, FiClipboard, FiDollarSign, FiRefreshCw, FiTool, FiUsers } from "react-icons/fi";
 import OrderStatusBadge from "../orders/OrderStatusBadge";
+import OrdersPerDayChart from "../charts/OrdersPerDayChart";
+import RevenueByAreaChart from "../charts/RevenueByAreaChart";
 import { fetcher } from "@/lib/fetcher";
 import { formatETB, formatOrderDate } from "@/lib/orderStatus";
 
@@ -17,7 +19,7 @@ const cards = [
 
 /** AdminOverview — live metrics and the newest orders, seeded by the server. */
 export default function AdminOverview({ initialStats }) {
-  const { data, isValidating } = useSWR("/api/admin/stats", fetcher, {
+  const { data, error, mutate, isValidating } = useSWR("/api/admin/stats", fetcher, {
     fallbackData: { data: initialStats },
     refreshInterval: 15000,
     revalidateOnFocus: true,
@@ -48,6 +50,20 @@ export default function AdminOverview({ initialStats }) {
         ))}
       </div>
 
+      {error && (
+        <p className="form-error">
+          Could not refresh the dashboard. Showing the last known metrics.
+          <button type="button" className="form-error__retry" onClick={() => mutate()}>
+            Retry
+          </button>
+        </p>
+      )}
+
+      <div className="chart-grid">
+        <OrdersPerDayChart data={stats.charts?.ordersPerDay} />
+        <RevenueByAreaChart data={stats.charts?.revenueByArea} />
+      </div>
+
       <section className="portal-card">
         <div className="portal-card__head">
           <h2>Recent orders</h2>
@@ -56,13 +72,14 @@ export default function AdminOverview({ initialStats }) {
         {stats.recent?.length ? (
           <div className="data-table-wrap">
             <table className="data-table">
+              <caption className="visually-hidden">Recent orders</caption>
               <thead>
                 <tr>
-                  <th>Order</th>
-                  <th>Customer</th>
-                  <th>Placed</th>
-                  <th>Total</th>
-                  <th>Status</th>
+                  <th scope="col">Order</th>
+                  <th scope="col">Customer</th>
+                  <th scope="col">Placed</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Status</th>
                 </tr>
               </thead>
               <tbody>

@@ -81,6 +81,35 @@ Observations:
 - Checkout is the heaviest sample (~194 KB compressed JS) because it includes the payment/delivery cards and form validation. Those cards are already lazy-loaded below the fold, so the first interaction is not blocked by them.
 - `/orders` is the lightest private sample (~168 KB) because it renders a small list and the SWR payload is JSON, not another component tree.
 
+### Day 46 dashboard charts
+
+Recharts 3.10.1 was added for the admin and kitchen dashboards. The chart
+components are client leaves under `src/components/charts/`; the pages and the
+aggregation in `src/lib/analytics.js` stay on the server. Recharts is only
+loaded by the private `/admin` and `/kitchen` route trees, so the public
+catalogue's JS is unchanged.
+
+| Page | LCP | CLS | TTFB | Compressed JS | Notes |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `/admin` | 360 ms | 0 | 45 ms | 302.6 KB | 5 stat cards + 2 charts + recent orders |
+| `/kitchen` | 384 ms | 0 | 105 ms | 293.9 KB | 2 charts + live board |
+| `/orders` (for comparison) | 312 ms | 0 | 86 ms | 167.8 KB | No chart library |
+
+Recharts accounts for roughly 126 KB of the private dashboard JS. That is a
+real cost, but it is isolated to routes that already require a staff session.
+The public `/`, `/menu` and dish pages remain at their previous static/ISR
+budget. The chart cards reserve a fixed 280 px height and render tables
+underneath, so CLS stays at 0.
+
+Chart payloads are deliberately small:
+
+- Admin: 14 daily rows + up to 6 area rows.
+- Kitchen: 4 status rows + 12 two-hour rows.
+
+No order rows are sent to the browser just to build a chart. If a future
+dashboard needs more categories or a longer range, keep the aggregation on the
+server and cap the rows before they cross the boundary.
+
 ## 4. Before/after framing
 
 A strict before/after on the same route set is not possible: before this phase the app had no `/orders`, `/kitchen`, `/admin`, `/checkout` auth guard or SWR layer. The repository also does not contain a pre-phase production build, so there is no honest “before” LCP number to quote.

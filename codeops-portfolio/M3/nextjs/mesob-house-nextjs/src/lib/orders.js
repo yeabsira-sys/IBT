@@ -8,6 +8,7 @@ import {
   isTerminal,
   nextStatuses,
 } from "./orderStatus";
+import { buildAdminCharts, buildKitchenCharts } from "./analytics";
 
 const byNewest = (a, b) => new Date(b.createdAt) - new Date(a.createdAt);
 const byOldest = (a, b) => new Date(a.createdAt) - new Date(b.createdAt);
@@ -66,6 +67,19 @@ export async function getAllOrders() {
 export async function getKitchenOrders() {
   const db = await readDb();
   return db.orders.filter((order) => !isTerminal(order.status)).sort(byOldest);
+}
+
+/**
+ * One read for the kitchen page and its polled API: the live queue plus the
+ * small chart summaries. Only the summaries cross to the client.
+ */
+export async function getKitchenOverview() {
+  const db = await readDb();
+  const orders = db.orders.filter((order) => !isTerminal(order.status)).sort(byOldest);
+  return {
+    orders,
+    charts: buildKitchenCharts(db.orders),
+  };
 }
 
 export async function cancelOrderForUser(orderId, userId) {
@@ -144,5 +158,6 @@ export async function getAdminStats() {
     customers: db.users.filter((user) => user.role === "customer").length,
     staff: db.users.filter((user) => user.role !== "customer").length,
     recent: [...orders].sort(byNewest).slice(0, 6),
+    charts: buildAdminCharts(orders),
   };
 }

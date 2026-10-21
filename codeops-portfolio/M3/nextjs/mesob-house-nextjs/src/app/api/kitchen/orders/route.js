@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession, isStaff } from "@/lib/auth";
-import { getKitchenOrders } from "@/lib/orders";
+import { getKitchenOverview } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +10,6 @@ export async function GET() {
   if (!user) return NextResponse.json({ message: "Sign in required." }, { status: 401 });
   if (!isStaff(user)) return NextResponse.json({ message: "Staff access required." }, { status: 403 });
 
-  const data = await getKitchenOrders();
-  return NextResponse.json({ data }, { headers: { "Cache-Control": "no-store" } });
+  const { orders, charts } = await getKitchenOverview();
+  return NextResponse.json({ data: orders, charts }, { headers: { "Cache-Control": "no-store" } });
 }

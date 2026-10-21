@@ -19,6 +19,7 @@ import { Segmented } from "../ui/OptionCard";
 import { signInSchema } from "@/lib/schemas";
 import { useToast } from "@/store/toastStore";
 import { signInAction, socialSignInAction } from "@/actions/auth";
+import { postLoginPath } from "@/lib/roleHome";
 import { SESSION_KEY } from "@/hooks/useSession";
 import { useSWRConfig } from "swr";
 
@@ -54,7 +55,7 @@ export default function SignInForm({ next = "/" }) {
     toast(result.message, result.ok ? "success" : "error");
     if (!result.ok) return;
     await mutate(SESSION_KEY);
-    router.push(next);
+    router.push(postLoginPath(result.user, next));
     router.refresh();
   };
 

@@ -5,6 +5,7 @@ import SignInForm from "@/components/auth/SignInForm";
 import TrustStrip from "@/components/auth/TrustStrip";
 import { signInBreadcrumbs, signInPanel, trust } from "@/data/auth";
 import { getSession } from "@/lib/auth";
+import { postLoginPath } from "@/lib/roleHome";
 
 export const metadata = { title: "Sign In", description: "Sign in to manage your feasts and rewards." };
 
@@ -24,7 +25,7 @@ export default async function SignInPage({ searchParams }) {
   const { next } = await searchParams; // set by src/proxy.js when it bounces a guest from a private route
   const destination = safeNext(next);
   const user = await getSession();
-  if (user) redirect(destination);
+  if (user) redirect(postLoginPath(user, destination));
 
   return (
     <div className="container">
