@@ -8,6 +8,7 @@ import {
   getSessionUserByToken,
   toSafeUser,
 } from "./db";
+import { roleHome } from "./roleHome";
 
 export const SESSION_COOKIE = "mh_session";
 
@@ -55,7 +56,17 @@ export async function requirePageUser(nextPath) {
 
 export async function requirePageRole(roles, nextPath) {
   const user = await requirePageUser(nextPath);
-  if (!roles.includes(user.role)) redirect("/");
+  if (!roles.includes(user.role)) redirect(roleHome(user.role));
+  return user;
+}
+
+/**
+ * Customer-only pages. Staff accounts work from /kitchen or /admin, so they
+ * are sent back to their portal instead of seeing customer order screens.
+ */
+export async function requireCustomerPage(nextPath) {
+  const user = await requirePageUser(nextPath);
+  if (user.role !== "customer") redirect(roleHome(user.role));
   return user;
 }
 

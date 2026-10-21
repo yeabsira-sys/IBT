@@ -66,29 +66,47 @@ The assignment asks for middleware **and** page **and** action checks. In Next.j
 
 | Layer | File | What it proves | What it deliberately does not do |
 | --- | --- | --- | --- |
-| 1. Edge/proxy gate | `src/proxy.js` | A cookie named `mh_session` exists for `/account`, `/orders`, `/checkout`, `/kitchen`, `/admin` | It does not verify the token or role; that requires the database |
-| 2. Page guard | `src/lib/auth.js` → `requirePageUser` / `requirePageRole` | The token maps to a live session and the role is allowed | It does not protect route handlers or actions |
+| 1. Proxy routing gate | `src/proxy.js` | The session token maps to a live user, so guests can be routed to sign-in and staff can be kept in their portal | It is not the final authorization decision; page and API guards still enforce ownership and role |
+| 2. Page guard | `src/lib/auth.js` → `requirePageUser` / `requirePageRole` / `requireCustomerPage` | The token maps to a live session and the role is allowed | It does not protect route handlers or actions |
 | 3. Action/API guard | `src/actions/order.js`, `src/actions/auth.js`, `src/app/api/**` | The caller is signed in, has the right role, and owns the resource | It is the last line, so it must also enforce ownership and status rules |
 
 ### Layer 1 — `src/proxy.js`
 
 ```js
-const signedIn = request.cookies.has(SESSION_COOKIE);
-const protectedRoute =
-  pathname.startsWith("/account") ||
-  pathname.startsWith("/orders") ||
-  pathname.startsWith("/checkout") ||
-  pathname.startsWith("/kitchen") ||
-  pathname.startsWith("/admin");
+const token = request.cookies.get(SESSION_COOKIE)?.value;
+const user = token ? await getSessionUserByToken(token) : null;
 
-if (protectedRoute && !signedIn) {
+if ((isCustomerPage(pathname) || isStaffPage(pathname)) && !user) {
   const url = new URL("/sign-in", request.url);
   url.searchParams.set("next", pathname);
   return NextResponse.redirect(url);
 }
+
+if (user && isStaffPage(pathname)) {
+  const adminPage = matches(pathname, "/admin");
+  const wrongRole = adminPage ? user.role !== "admin" : user.role === "customer";
+  if (wrongRole) {
+    return NextResponse.redirect(new URL(roleHome(user.role), request.url));
+  }
+}
+
+const staff = user?.role === "employee" || user?.role === "admin";
+
+if (staff && (isPublicPage(pathname) || isCustomerPage(pathname))) {
+  return NextResponse.redirect(new URL(roleHome(user.role), request.url));
+}
+
+if (staff && isStaffBlockedApi(pathname)) {
+  return NextResponse.json(
+    { message: "Staff accounts use the portal. Public ordering is for customers." },
+    { status: 403, headers: { "Cache-Control": "no-store" } },
+  );
+}
 ```
 
-The matcher covers the same five prefixes. The proxy is a fast UX gate, not the authorization decision. A cookie can exist and still be invalid; the page layer catches that.
+The matcher covers public shop pages (`/`, `/menu`, `/dish`, `/cart`, `/terms`, `/privacy`), customer pages (`/account`, `/orders`, `/checkout`), staff pages (`/kitchen`, `/admin`), and the public/customer APIs (`/api/menu`, `/api/orders`). `/api/auth/session`, `/api/health`, `/api/revalidate`, `/sign-in` and `/register` are not blocked by the proxy; the auth pages redirect signed-in users themselves.
+
+The proxy now verifies the session because it has to know the role to route staff correctly. It is still a routing layer, not the authorization decision: a forged cookie does not create a session, and the page/API layers repeat the checks. Keeping this check in `proxy.js` instead of `(shop)/layout.jsx` preserves the static/ISR rendering of the public shop.
 
 ### Layer 2 — server page guards
 
@@ -104,21 +122,27 @@ export async function requirePageUser(nextPath) {
 
 export async function requirePageRole(roles, nextPath) {
   const user = await requirePageUser(nextPath);
-  if (!roles.includes(user.role)) redirect("/");
+  if (!roles.includes(user.role)) redirect(roleHome(user.role));
+  return user;
+}
+
+export async function requireCustomerPage(nextPath) {
+  const user = await requirePageUser(nextPath);
+  if (user.role !== "customer") redirect(roleHome(user.role));
   return user;
 }
 ```
 
 | Page | Guard |
 | --- | --- |
-| `/account` | `requirePageUser("/account")` |
-| `/checkout` | `requirePageUser("/checkout")` |
-| `/orders` | `requirePageUser("/orders")` |
-| `/orders/[id]` | `requirePageUser(...)` then `getOrderForUser(user.id, id)` |
+| `/account` | `requireCustomerPage("/account")` |
+| `/checkout` | `requireCustomerPage("/checkout")` |
+| `/orders` | `requireCustomerPage("/orders")` |
+| `/orders/[id]` | `requireCustomerPage(...)` then `getOrderForUser(user.id, id)` |
 | `/kitchen` | `requirePageRole(["employee", "admin"], "/kitchen")` |
 | `/admin`, `/admin/orders`, `/admin/users` | `requirePageRole(["admin"], ...)` |
 
-A customer who manually opens `/kitchen` or `/admin` is redirected to `/`, not shown an empty shell. A signed-out visitor is sent to `/sign-in?next=...`.
+A customer who manually opens `/kitchen` or `/admin` is redirected to `/`, not shown an empty shell. An employee who opens `/admin` is redirected to `/kitchen`. A signed-in staff member who opens a public shop page or a customer page is redirected to `/admin` or `/kitchen`. A signed-out visitor is sent to `/sign-in?next=...`.
 
 ### Layer 3 — actions and route handlers
 
@@ -147,11 +171,13 @@ if (!isStaff(user)) return NextResponse.json({ message: "Staff access required."
 
 ### Roles
 
-| Role | Customer pages | Kitchen | Admin |
+| Role | Public shop + customer pages | Kitchen | Admin |
 | --- | --- | --- | --- |
-| `customer` | own account, checkout, own orders | no | no |
-| `employee` | own account/orders | yes | no |
-| `admin` | own account/orders | yes | yes |
+| `customer` | yes — public shop, own account, checkout, own orders | no | no |
+| `employee` | no — redirected to `/kitchen` | yes | no |
+| `admin` | no — redirected to `/admin` | yes | yes |
+
+Staff accounts are deliberately not customer accounts. `/`, `/menu`, `/dish/*`, `/cart`, `/checkout`, `/terms`, `/privacy`, `/account` and `/orders` all redirect admin/employee sessions to their portal, and `/api/menu*` plus `/api/orders*` return `403` for those sessions.
 
 ### Customer ownership
 
@@ -247,7 +273,7 @@ function safeNext(value) {
 }
 ```
 
-Only same-site relative paths are accepted. Absolute URLs (`https://example.com`), protocol-relative URLs (`//evil.test`) and backslash tricks are reduced to `/`. The sanitized value is passed to the client form and used after a successful sign-in. If that value is the bare home page (`/`), `src/lib/roleHome.js` sends admins to `/admin` and employees to `/kitchen`; customers keep `/`. An explicit private destination such as `/admin/orders` is still honoured.
+Only same-site relative paths are accepted. Absolute URLs (`https://example.com`), protocol-relative URLs (`//evil.test`) and backslash tricks are reduced to `/`. The sanitized value is passed to the client form and used after a successful sign-in. If that value is the bare home page (`/`), `src/lib/roleHome.js` sends admins to `/admin` and employees to `/kitchen`; customers keep `/`. An explicit private destination such as `/admin/orders` is still honoured. If a staff account asks for a customer page, the proxy or page guard sends it on to the staff portal instead.
 
 ## 7. Attack tests and observed results
 
@@ -269,6 +295,10 @@ These were run against the local dev server (`localhost:3000`) and repeated agai
 | 12 | Open redirect | `/signin?next=https://example.com`, then sign in | lands on `/`, never `example.com` |
 | 13 | Forged item price | set `localStorage` cart price to `1`, submit checkout | stored subtotal `650`, total `548` (server prices) |
 | 14 | Rapid search typing | type `k`, `ki`, `kit`, `kitfo` quickly | one `/api/menu/search?q=kitfo` request |
+| 15 | Staff opens public shop page | admin opens `/menu`; employee opens `/` | `307` to `/admin` / `/kitchen` |
+| 16 | Staff opens customer page | admin opens `/account`; employee opens `/orders` | `307` to `/admin` / `/kitchen` |
+| 17 | Staff calls public menu API | admin `GET /api/menu` | `403 {"message":"Staff accounts use the portal. Public ordering is for customers."}` with `Cache-Control: no-store` |
+| 18 | Employee opens admin page | employee opens `/admin` | `307` to `/kitchen` |
 
 ### Reproducing the main checks
 
@@ -282,13 +312,19 @@ curl -i http://localhost:3000/admin
 # Expected: 403 for both
 fetch('/api/kitchen/orders', { credentials: 'same-origin' })
 fetch('/api/admin/stats', { credentials: 'same-origin' })
+
+# Staff/public separation (replace TOKEN with a real staff session cookie)
+curl -i -H 'Cookie: mh_session=TOKEN' http://localhost:3000/menu
+curl -i -H 'Cookie: mh_session=TOKEN' http://localhost:3000/api/menu
+# Expected: 307 to the staff portal, then 403 for the API
 ```
 
 For the ownership tests, sign in as `guest@mesob.house`, note an order id, then register a second customer and request that id. The API returns `404` rather than revealing that the order exists.
 
 ## 8. Known limitations
 
-- **The proxy only checks cookie presence.** That is intentional: verifying a hashed token in the edge layer would require a database call or a signed token. The page and action layers do the real check. The attack table shows a forged cookie is rejected.
+- **The proxy verifies the session to route by role.** It reads the local JSON store for matched requests that carry a session cookie. That is fine for this assessment, but a production deployment should use an indexed session lookup, a signed role claim or a fast session store. The page and action layers still make the authorization decision.
+- **The role check stays out of the public layout.** It lives in `proxy.js` instead of `(shop)/layout.jsx`, so `/`, `/menu`, `/dish/*`, `/cart`, `/terms` and `/privacy` keep their static/ISR rendering.
 - **The demo social buttons create real customer sessions.** They are labelled as demo flows and do not call an external OAuth provider.
 - **No rate limiting or account lockout.** A production deployment should add rate limiting on `/sign-in`, `/register` and order creation.
 - **File database.** It is single-instance and has no cross-process write lock. See [`DATA.md`](./DATA.md) before deploying to a serverless host.

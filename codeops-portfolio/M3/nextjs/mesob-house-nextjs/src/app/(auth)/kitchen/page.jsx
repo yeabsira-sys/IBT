@@ -15,7 +15,7 @@ export default async function KitchenPage() {
 
   return (
     <div className="container portal-page portal-page--wide">
-      <Breadcrumbs items={[{ label: "Account", to: "/account" }, { label: "Kitchen" }]} />
+      <Breadcrumbs items={[{ label: "Kitchen" }]} />
       <header className="portal-head">
         <p className="portal-eyebrow">Staff workspace</p>
         <h1>Kitchen queue</h1>

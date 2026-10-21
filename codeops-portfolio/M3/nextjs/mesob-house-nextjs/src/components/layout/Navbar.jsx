@@ -7,6 +7,7 @@ import { FiMenu, FiShoppingBag, FiX } from "react-icons/fi";
 import Button from "../ui/Button";
 import { Avatar } from "../ui/Primitives";
 import useNavbarState from "@/hooks/useNavbarState";
+import { roleHome } from "@/lib/roleHome";
 
 /** CartPill — item count + running total, exported for reuse in other headers. */
 export function CartPill({ itemCount = 0, currency = "ETB", amount = "0", href = "/cart" }) {
@@ -52,17 +53,20 @@ export default function Navbar({ brand = "Mesob House", links = [] }) {
 
   // Portal links are only rendered for the roles that can use them. The
   // server still checks the role on every page and action.
-  const portalLinks = [];
-  if (user) portalLinks.push({ label: "Orders", href: "/orders" });
   const staffArea = pathname.startsWith("/admin") || pathname.startsWith("/kitchen");
   const isStaffRole = user?.role === "employee" || user?.role === "admin";
   const isStaff = isStaffRole || staffArea;
+  const portalLinks = [];
+  if (user && !isStaffRole) portalLinks.push({ label: "Orders", href: "/orders" });
   if (isStaffRole) portalLinks.push({ label: "Kitchen", href: "/kitchen" });
   if (user?.role === "admin") portalLinks.push({ label: "Admin", href: "/admin" });
+  if (isStaffRole) portalLinks.push({ label: "Account", href: "/account" });
 
   // Staff work from the portal. Hide the public ordering links and the cart
   // pill so the header stays focused on the queue/admin surfaces.
   const visibleLinks = isStaff ? portalLinks : [...links, ...portalLinks];
+  const homeHref = isStaffRole ? roleHome(user.role) : "/";
+  const accountHref = "/account";
 
   // Close the mobile menu whenever the route changes.
   useEffect(() => setOpen(false), [pathname]);
@@ -83,7 +87,7 @@ export default function Navbar({ brand = "Mesob House", links = [] }) {
   return (
     <header className="navbar">
       <div className="container navbar__inner">
-        <Link className="navbar__brand" href="/">
+        <Link className="navbar__brand" href={homeHref}>
           {brand}
         </Link>
 
@@ -104,7 +108,7 @@ export default function Navbar({ brand = "Mesob House", links = [] }) {
           <div className="navbar__actions">
             {!isStaff && <CartPill {...cart} />}
             {user ? (
-              <UserChip {...user} />
+              <UserChip {...user} href={accountHref} />
             ) : (
               <>
                 <Button as={Link} href="/sign-in" variant="ghost" size="sm">

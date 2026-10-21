@@ -4,6 +4,7 @@ import MembershipPanel from "@/components/marketing/MembershipPanel";
 import RegisterForm from "@/components/account/RegisterForm";
 import { benefits, breadcrumbs, dietaryOptions, testimonial } from "@/data/content";
 import { getSession } from "@/lib/auth";
+import { roleHome } from "@/lib/roleHome";
 
 export const metadata = {
   title: "Join the Mesob Family",
@@ -12,7 +13,7 @@ export const metadata = {
 
 export default async function RegisterPage() {
   const user = await getSession();
-  if (user) redirect("/account");
+  if (user) redirect(user.role === "customer" ? "/account" : roleHome(user.role));
 
   return (
     <div className="container">

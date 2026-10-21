@@ -4,16 +4,19 @@ A production-shaped Next.js restaurant site for a Habesha kitchen in Addis Ababa
 
 This repository is the Day 45 submission for the CodeOps M3 advanced Next.js assignment.
 
+> **New to the codebase? Start with [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md).**
+> It explains the whole app, the main request flows, the folder map and where to change things.
+
 ## What is implemented
 
 - **Real authentication** — opaque session tokens in an `httpOnly` cookie, scrypt password hashes, 7-day sessions (30 days with “keep signed in”).
-- **Three layers of protection** — `proxy.js` cookie gate, server-side page guards, and action/API guards. Ownership is part of every customer order query.
-- **Three roles** — `customer`, `employee`, `admin`. Kitchen and admin routes are never public.
+- **Three layers of protection** — role-aware `proxy.js` routing gate, server-side page guards, and action/API guards. Ownership is part of every customer order query.
+- **Three roles** — `customer`, `employee`, `admin`. Kitchen and admin routes are never public, and staff accounts are kept inside their portal: public shop/customer pages redirect them to `/admin` or `/kitchen`, while public menu and customer order APIs return `403`.
 - **Live order flow** — `received → preparing → ready → out_for_delivery → completed`, with pickup skipping delivery and customer cancellation only while `received`.
 - **Server-authoritative pricing** — dish ids and prices are resolved against the live menu inside the order action; a forged client price is ignored.
 - **Live data + SWR** — session navbar, debounced menu search, customer order polling, kitchen queue polling, admin metrics/orders/users polling.
 - **Metadata and discovery** — per-page metadata, per-dish Open Graph cards, JSON-LD `MenuItem`, sitemap, robots rules, web manifest, private-page `noindex`.
-- **Documentation** — [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md) and [`PERF.md`](./PERF.md) explain the design, attacks and measurements.
+- **Documentation** — [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md) is the big-picture codebase tour; [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md) and [`PERF.md`](./PERF.md) cover security, data/caching and performance.
 
 ## Stack
 
@@ -44,9 +47,9 @@ The menu is fetched from `API_BASE_URL` on the server with a 5-minute ISR cache.
 
 | Role | Email | Mobile | Password | Can open |
 | --- | --- | --- | --- | --- |
-| Admin | `admin@mesob.house` | `911000001` | `Admin123!` | everything |
-| Employee | `kitchen@mesob.house` | `911000002` | `Kitchen123!` | `/kitchen` |
-| Customer | `guest@mesob.house` | `911000003` | `Guest123!` | account, checkout, own orders |
+| Admin | `admin@mesob.house` | `911000001` | `Admin123!` | `/kitchen`, `/admin` (staff portal only) |
+| Employee | `kitchen@mesob.house` | `911000002` | `Kitchen123!` | `/kitchen` (staff portal only) |
+| Customer | `guest@mesob.house` | `911000003` | `Guest123!` | public shop, account, checkout, own orders |
 
 Sign in with either the email (Email tab) or the nine digits after `+251` (Mobile tab).
 
@@ -69,10 +72,10 @@ Sign in with either the email (Email tab) or the nine digits after `+251` (Mobil
 
 | Route | Guard |
 | --- | --- |
-| `/account` | `requirePageUser` |
-| `/checkout` | `requirePageUser` + `noindex` |
-| `/orders` | `requirePageUser`; only the session user's orders |
-| `/orders/[id]` | `requirePageUser`; ownership is part of the lookup |
+| `/account` | `requireCustomerPage` |
+| `/checkout` | `requireCustomerPage` + `noindex` |
+| `/orders` | `requireCustomerPage`; only the session user's orders |
+| `/orders/[id]` | `requireCustomerPage`; ownership is part of the lookup |
 
 ### Staff
 
@@ -83,16 +86,18 @@ Sign in with either the email (Email tab) or the nine digits after `+251` (Mobil
 | `/admin/orders` | `admin` |
 | `/admin/users` | `admin` |
 
+Staff sessions are redirected away from the public shop (`/`, `/menu`, `/dish/*`, `/cart`, `/terms`, `/privacy`) and customer pages (`/account`, `/orders`, `/checkout`) to their portal.
+
 ### API
 
 | Method | Route | Access |
 | --- | --- | --- |
 | GET | `/api/auth/session` | public; returns `{ user: null }` when signed out |
-| GET | `/api/menu`, `/api/menu/specials` | public, ISR-cached |
-| GET | `/api/menu/search?q=&category=` | public, 60 s CDN cache + SWR |
-| GET | `/api/orders` | signed-in customer; scoped to session |
-| GET | `/api/orders/[id]` | owner only; 404 for another user's order |
-| POST | `/api/orders/[id]/cancel` | owner + status `received` only |
+| GET | `/api/menu`, `/api/menu/specials` | public, ISR-cached; `403` for staff |
+| GET | `/api/menu/search?q=&category=` | public, 60 s CDN cache + SWR; `403` for staff |
+| GET | `/api/orders` | signed-in customer; scoped to session; `403` for staff |
+| GET | `/api/orders/[id]` | owner only; 404 for another user's order; `403` for staff |
+| POST | `/api/orders/[id]/cancel` | owner + status `received` only; `403` for staff |
 | GET | `/api/kitchen/orders` | employee/admin |
 | PATCH | `/api/kitchen/orders/[id]` | employee/admin; validated transition |
 | GET | `/api/admin/stats` | admin |
@@ -159,6 +164,8 @@ The final local run built 44 routes successfully. Runtime checks covered:
 - seeded sign-in for all three roles, registration, sign-out;
 - signed-out redirects from `/orders`, `/kitchen`, `/admin`;
 - customer redirect away from `/kitchen` and `/admin`;
+- staff redirect away from public shop and customer pages;
+- `403` from public menu/customer APIs for staff sessions;
 - 401/403 responses from private APIs;
 - cross-user order reads and cancellation returning 404;
 - cancellation after the kitchen starts returning 409;

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import OrderDetailLive from "@/components/orders/OrderDetailLive";
-import { requirePageUser } from "@/lib/auth";
+import { requireCustomerPage } from "@/lib/auth";
 import { getOrderForUser } from "@/lib/orders";
 
 export const metadata = {
@@ -12,7 +12,7 @@ export const metadata = {
 
 export default async function OrderDetailPage({ params }) {
   const { id } = await params;
-  const user = await requirePageUser(`/orders/${id}`);
+  const user = await requireCustomerPage(`/orders/${id}`);
   const order = await getOrderForUser(user.id, id);
   if (!order) notFound();
 

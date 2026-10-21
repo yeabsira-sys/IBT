@@ -23,6 +23,7 @@ export default function AccountView({ user }) {
   const { mutate } = useSWRConfig();
   const favorites = useStore((s) => s.favorites);
   const toggleFavorite = useStore((s) => s.toggleFavorite);
+  const isStaff = user.role === "employee" || user.role === "admin";
 
   const handleSignOut = async () => {
     await signOutAction();
@@ -73,10 +74,12 @@ export default function AccountView({ user }) {
         </dl>
 
         <div className="account-actions">
-          <Button as={Link} href="/orders" variant="primary" leftIcon={<FiClipboard />}>
-            Your Orders
-          </Button>
-          {(user.role === "employee" || user.role === "admin") && (
+          {!isStaff && (
+            <Button as={Link} href="/orders" variant="primary" leftIcon={<FiClipboard />}>
+              Your Orders
+            </Button>
+          )}
+          {isStaff && (
             <Button as={Link} href="/kitchen" variant="outline" leftIcon={<FiTool />}>
               Kitchen
             </Button>
@@ -92,27 +95,29 @@ export default function AccountView({ user }) {
         </div>
       </Card>
 
-      <Card variant="panel" className="account-favorites">
-        <h2>
-          <FiHeart aria-hidden="true" /> Your Favorites ({favorites.length})
-        </h2>
-        {favorites.length === 0 ? (
-          <p className="account-favorites__empty">
-            Dishes you save from the menu will show up here — look for &quot;Save to Favorites&quot; on any dish.
-          </p>
-        ) : (
-          <ul className="account-favorites__list">
-            {favorites.map((dish) => (
-              <li key={dish.id}>
-                <Link href={`/dish/${dish.id}`}>{dish.name}</Link>
-                <button type="button" aria-label={`Remove ${dish.name} from favorites`} onClick={() => toggleFavorite(dish)}>
-                  <FiX aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      {!isStaff && (
+        <Card variant="panel" className="account-favorites">
+          <h2>
+            <FiHeart aria-hidden="true" /> Your Favorites ({favorites.length})
+          </h2>
+          {favorites.length === 0 ? (
+            <p className="account-favorites__empty">
+              Dishes you save from the menu will show up here — look for &quot;Save to Favorites&quot; on any dish.
+            </p>
+          ) : (
+            <ul className="account-favorites__list">
+              {favorites.map((dish) => (
+                <li key={dish.id}>
+                  <Link href={`/dish/${dish.id}`}>{dish.name}</Link>
+                  <button type="button" aria-label={`Remove ${dish.name} from favorites`} onClick={() => toggleFavorite(dish)}>
+                    <FiX aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

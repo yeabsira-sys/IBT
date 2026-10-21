@@ -45,19 +45,13 @@ export default function Footer({
   const isStaff = user?.role === "employee" || user?.role === "admin" || staffArea;
 
   // Staff get the legal bar only: no marketing columns, hours or location.
+  // Legal links point at public shop pages, which are blocked for staff.
   if (isStaff) {
     return (
       <footer className="footer footer--minimal">
         <div className="container">
           <div className="footer__bar">
             <span>{legal}</span>
-            <span className="footer__bar-links">
-              {legalLinks.map((link) => (
-                <Link key={link.label} href={link.href}>
-                  {link.label}
-                </Link>
-              ))}
-            </span>
           </div>
         </div>
       </footer>

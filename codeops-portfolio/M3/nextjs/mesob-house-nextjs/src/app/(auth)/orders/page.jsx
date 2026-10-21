@@ -1,6 +1,6 @@
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import OrdersLive from "@/components/orders/OrdersLive";
-import { requirePageUser } from "@/lib/auth";
+import { requireCustomerPage } from "@/lib/auth";
 import { getOrdersForUser } from "@/lib/orders";
 
 export const metadata = {
@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 export default async function OrdersPage() {
-  const user = await requirePageUser("/orders");
+  const user = await requireCustomerPage("/orders");
   const orders = await getOrdersForUser(user.id);
 
   return (
