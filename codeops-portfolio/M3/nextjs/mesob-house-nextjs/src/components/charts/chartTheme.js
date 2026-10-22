@@ -1,3 +1,5 @@
+import { etb } from "@/lib/format";
+
 /** Shared chart colours and formatters. Safe to import from client components. */
 
 export const chartColors = {
@@ -23,11 +25,6 @@ export const chartTooltipStyle = {
   fontSize: 12,
 };
 
-export const formatETBCurrency = (value) =>
-  new Intl.NumberFormat("en-ET", {
-    style: "currency",
-    currency: "ETB",
-    maximumFractionDigits: 0,
-  }).format(Number(value) || 0);
+export const formatETBCurrency = (value) => etb.format(Number(value) || 0);
 
 export const formatCount = (value) => new Intl.NumberFormat("en-ET").format(Number(value) || 0);

@@ -3,14 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { FiArrowRight, FiClock, FiRefreshCw } from "react-icons/fi";
+import { FiArrowRight, FiClock, FiDownload, FiRefreshCw } from "react-icons/fi";
 import Button from "../ui/Button";
 import OrderFilters from "./OrderFilters";
 import OrderPagination from "./OrderPagination";
 import OrderStatusBadge from "./OrderStatusBadge";
 import useOrderBrowser from "@/hooks/useOrderBrowser";
+import { downloadCsv, orderHistoryCsv } from "@/lib/csv";
 import { fetcher } from "@/lib/fetcher";
-import { formatETB, formatOrderDate, isCancellable, isTerminal } from "@/lib/orderStatus";
+import { dateStamp, etb, when } from "@/lib/format";
+import { isCancellable, isTerminal } from "@/lib/orderStatus";
 import { useToast } from "@/store/toastStore";
 
 /**
@@ -45,6 +47,11 @@ export default function OrdersLive({ initialOrders }) {
     }
   };
 
+  const exportHistory = () => {
+    downloadCsv(`mesob-house-orders-${dateStamp.format(new Date())}.csv`, orderHistoryCsv(orders));
+    toast("Order history exported as CSV.", "info");
+  };
+
   if (orders.length === 0) {
     return (
       <div className="portal-empty">
@@ -65,6 +72,15 @@ export default function OrdersLive({ initialOrders }) {
           <FiRefreshCw className={isValidating ? "is-spinning" : undefined} aria-hidden="true" />
           {isValidating ? "Checking the kitchen…" : "Status refreshes automatically while an order is active."}
         </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          leftIcon={<FiDownload aria-hidden="true" />}
+          onClick={exportHistory}
+        >
+          Export CSV
+        </Button>
       </div>
 
       {error && <p className="form-error">We could not refresh your orders. Showing the last known status.</p>}
@@ -94,7 +110,7 @@ export default function OrdersLive({ initialOrders }) {
                 <div>
                   <p className="order-card__id">{order.id}</p>
                   <p className="order-card__date">
-                    {formatOrderDate(order.createdAt)} · {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
+                    {when.format(new Date(order.createdAt))} · {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
                   </p>
                 </div>
                 <OrderStatusBadge status={order.status} />
@@ -106,13 +122,13 @@ export default function OrdersLive({ initialOrders }) {
                     <span>
                       {item.quantity} × {item.name}
                     </span>
-                    <span>ETB {formatETB(Number(item.price) * item.quantity)}</span>
+                    <span>{etb.format(Number(item.price) * item.quantity || 0)}</span>
                   </li>
                 ))}
               </ul>
 
               <footer className="order-card__foot">
-                <strong>ETB {formatETB(order.totals?.total)}</strong>
+                <strong>{etb.format(Number(order.totals?.total) || 0)}</strong>
                 <div className="order-card__actions">
                   {isCancellable(order.status) && (
                     <Button

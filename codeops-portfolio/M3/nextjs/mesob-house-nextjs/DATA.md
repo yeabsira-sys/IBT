@@ -7,7 +7,7 @@ This document explains where data lives, how it is fetched, which SWR keys are l
 | Kind | Source | Rendering / cache | Examples |
 | --- | --- | --- | --- |
 | Public catalogue | Remote menu API (`API_BASE_URL`) with curated fallback | Server Components + ISR (5 min) + React `cache` per render | dishes, specials, dish pages, sitemap |
-| Private operational data | `.data/mesob-house.json` | Dynamic server rendering + SWR polling | users, sessions, orders, kitchen queue, admin stats |
+| Private operational data | `.data/mesob-house.json` | Dynamic server rendering + SWR polling + SSE order stream | users, sessions, orders, kitchen queue, admin stats |
 
 The browser never calls the menu backend directly. `src/lib/api.js` builds the URLs and `src/lib/menu.js` fetches them on the server, so missing CORS headers on the backend are irrelevant and the API host is not exposed as a client dependency.
 
@@ -142,7 +142,7 @@ The order action calls `getAllDishes()` as well. That is deliberate: the same ca
 | Navbar session | `useSession()` SWR, seeded by `/api/auth/session` | revalidate on focus; mutated after sign-in/out |
 | `/account` | Server page guard + user prop | `mutate(SESSION_KEY)` after sign-out |
 | `/orders` | Server page guard + `getOrdersForUser` | SWR `/api/orders`, 10 s while active |
-| `/orders/[id]` | Server page guard + `getOrderForUser` | SWR `/api/orders/[id]`, 10 s while active |
+| `/orders/[id]` | Server page guard + `getOrderForUser` | SSE `/api/orders/[id]/stream`, checks every 2 s, closes on terminal |
 | `/kitchen` | Server page guard + `getKitchenOverview` (queue + chart summaries) | SWR `/api/kitchen/orders`, 8 s |
 | `/admin` | Server page guard + `getAdminStats` (metrics + chart summaries) | SWR `/api/admin/stats`, 15 s |
 | `/admin/orders` | Server page guard + `getAllOrders` | SWR `/api/admin/orders`, 10 s |
@@ -150,7 +150,7 @@ The order action calls `getAllDishes()` as well. That is deliberate: the same ca
 
 ### Why not make every page client-rendered?
 
-The public catalogue is mostly static and benefits from ISR, streaming and zero client fetch on first paint. The private pages need a server session check before any HTML is sent, so they are dynamic. SWR then handles only the changing part, seeded with server data via `fallbackData` to avoid a loading flash.
+The public catalogue is mostly static and benefits from ISR, streaming and zero client fetch on first paint. The private pages need a server session check before any HTML is sent, so they are dynamic. SWR then handles only the changing part, seeded with server data via `fallbackData` to avoid a loading flash. The active order detail uses SSE instead: the server sends the initial order and pushes changes, so the page does not need a client fetch loop.
 
 ### Dashboard chart summaries
 
@@ -171,18 +171,23 @@ Date and hour bucketing uses `Africa/Addis_Ababa`, not the server timezone.
 `{ data: orders, charts }`. The existing SWR polls therefore refresh the
 charts with the queue/metrics instead of adding a second request.
 
-## 5. SWR keys and intervals
+## 5. SWR keys, intervals and SSE
 
 | SWR key | Used by | Interval | Notes |
 | --- | --- | --- | --- |
 | `/api/auth/session` | `useSession` / navbar | on focus | `shouldRetryOnError: false`; `mutate` after auth actions |
 | `/api/menu/search?q=…&category=…` | `MenuBrowser` | on key change only | 300 ms debounce; `keepPreviousData: true`; no focus revalidation |
 | `/api/orders` | `OrdersLive` | 10 s while any order is active | stops when all orders are terminal |
-| `/api/orders/[id]` | `OrderDetailLive` | 10 s while not terminal | stops on `completed`/`cancelled` |
 | `/api/kitchen/orders` | `KitchenBoard` | 8 s | employee/admin queue plus chart summaries |
 | `/api/admin/stats` | `AdminOverview` | 15 s | metrics plus chart summaries |
 | `/api/admin/orders` | `AdminOrders` | 10 s | all orders |
 | `/api/admin/users` | `AdminUsers` | 30 s | role management |
+
+`OrderDetailLive` does not use SWR. It opens an `EventSource` to
+`/api/orders/[id]/stream`; the route checks the session and ownership, sends the
+current order immediately, then checks the database every 2 seconds and sends a
+frame only when `updatedAt` changes. The route and client both close the stream
+once the order is `completed` or `cancelled`.
 
 `src/lib/fetcher.js` is shared: it sends `accept: application/json`, includes cookies, parses JSON, and throws an `Error` with `status` and `body` on non-2xx. That lets components distinguish 401/403/404/409 without parsing strings.
 
@@ -190,7 +195,7 @@ charts with the queue/metrics instead of adding a second request.
 
 - **Sign-in/register/sign-out** call the server action, then `mutate(SESSION_KEY)` so the navbar updates immediately. Sign-out also clears the client store's auth keys (the store was bumped to version 4 for that migration).
 - **Order creation** is a Server Action. It calls `revalidatePath` for `/orders`, `/orders/[id]`, `/kitchen`, `/admin` and `/admin/orders`, then the checkout page navigates to the new order.
-- **Customer cancel** calls `POST /api/orders/[id]/cancel`, then `mutate()` on the list/detail SWR key.
+- **Customer cancel** calls `POST /api/orders/[id]/cancel`, then `mutate()` on the list SWR key; the detail page's SSE stream also receives the cancelled status.
 - **Kitchen/admin status changes** call `PATCH`, then `mutate()` on their queue key. The next poll also picks up changes made by another user.
 
 ## 6. Search debounce

@@ -1,4 +1,5 @@
 import { FaStar } from "react-icons/fa6";
+import { etb } from "@/lib/format";
 
 /**
  * Tag — small pill label used over imagery and on cards.
@@ -45,11 +46,10 @@ export function Avatar({ name = "", src, size = 30 }) {
 
 /** PriceTag — currency + amount in the brand accent. */
 export function PriceTag({ currency = "ETB", amount, tone = "brand" }) {
-  return (
-    <span className={`price price--${tone}`}>
-      {currency} {amount}
-    </span>
-  );
+  const numeric = Number(String(amount ?? "").replace(/,/g, ""));
+  const label = Number.isFinite(numeric) ? etb.format(numeric) : `${currency} ${amount}`;
+
+  return <span className={`price price--${tone}`}>{currency === "ETB" ? label : `${currency} ${amount}`}</span>;
 }
 
 /**

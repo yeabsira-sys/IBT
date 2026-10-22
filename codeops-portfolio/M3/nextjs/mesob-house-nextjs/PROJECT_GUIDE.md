@@ -23,7 +23,7 @@
 1. **`src/app` is the route map.** Start at the page file, then follow its component imports.
 2. **The server owns security and money.** Sessions, roles, prices, ownership and status transitions are checked in `src/lib` and the API/actions.
 3. **The browser store is only a draft.** Cart, favourites and checkout form state live in Zustand/localStorage; real orders live in `.data/mesob-house.json`.
-4. **SWR is only for live refresh.** The first page render is server-rendered; SWR keeps order, kitchen and admin views current.
+4. **SWR and SSE are only for live refresh.** The first page render is server-rendered; SWR keeps order, kitchen and admin views current, while the active order detail uses an authenticated SSE stream.
 5. **`src/lib/db.js` is the database boundary.** Replace that one file to move off the JSON store.
 
 ---
@@ -230,7 +230,9 @@ Server page guard
   → requireCustomerPage()
   → getOrdersForUser(user.id) or getOrderForUser(user.id, orderId)
   → initial data passed to client component
-  → SWR polls while an order is still active
+  → /orders polls with SWR while an order is still active
+  → /orders/[id] opens an authenticated SSE stream
+    (/api/orders/[id]/stream) that pushes a new order when updatedAt changes
 ```
 
 Rules:
@@ -241,6 +243,7 @@ Rules:
 - Once the kitchen starts preparing, online cancellation is refused.
 - The timeline is derived from the current status; `statusHistory` stores the full audit trail.
 - The order-detail page also renders a Leaflet map: restaurant, destination and an illustrative courier marker. The route and address are repeated as text; see [`MAPS.md`](./MAPS.md).
+- The SSE route sends the current order immediately, polls every 2 seconds and closes on `completed` or `cancelled`. The client shows connecting/live/reconnecting/final states and closes the connection on unmount.
 
 Files:
 
@@ -251,8 +254,11 @@ Files:
 - [`src/components/orders/DeliveryMapPanel.jsx`](./src/components/orders/DeliveryMapPanel.jsx)
 - [`src/components/orders/DeliveryMap.jsx`](./src/components/orders/DeliveryMap.jsx)
 - [`src/lib/deliveryMap.js`](./src/lib/deliveryMap.js)
+- [`src/lib/format.js`](./src/lib/format.js)
+- [`src/lib/csv.js`](./src/lib/csv.js)
 - [`src/app/api/orders/route.js`](./src/app/api/orders/route.js)
 - [`src/app/api/orders/[id]/route.js`](./src/app/api/orders/[id]/route.js)
+- [`src/app/api/orders/[id]/stream/route.js`](./src/app/api/orders/%5Bid%5D/stream/route.js)
 - [`src/app/api/orders/[id]/cancel/route.js`](./src/app/api/orders/[id]/cancel/route.js)
 
 ---
@@ -540,6 +546,8 @@ src/app/(auth)/admin/page.jsx       → /admin
 | Menu data | Server + ISR | Cached, fast, no CORS problems |
 | Menu search | Client + SWR | Debounced interaction |
 | Order lists | Server seed + SWR | Fast first paint, then live updates |
+| Order detail status | Client + EventSource | Server sends changes only; stream closes on a terminal status |
+| Money/time display | Client or server + `lib/format.js` | One formatter per locale/time zone, built once |
 | Charts | Server aggregates + client render | Chart data is a small summary; the kitchen also receives the active queue it renders |
 | Search/filter/pagination | Client over loaded rows | No extra API round trip per keystroke |
 
@@ -573,6 +581,8 @@ Shared, client-safe modules include:
 - `src/lib/roles.js`
 - `src/lib/orderSearch.js`
 - `src/lib/schemas.js`
+- `src/lib/format.js`
+- `src/lib/csv.js`
 
 ---
 
@@ -596,8 +606,11 @@ Shared, client-safe modules include:
 | [`src/lib/orders.js`](./src/lib/orders.js) | Create, read, cancel and transition orders |
 | [`src/lib/orderStatus.js`](./src/lib/orderStatus.js) | Status vocabulary and legal transitions |
 | [`src/actions/order.js`](./src/actions/order.js) | Checkout Server Action |
-| [`src/components/orders/OrdersLive.jsx`](./src/components/orders/OrdersLive.jsx) | Customer order list |
-| [`src/components/orders/OrderDetailLive.jsx`](./src/components/orders/OrderDetailLive.jsx) | Customer order detail |
+| [`src/components/orders/OrdersLive.jsx`](./src/components/orders/OrdersLive.jsx) | Customer order list and CSV export |
+| [`src/components/orders/OrderDetailLive.jsx`](./src/components/orders/OrderDetailLive.jsx) | Customer order detail with SSE live status |
+| [`src/app/api/orders/[id]/stream/route.js`](./src/app/api/orders/%5Bid%5D/stream/route.js) | Authenticated SSE stream for one owned order |
+| [`src/lib/format.js`](./src/lib/format.js) | Shared `etb`, `when`, `relative`, `number` and `dateStamp` formatters |
+| [`src/lib/csv.js`](./src/lib/csv.js) | CSV escaping, order-history serialisation and browser download |
 | [`src/components/orders/DeliveryMapPanel.jsx`](./src/components/orders/DeliveryMapPanel.jsx) | Map card, loading state and text alternative |
 | [`src/components/orders/DeliveryMap.jsx`](./src/components/orders/DeliveryMap.jsx) | Browser-only Leaflet canvas |
 | [`src/lib/deliveryMap.js`](./src/lib/deliveryMap.js) | Approximate coordinates, address and courier helpers |
@@ -660,6 +673,7 @@ Shared, client-safe modules include:
 | `GET` | `/api/menu/search?q=&category=` | Public | Menu search |
 | `GET` | `/api/orders` | Signed-in customer | Customer order list polling |
 | `GET` | `/api/orders/[id]` | Owner only | Order detail polling |
+| `GET` | `/api/orders/[id]/stream` | Owner only | SSE order status stream |
 | `POST` | `/api/orders/[id]/cancel` | Owner + `received` only | Customer cancellation |
 | `GET` | `/api/kitchen/orders` | Employee/admin | Kitchen queue polling |
 | `PATCH` | `/api/kitchen/orders/[id]` | Employee/admin | Advance a ticket |
@@ -675,20 +689,27 @@ All private API responses use `Cache-Control: no-store`.
 
 ---
 
-## 11. SWR keys and intervals
+## 11. SWR keys, SSE and intervals
 
 | SWR key | Component | Interval |
 | --- | --- | --- |
 | `/api/auth/session` | Navbar / `useSession` | On focus |
 | `/api/menu/search?...` | `MenuBrowser` | On debounced key change |
 | `/api/orders` | `OrdersLive` | 10 s while an order is active |
-| `/api/orders/[id]` | `OrderDetailLive` | 10 s while not terminal |
 | `/api/kitchen/orders` | `KitchenBoard` | 8 s |
 | `/api/admin/stats` | `AdminOverview` | 15 s |
 | `/api/admin/orders` | `AdminOrders` | 10 s |
 | `/api/admin/users` | `AdminUsers` | 30 s |
 
-The data views (`OrdersLive`, `OrderDetailLive`, `KitchenBoard`, `AdminOverview`, `AdminOrders`, `AdminUsers`) receive initial data through `fallbackData`, so their first render does not wait for a client fetch.
+`OrderDetailLive` is the exception: it opens an `EventSource` to
+`/api/orders/[id]/stream` instead of polling with SWR. The route polls the
+file database every 2 seconds, sends only when `updatedAt` changes, and closes
+on a terminal status.
+
+The data views (`OrdersLive`, `KitchenBoard`, `AdminOverview`, `AdminOrders`,
+`AdminUsers`) receive initial data through `fallbackData`, so their first render
+does not wait for a client fetch. `OrderDetailLive` receives `initialOrder` as
+a prop and renders that before the stream's first event.
 
 ---
 
@@ -709,7 +730,9 @@ The data views (`OrdersLive`, `OrderDetailLive`, `KitchenBoard`, `AdminOverview`
 | Change checkout validation | `src/lib/schemas.js` |
 | Change menu fallback data | `src/data/menu.jsx` + `src/data/home.jsx` |
 | Change menu API URL | `src/lib/api.js` + `.env.local` |
-| Change polling intervals | The SWR config in the relevant component |
+| Change polling intervals | The SWR config in the relevant component, or `POLL_MS` in `src/app/api/orders/[id]/stream/route.js` |
+| Change money/time formatting | `src/lib/format.js` |
+| Change CSV columns or escaping | `src/lib/csv.js` |
 | Change map locations or delivery areas | `src/lib/deliveryMap.js`; see [`MAPS.md`](./MAPS.md) |
 | Change colours, spacing or fonts | `src/styles/theme.css` |
 | Change portal layout | `src/styles/portal.css` |
@@ -732,9 +755,10 @@ Read in this order:
 7. [`src/actions/order.js`](./src/actions/order.js), [`src/lib/orders.js`](./src/lib/orders.js), [`src/lib/db.js`](./src/lib/db.js) — order write path.
 8. [`src/proxy.js`](./src/proxy.js), [`src/lib/auth.js`](./src/lib/auth.js), [`src/actions/auth.js`](./src/actions/auth.js) — auth.
 9. [`src/app/(auth)/orders/page.jsx`](./src/app/%28auth%29/orders/page.jsx) and [`OrdersLive.jsx`](./src/components/orders/OrdersLive.jsx) — customer portal.
-10. [`src/components/kitchen/KitchenBoard.jsx`](./src/components/kitchen/KitchenBoard.jsx) — live kitchen queue.
-11. [`src/components/admin/AdminOverview.jsx`](./src/components/admin/AdminOverview.jsx) and [`src/lib/analytics.js`](./src/lib/analytics.js) — admin + charts.
-12. [`src/styles/theme.css`](./src/styles/theme.css) and [`src/styles/portal.css`](./src/styles/portal.css) — visual system.
+10. [`src/components/orders/OrderDetailLive.jsx`](./src/components/orders/OrderDetailLive.jsx) and [`src/app/api/orders/[id]/stream/route.js`](./src/app/api/orders/%5Bid%5D/stream/route.js) — SSE order tracking.
+11. [`src/components/kitchen/KitchenBoard.jsx`](./src/components/kitchen/KitchenBoard.jsx) — live kitchen queue.
+12. [`src/components/admin/AdminOverview.jsx`](./src/components/admin/AdminOverview.jsx) and [`src/lib/analytics.js`](./src/lib/analytics.js) — admin + charts.
+13. [`src/styles/theme.css`](./src/styles/theme.css) and [`src/styles/portal.css`](./src/styles/portal.css) — visual system.
 
 ---
 
@@ -845,6 +869,8 @@ The rest of the app should not need to change.
 | Menu is stale | ISR `revalidate`, `/api/revalidate`, `revalidateTag("menu")` |
 | Menu search fires too often | `useDebouncedValue` and the SWR key |
 | Kitchen queue does not update | SWR interval, `/api/kitchen/orders`, `mutate()` after PATCH |
+| Order detail stays on “Reconnecting…” | Session cookie, `/api/orders/[id]/stream`, `proxy.js`, server logs |
+| CSV fails to open cleanly | `src/lib/csv.js` escaping and the exported number columns |
 | Status button is missing | `nextStatuses(status, fulfillment)` |
 | Status change returns `409` | The transition is not legal from the current status |
 | Chart is empty | Date range, Addis timezone bucketing, no matching orders |

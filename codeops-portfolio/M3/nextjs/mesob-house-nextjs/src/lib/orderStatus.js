@@ -46,13 +46,3 @@ export function nextStatuses(status, fulfillment) {
 export function statusStep(status) {
   return STATUS_META[status]?.step ?? 0;
 }
-
-export const formatOrderDate = (value) =>
-  new Intl.DateTimeFormat("en-ET", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Africa/Addis_Ababa",
-  }).format(new Date(value));
-
-export const formatETB = (value) =>
-  new Intl.NumberFormat("en-ET", { maximumFractionDigits: 0 }).format(Number(value) || 0);

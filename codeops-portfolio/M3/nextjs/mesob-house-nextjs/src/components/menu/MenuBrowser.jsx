@@ -12,6 +12,7 @@ import useAddToCart from "@/hooks/useAddToCart";
 import useDebouncedValue from "@/hooks/useDebouncedValue";
 import { useStore } from "@/store/appStore";
 import { fetcher } from "@/lib/fetcher";
+import { number } from "@/lib/format";
 import { menuHero, stickyNote } from "@/data/menu";
 
 /**
@@ -113,7 +114,7 @@ export default function MenuBrowser({ dishes, source }) {
       </div>
       {visible.length === 0 && <p className="menu-empty">No dishes match your search — try another word or category.</p>}
 
-      <StickyCartBar count={itemCount} amount={subtotal.toLocaleString("en-US")} note={stickyNote} ctaTo="/cart" />
+      <StickyCartBar count={itemCount} amount={number.format(Number(subtotal) || 0)} note={stickyNote} ctaTo="/cart" />
     </>
   );
 }

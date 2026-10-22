@@ -13,6 +13,7 @@ import { contact, delivery, fulfillmentOptions, payment, promise } from "@/data/
 import { useStore } from "@/store/appStore";
 import { useToast } from "@/store/toastStore";
 import { checkoutSchema } from "@/lib/schemas";
+import { etb, number } from "@/lib/format";
 import { submitOrder } from "@/actions/order";
 
 // Lazy-loaded: the address and payment cards sit below the fold, so their JS
@@ -102,15 +103,15 @@ export default function CheckoutView({ user }) {
       eta: "Estimated arrival ~35–45 mins from clay oven sealing",
     },
     costs: [
-      { label: `Items Subtotal (${itemCount} item${itemCount === 1 ? "" : "s"})`, value: `ETB ${totals.subtotal.toLocaleString("en-US")}` },
+      { label: `Items Subtotal (${itemCount} item${itemCount === 1 ? "" : "s"})`, value: etb.format(Number(totals.subtotal) || 0) },
       { label: "100% Teff Injera (4 Rolls)", value: "Included", tone: "positive" },
       { label: "Insulated Traditional Clay-Pak", value: "Free", tone: "positive" },
-      { label: "City VAT & Tourism Levy (15%)", value: `ETB ${totals.vat.toLocaleString("en-US")}` },
-      ...(totals.discount > 0 ? [{ label: "Coupon Discount", value: `− ETB ${totals.discount}`, tone: "positive" }] : []),
+      { label: "City VAT & Tourism Levy (15%)", value: etb.format(Number(totals.vat) || 0) },
+      ...(totals.discount > 0 ? [{ label: "Coupon Discount", value: `− ${etb.format(Number(totals.discount) || 0)}`, tone: "positive" }] : []),
     ],
-    total: totals.total.toLocaleString("en-US"),
+    total: number.format(Number(totals.total) || 0),
     guarantee: "Guaranteed steaming hot in woven sealed carriers or 100% remade.",
-    ctaLabel: confirming ? "Confirming your order…" : `Confirm Order & Pay ETB ${totals.total.toLocaleString("en-US")}`,
+    ctaLabel: confirming ? "Confirming your order…" : `Confirm Order & Pay ${etb.format(Number(totals.total) || 0)}`,
     support: {
       icon: <FaHeadset />,
       title: "Need Phone Support?",

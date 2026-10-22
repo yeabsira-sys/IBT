@@ -11,7 +11,8 @@ import KitchenQueueChart from "../charts/KitchenQueueChart";
 import OrdersByHourChart from "../charts/OrdersByHourChart";
 import useOrderBrowser from "@/hooks/useOrderBrowser";
 import { fetcher } from "@/lib/fetcher";
-import { formatETB, formatOrderDate, nextStatuses, STATUS_META } from "@/lib/orderStatus";
+import { etb, when } from "@/lib/format";
+import { nextStatuses, STATUS_META } from "@/lib/orderStatus";
 import { useToast } from "@/store/toastStore";
 
 const COLUMNS = [
@@ -148,7 +149,7 @@ export default function KitchenBoard({ initialOrders, initialCharts }) {
                       <p className="kitchen-ticket__meta">
                         {order.customer?.name} · {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
                       </p>
-                      <p className="kitchen-ticket__meta">{formatOrderDate(order.createdAt)}</p>
+                      <p className="kitchen-ticket__meta">{when.format(new Date(order.createdAt))}</p>
                       <ul>
                         {order.items.map((item) => (
                           <li key={item.id}>
@@ -158,7 +159,7 @@ export default function KitchenBoard({ initialOrders, initialCharts }) {
                       </ul>
                       {order.note && <p className="kitchen-ticket__note">“{order.note}”</p>}
                       <div className="kitchen-ticket__foot">
-                        <strong>ETB {formatETB(order.totals?.total)}</strong>
+                        <strong>{etb.format(Number(order.totals?.total) || 0)}</strong>
                         <div className="kitchen-ticket__actions">
                           {nextStatuses(order.status, order.fulfillment).map((next) => (
                             <Button

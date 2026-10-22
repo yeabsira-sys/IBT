@@ -14,7 +14,8 @@ This repository is the Day 45 submission for the CodeOps M3 advanced Next.js ass
 - **Three roles** — `customer`, `employee`, `admin`. Kitchen and admin routes are never public, and staff accounts are kept inside their portal: public shop and customer-only pages redirect them to `/admin` or `/kitchen`, while public menu and customer order APIs return `403`. `/account` stays available so staff can sign out.
 - **Live order flow** — `received → preparing → ready → out_for_delivery → completed`, with pickup skipping delivery and customer cancellation only while `received`.
 - **Server-authoritative pricing** — dish ids and prices are resolved against the live menu inside the order action; a forged client price is ignored.
-- **Live data + SWR** — session navbar, debounced menu search, customer order polling, kitchen queue polling, admin metrics/orders/users polling.
+- **Live data + SWR and SSE** — session navbar, debounced menu search, order-history polling, kitchen queue polling, admin metrics/orders/users polling, and an authenticated SSE stream for the active order detail.
+- **Shared formatters + CSV export** — `src/lib/format.js` builds the `etb`, `when`, `relative` and `number` formatters once; `/orders` can download the customer's history through `src/lib/csv.js`, which quotes commas, quotes and newlines correctly.
 - **Leaflet delivery map** — a browser-only map on `/orders/[id]` with restaurant, destination and illustrative courier markers, plus the same route and address as text. See [`MAPS.md`](./MAPS.md).
 - **Metadata and discovery** — per-page metadata, per-dish Open Graph cards, JSON-LD `MenuItem`, sitemap, robots rules, web manifest, private-page `noindex`.
 - **Documentation** — [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md) is the big-picture codebase tour; [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md), [`PERF.md`](./PERF.md) and [`MAPS.md`](./MAPS.md) cover security, data/caching, performance and the map.
@@ -27,7 +28,7 @@ This repository is the Day 45 submission for the CodeOps M3 advanced Next.js ass
 | UI | React 19, CSS modules-free global styles |
 | Client state | Zustand for cart, favourites and checkout draft |
 | Server data | File-backed JSON store at `.data/mesob-house.json` |
-| Client data | SWR 2 |
+| Client data | SWR 2 + EventSource for the order status stream |
 | Validation | Zod + react-hook-form |
 | Passwords | Node `scrypt` with a per-user salt |
 | Session token | 256-bit random token; SHA-256 hash stored server-side |
@@ -75,8 +76,8 @@ Sign in with either the email (Email tab) or the nine digits after `+251` (Mobil
 | --- | --- |
 | `/account` | `requirePageUser`; every signed-in role, so staff can also sign out |
 | `/checkout` | `requireCustomerPage` + `noindex` |
-| `/orders` | `requireCustomerPage`; only the session user's orders |
-| `/orders/[id]` | `requireCustomerPage`; ownership is part of the lookup; includes the Leaflet map |
+| `/orders` | `requireCustomerPage`; only the session user's orders; CSV export |
+| `/orders/[id]` | `requireCustomerPage`; ownership is part of the lookup; includes the Leaflet map and SSE live status |
 
 ### Staff
 
@@ -98,6 +99,7 @@ Staff sessions are redirected away from the public shop (`/`, `/menu`, `/dish/*`
 | GET | `/api/menu/search?q=&category=` | public, 60 s CDN cache + SWR; `403` for staff |
 | GET | `/api/orders` | signed-in customer; scoped to session; `403` for staff |
 | GET | `/api/orders/[id]` | owner only; 404 for another user's order; `403` for staff |
+| GET | `/api/orders/[id]/stream` | owner only SSE; polls status every 2 s and closes on a terminal status |
 | POST | `/api/orders/[id]/cancel` | owner + status `received` only; `403` for staff |
 | GET | `/api/kitchen/orders` | employee/admin |
 | PATCH | `/api/kitchen/orders/[id]` | employee/admin; validated transition |
@@ -118,10 +120,10 @@ src/
     (shop)/         public shop, cart, checkout, dish pages
     (auth)/         sign-in, register, account, orders, kitchen, admin
     api/            route handlers
-  components/       UI, including SWR live views and the Leaflet map card
+  components/       UI, including SWR live views, the SSE order detail and the Leaflet map card
   data/             curated menu/content fallbacks
   hooks/            useSession, useDebouncedValue, useNavbarState
-  lib/              db, auth, orders, menu, pricing, schemas, deliveryMap
+  lib/              db, auth, orders, menu, pricing, schemas, format, csv, deliveryMap
   proxy.js          Next.js 16 proxy (middleware equivalent)
   store/            Zustand cart/favourites/checkout draft
   styles/           global styles, including portal.css
@@ -143,6 +145,22 @@ details, and public shop pages stay static/ISR.
 The coordinates are approximate neighbourhood centres, not live GPS. The
 courier dot is intentionally labelled as illustrative. For the full design,
 extension points and testing checklist, see [`MAPS.md`](./MAPS.md).
+
+## Live status and history export
+
+`/orders/[id]` opens an `EventSource` to
+`/api/orders/[id]/stream`. The route checks the session and order ownership,
+sends the current order immediately, then polls the file database every 2
+seconds and sends only when `updatedAt` changes. It closes itself when the
+order reaches `completed` or `cancelled`, and the client closes the connection
+on unmount.
+
+`/orders` keeps its SWR polling and adds **Export CSV**. The export uses
+`src/lib/csv.js`, which doubles quotes and wraps any value containing a comma,
+quote or newline. Money stays numeric in the file; the column names carry the
+ETB unit. Money and date display across the app goes through
+`src/lib/format.js` (`etb`, `when`, `relative`, `number`), so a formatter is
+built once rather than inside a render loop.
 
 ## Scripts
 
@@ -191,7 +209,10 @@ The final local production build succeeded. Runtime checks covered:
 - admin self-demotion returning 409;
 - open-redirect payloads rejected;
 - tampered localStorage price ignored by the server;
-- SWR polling changing a customer order from `PREPARING` to `READY` without a reload;
+- SSE order detail receiving a status change and closing the stream on `completed`, with a visible connection state;
+- `/api/orders/[id]/stream` returning `401` to guests, `403` to staff and `404` for another customer's order;
+- order-history CSV export containing quoted comma/quote/newline values and no malformed columns;
+- SWR polling changing a customer order from `PREPARING` to `READY` without a reload outside the order detail;
 - delivery and pickup order maps rendering with the text address, markers and OpenStreetMap attribution;
 - debounced search sending one request for a burst of keystrokes.
 

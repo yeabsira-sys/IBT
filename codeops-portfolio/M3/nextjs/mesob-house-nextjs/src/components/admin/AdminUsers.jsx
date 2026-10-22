@@ -4,7 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { FiRefreshCw } from "react-icons/fi";
 import { fetcher } from "@/lib/fetcher";
-import { formatOrderDate } from "@/lib/orderStatus";
+import { when } from "@/lib/format";
 import { ROLES, ROLE_LABELS } from "@/lib/roles";
 import { useToast } from "@/store/toastStore";
 
@@ -70,7 +70,7 @@ export default function AdminUsers({ initialUsers, currentUserId }) {
                 </td>
                 <td>{user.email}</td>
                 <td>{user.phone ? `+251 ${user.phone}` : "—"}</td>
-                <td>{formatOrderDate(user.createdAt)}</td>
+                <td>{when.format(new Date(user.createdAt))}</td>
                 <td>
                   <select
                     className="role-select"

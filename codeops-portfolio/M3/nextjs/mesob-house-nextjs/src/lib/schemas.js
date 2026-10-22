@@ -2,18 +2,26 @@ import { z } from "zod";
 
 const ethiopianMobile = z
   .string()
-  .refine((v) => /^\d{9}$/.test(v.replace(/\s/g, "")), "Enter 9 digits after +251, e.g. 911 234 567.");
+  .refine(
+    (v) => /^\d{9}$/.test(v.replace(/\s/g, "")),
+    "Enter 9 digits after +251, e.g. 911 234 567.",
+  );
 
 /** Register form — validated in the browser by react-hook-form via zodResolver. */
 export const registerSchema = z
   .object({
-    fullName: z.string().trim().min(2, "Enter the name to reserve tables under."),
+    fullName: z
+      .string()
+      .trim()
+      .min(2, "Enter the name to reserve tables under."),
     phone: ethiopianMobile,
     email: z.string().trim().email("Enter a valid email address."),
     password: z.string().min(8, "Use at least 8 characters."),
     confirmPassword: z.string(),
     preference: z.string().nullable().optional(),
-    agreed: z.boolean().refine((v) => v === true, "Accept the terms to continue."),
+    agreed: z
+      .boolean()
+      .refine((v) => v === true, "Accept the terms to continue."),
   })
   .refine((v) => v.password === v.confirmPassword, {
     path: ["confirmPassword"],
@@ -55,7 +63,10 @@ export const checkoutSchema = z
     }),
     method: z.string().min(1, "Choose a payment method."),
     couponCode: z.string().optional(),
-    note: z.string().max(500, "Keep the kitchen note under 500 characters.").optional(),
+    note: z
+      .string()
+      .max(500, "Keep the kitchen note under 500 characters.")
+      .optional(),
     items: z
       .array(
         z.object({

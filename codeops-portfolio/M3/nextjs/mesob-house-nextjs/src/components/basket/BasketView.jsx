@@ -9,6 +9,7 @@ import { basketGroup, etiquette } from "@/data/basket";
 import { useStore } from "@/store/appStore";
 import { useToast } from "@/store/toastStore";
 import useAddToCart from "@/hooks/useAddToCart";
+import { etb, number } from "@/lib/format";
 
 const JEBENA_BUNA_ADDON = {
   id: "jebena-spiced-coffee",
@@ -43,16 +44,16 @@ export default function BasketView() {
   const ledgerProps = {
     title: "Basket Ledger",
     rows: [
-      { label: `Items Subtotal (${itemCount} item${itemCount === 1 ? "" : "s"})`, value: `ETB ${totals.subtotal.toLocaleString("en-US")}` },
+      { label: `Items Subtotal (${itemCount} item${itemCount === 1 ? "" : "s"})`, value: etb.format(Number(totals.subtotal) || 0) },
       { label: "100% Teff Injera (4 Rolls)", value: "Included", tone: "positive" },
       { label: "Insulated Traditional Clay-Pak", value: "Free", tone: "positive" },
       { label: "Delivery Fee (Bole Zone)", value: "Free", tone: "positive" },
-      { label: "City VAT & Tourism Levy (15%)", value: `ETB ${totals.vat.toLocaleString("en-US")}` },
+      { label: "City VAT & Tourism Levy (15%)", value: etb.format(Number(totals.vat) || 0) },
     ],
-    coupon: totals.discount > 0 ? { label: `${couponCode.toUpperCase()} applied`, value: `− ETB ${totals.discount}` } : undefined,
+    coupon: totals.discount > 0 ? { label: `${couponCode.toUpperCase()} applied`, value: `− ${etb.format(Number(totals.discount) || 0)}` } : undefined,
     couponPlaceholder: "Have a coupon code? Try GURSHA2025",
     onApplyCoupon: handleApplyCoupon,
-    total: totals.total.toLocaleString("en-US"),
+    total: number.format(Number(totals.total) || 0),
     ctaLabel: "Proceed to Delivery Checkout",
     ctaTo: "/checkout",
     exploreLabel: "Explore more dishes from our Menu",

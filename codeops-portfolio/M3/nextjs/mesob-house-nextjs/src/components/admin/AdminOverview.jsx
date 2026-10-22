@@ -7,7 +7,7 @@ import OrderStatusBadge from "../orders/OrderStatusBadge";
 import OrdersPerDayChart from "../charts/OrdersPerDayChart";
 import RevenueByAreaChart from "../charts/RevenueByAreaChart";
 import { fetcher } from "@/lib/fetcher";
-import { formatETB, formatOrderDate } from "@/lib/orderStatus";
+import { etb, when } from "@/lib/format";
 
 const cards = [
   { key: "orders", label: "All orders", icon: <FiClipboard /> },
@@ -45,7 +45,7 @@ export default function AdminOverview({ initialStats }) {
           <article className="admin-stat" key={card.key}>
             <span className="admin-stat__icon" aria-hidden="true">{card.icon}</span>
             <span className="admin-stat__label">{card.label}</span>
-            <strong>{card.money ? `ETB ${formatETB(stats[card.key])}` : stats[card.key]}</strong>
+            <strong>{card.money ? etb.format(Number(stats[card.key]) || 0) : stats[card.key]}</strong>
           </article>
         ))}
       </div>
@@ -87,8 +87,8 @@ export default function AdminOverview({ initialStats }) {
                   <tr key={order.id}>
                     <td><strong>{order.id}</strong></td>
                     <td>{order.customer?.name}</td>
-                    <td>{formatOrderDate(order.createdAt)}</td>
-                    <td>ETB {formatETB(order.totals?.total)}</td>
+                    <td>{when.format(new Date(order.createdAt))}</td>
+                    <td>{etb.format(Number(order.totals?.total) || 0)}</td>
                     <td><OrderStatusBadge status={order.status} /></td>
                   </tr>
                 ))}

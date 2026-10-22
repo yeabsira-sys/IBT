@@ -9,7 +9,8 @@ import OrderPagination from "../orders/OrderPagination";
 import OrderStatusBadge from "../orders/OrderStatusBadge";
 import useOrderBrowser from "@/hooks/useOrderBrowser";
 import { fetcher } from "@/lib/fetcher";
-import { formatETB, formatOrderDate, isTerminal, nextStatuses } from "@/lib/orderStatus";
+import { etb, when } from "@/lib/format";
+import { isTerminal, nextStatuses } from "@/lib/orderStatus";
 import { useToast } from "@/store/toastStore";
 
 const ACTION_LABEL = {
@@ -98,7 +99,7 @@ export default function AdminOrders({ initialOrders }) {
                     <header className="admin-order__head">
                       <div>
                         <strong>{order.id}</strong>
-                        <span>{formatOrderDate(order.createdAt)}</span>
+                        <span>{when.format(new Date(order.createdAt))}</span>
                       </div>
                       <OrderStatusBadge status={order.status} />
                     </header>
@@ -107,7 +108,7 @@ export default function AdminOrders({ initialOrders }) {
                       <p><span>Customer</span>{order.customer?.name}</p>
                       <p><span>Contact</span>+251 {order.contact?.phone}</p>
                       <p><span>Fulfillment</span>{order.fulfillment === "pickup" ? "Pickup" : "Delivery"}</p>
-                      <p><span>Total</span>ETB {formatETB(order.totals?.total)}</p>
+                      <p><span>Total</span>{etb.format(Number(order.totals?.total) || 0)}</p>
                     </div>
 
                     <details className="admin-order__details">
@@ -116,7 +117,7 @@ export default function AdminOrders({ initialOrders }) {
                         {order.items.map((item) => (
                           <li key={item.id}>
                             <span>{item.quantity} × {item.name}</span>
-                            <span>ETB {formatETB(Number(item.price) * item.quantity)}</span>
+                            <span>{etb.format(Number(item.price) * item.quantity || 0)}</span>
                           </li>
                         ))}
                       </ul>

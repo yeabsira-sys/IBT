@@ -92,7 +92,8 @@ Browser requests /orders/MH-...
   │
   ├─ OrderDetailLive                              (Client Component)
   │    renders the timeline, map card and details
-  │    SWR keeps the order current while it is active
+  │    opens EventSource to /api/orders/[id]/stream
+  │    SSE pushes a new order while the stream is active
   │
   ├─ DeliveryMapPanel                             (Client Component)
   │    next/dynamic(..., { ssr: false })
@@ -106,6 +107,11 @@ Browser requests /orders/MH-...
 
 The server render already contains the address and route text. The map only
 adds a visual layer on top; it never owns the authoritative delivery data.
+
+The map redraws from the same `order` object that the SSE stream updates. A
+status change therefore moves the timeline and (for `out_for_delivery`) adds or
+removes the courier marker without a page reload. The courier position itself
+is still interpolated, not GPS-derived.
 
 ---
 
@@ -347,7 +353,7 @@ status badge and “Delivery details” section all repeat the fulfilment method
   a separate chunk that is requested only on the order-detail page.
 - The server sends a placeholder with a fixed height, so there is no layout
   shift when the map mounts.
-- The map adds no new API route and no extra database query.
+- The map adds no new API route and no extra database query; the separate SSE status stream is the only new order-detail route.
 - Tiles come directly from OpenStreetMap; the server does not proxy them.
 - Public pages remain static/ISR because the map lives on a private dynamic
   page, not in the `(shop)` layout.
@@ -410,14 +416,16 @@ provider’s licence.
 3. The map card says “Delivery map”.
 4. Three markers are visible: restaurant, destination, courier.
 5. Tiles load and the OpenStreetMap attribution is visible.
-6. The route and full address are readable as text under the map.
-7. Open a pickup order: one marker, “Pickup map”, no courier.
-8. Resize to a narrow viewport: the frame becomes `280px` and the map remains
-   usable.
-9. Disable the network: the frame may stay blank, but the address text remains.
-10. Sign in as staff and open `/orders/[id]`: the proxy redirects to the staff
+6. The connection label reaches “Live status”.
+7. Move the order to `completed` in the database (or the kitchen board): the timeline, badge and courier marker update without a reload, the label becomes “Final status”, and the stream closes.
+8. The route and full address are readable as text under the map.
+9. Open a pickup order: one marker, “Pickup map”, no courier.
+10. Resize to a narrow viewport: the frame becomes `280px` and the map remains
+    usable.
+11. Disable the network: the frame may stay blank, but the address text remains.
+12. Sign in as staff and open `/orders/[id]`: the proxy redirects to the staff
     portal, so the map is not shown.
-11. Check the browser console for hydration or Leaflet errors.
+13. Check the browser console for hydration or Leaflet errors.
 
 ---
 
@@ -432,7 +440,7 @@ provider’s licence.
 | Map covers other UI | Leaflet pane stacking | `.delivery-map-frame` has `position: relative; z-index: 0` |
 | Page jumps when the map loads | Placeholder height differs | Keep the loading placeholder the same height as the frame |
 | Tiles never load | Network blocked or OSM policy | Check the network panel; switch tile provider for production |
-| Courier dot does not move while watching | It only updates when the order re-renders | It is illustrative; real movement needs a GPS/SSE feed |
+| Courier dot does not move continuously | SSE re-renders on status changes only | It is illustrative; continuous movement needs a GPS feed |
 
 ---
 

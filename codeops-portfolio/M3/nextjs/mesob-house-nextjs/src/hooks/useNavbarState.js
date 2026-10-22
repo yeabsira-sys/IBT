@@ -2,6 +2,7 @@
 
 import { useStore } from "@/store/appStore";
 import useSession from "./useSession";
+import { number } from "@/lib/format";
 
 /** Live cart-pill figures + the server session (cached by SWR) for the navbar. */
 export default function useNavbarState() {
@@ -13,7 +14,7 @@ export default function useNavbarState() {
     cart: {
       itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
       currency: "ETB",
-      amount: subtotal.toLocaleString("en-US"),
+      amount: number.format(Number(subtotal) || 0),
     },
     user: user ? { name: user.fullName, role: user.role } : undefined,
   };
