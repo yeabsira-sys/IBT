@@ -2,7 +2,7 @@
 
 > **New to this codebase? Read this file first.**  
 > It explains the whole app, the main request flows, the folder map, and where to change things.  
-> Deep dives live in [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md) and [`PERF.md`](./PERF.md).
+> Deep dives live in [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md), [`PERF.md`](./PERF.md) and [`MAPS.md`](./MAPS.md).
 
 ## Quick orientation
 
@@ -146,7 +146,7 @@ Role landing pages:
 | `employee` | `/kitchen` |
 | `customer` | `/` |
 
-If the visitor was bounced from a private page, the `next` query parameter is honoured after sign-in. Unsafe redirect targets are rejected. Staff accounts are then kept inside their portal: if the requested destination is a public shop or customer page, the proxy sends them to `/admin` or `/kitchen`.
+If the visitor was bounced from a private page, the `next` query parameter is honoured after sign-in. Unsafe redirect targets are rejected. Staff accounts are then kept inside their portal: if the requested destination is a public shop or customer-only page, the proxy sends them to `/admin` or `/kitchen`. `/account` remains available for staff sign-out.
 
 Files:
 
@@ -240,6 +240,7 @@ Rules:
 - Cancellation is allowed only while the order is `received`.
 - Once the kitchen starts preparing, online cancellation is refused.
 - The timeline is derived from the current status; `statusHistory` stores the full audit trail.
+- The order-detail page also renders a Leaflet map: restaurant, destination and an illustrative courier marker. The route and address are repeated as text; see [`MAPS.md`](./MAPS.md).
 
 Files:
 
@@ -247,6 +248,9 @@ Files:
 - [`src/app/(auth)/orders/[id]/page.jsx`](./src/app/%28auth%29/orders/[id]/page.jsx)
 - [`src/components/orders/OrdersLive.jsx`](./src/components/orders/OrdersLive.jsx)
 - [`src/components/orders/OrderDetailLive.jsx`](./src/components/orders/OrderDetailLive.jsx)
+- [`src/components/orders/DeliveryMapPanel.jsx`](./src/components/orders/DeliveryMapPanel.jsx)
+- [`src/components/orders/DeliveryMap.jsx`](./src/components/orders/DeliveryMap.jsx)
+- [`src/lib/deliveryMap.js`](./src/lib/deliveryMap.js)
 - [`src/app/api/orders/route.js`](./src/app/api/orders/route.js)
 - [`src/app/api/orders/[id]/route.js`](./src/app/api/orders/[id]/route.js)
 - [`src/app/api/orders/[id]/cancel/route.js`](./src/app/api/orders/[id]/cancel/route.js)
@@ -308,8 +312,8 @@ The proxy is a routing layer, not the security boundary. It verifies the session
 | Role | Can use |
 | --- | --- |
 | `customer` | Public site, account, checkout, own orders |
-| `employee` | `/kitchen` only; public shop and customer pages redirect to `/kitchen` |
-| `admin` | `/kitchen`, `/admin`, `/admin/orders`, `/admin/users`; public shop and customer pages redirect to `/admin` |
+| `employee` | `/account` (sign out), `/kitchen`; public shop and customer-only pages redirect to `/kitchen` |
+| `admin` | `/account` (sign out), `/kitchen`, `/admin`, `/admin/orders`, `/admin/users`; public shop and customer-only pages redirect to `/admin` |
 
 Staff accounts are intentionally not customer accounts. The public menu APIs (`/api/menu*`) and customer order APIs (`/api/orders*`) return `403` for staff sessions. `/api/auth/session`, `/api/health` and `/api/revalidate` remain reachable.
 
@@ -594,6 +598,9 @@ Shared, client-safe modules include:
 | [`src/actions/order.js`](./src/actions/order.js) | Checkout Server Action |
 | [`src/components/orders/OrdersLive.jsx`](./src/components/orders/OrdersLive.jsx) | Customer order list |
 | [`src/components/orders/OrderDetailLive.jsx`](./src/components/orders/OrderDetailLive.jsx) | Customer order detail |
+| [`src/components/orders/DeliveryMapPanel.jsx`](./src/components/orders/DeliveryMapPanel.jsx) | Map card, loading state and text alternative |
+| [`src/components/orders/DeliveryMap.jsx`](./src/components/orders/DeliveryMap.jsx) | Browser-only Leaflet canvas |
+| [`src/lib/deliveryMap.js`](./src/lib/deliveryMap.js) | Approximate coordinates, address and courier helpers |
 | [`src/components/admin/AdminOrders.jsx`](./src/components/admin/AdminOrders.jsx) | All orders |
 | [`src/components/kitchen/KitchenBoard.jsx`](./src/components/kitchen/KitchenBoard.jsx) | Kitchen queue |
 | [`src/hooks/useOrderBrowser.js`](./src/hooks/useOrderBrowser.js) | Shared search/filter/pagination state |
@@ -703,6 +710,7 @@ The data views (`OrdersLive`, `OrderDetailLive`, `KitchenBoard`, `AdminOverview`
 | Change menu fallback data | `src/data/menu.jsx` + `src/data/home.jsx` |
 | Change menu API URL | `src/lib/api.js` + `.env.local` |
 | Change polling intervals | The SWR config in the relevant component |
+| Change map locations or delivery areas | `src/lib/deliveryMap.js`; see [`MAPS.md`](./MAPS.md) |
 | Change colours, spacing or fonts | `src/styles/theme.css` |
 | Change portal layout | `src/styles/portal.css` |
 | Change cart persistence | `src/store/appStore.js` |
@@ -828,7 +836,7 @@ The rest of the app should not need to change.
 | Symptom | Look at |
 | --- | --- |
 | Redirected to `/sign-in` unexpectedly | `src/proxy.js`, session cookie, `requirePageUser` |
-| Staff sent back to `/admin` or `/kitchen` | Expected: public shop and customer pages are blocked for staff in `src/proxy.js` |
+| Staff sent back to `/admin` or `/kitchen` | Expected: public shop and customer-only pages are blocked for staff in `src/proxy.js`; `/account` is intentionally allowed for sign-out |
 | Signed in but still see guest UI | `useSession`, `/api/auth/session`, SWR mutate after sign-in |
 | `403` from kitchen/admin API | Role check in `src/lib/auth.js` and the route handler |
 | Another user's order returns `404` | Correct: ownership is part of `getOrderForUser` |

@@ -5,6 +5,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { FiArrowLeft, FiClock, FiMapPin, FiPhone, FiRefreshCw } from "react-icons/fi";
 import Button from "../ui/Button";
+import DeliveryMapPanel from "./DeliveryMapPanel";
 import OrderStatusBadge from "./OrderStatusBadge";
 import { fetcher } from "@/lib/fetcher";
 import { formatETB, formatOrderDate, isCancellable, isTerminal, statusStep } from "@/lib/orderStatus";
@@ -88,6 +89,8 @@ export default function OrderDetailLive({ initialOrder }) {
           })}
         </ol>
       )}
+
+      <DeliveryMapPanel order={order} />
 
       <div className="order-detail__grid">
         <section className="portal-card">

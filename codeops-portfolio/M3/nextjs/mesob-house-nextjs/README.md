@@ -11,12 +11,13 @@ This repository is the Day 45 submission for the CodeOps M3 advanced Next.js ass
 
 - **Real authentication** — opaque session tokens in an `httpOnly` cookie, scrypt password hashes, 7-day sessions (30 days with “keep signed in”).
 - **Three layers of protection** — role-aware `proxy.js` routing gate, server-side page guards, and action/API guards. Ownership is part of every customer order query.
-- **Three roles** — `customer`, `employee`, `admin`. Kitchen and admin routes are never public, and staff accounts are kept inside their portal: public shop/customer pages redirect them to `/admin` or `/kitchen`, while public menu and customer order APIs return `403`.
+- **Three roles** — `customer`, `employee`, `admin`. Kitchen and admin routes are never public, and staff accounts are kept inside their portal: public shop and customer-only pages redirect them to `/admin` or `/kitchen`, while public menu and customer order APIs return `403`. `/account` stays available so staff can sign out.
 - **Live order flow** — `received → preparing → ready → out_for_delivery → completed`, with pickup skipping delivery and customer cancellation only while `received`.
 - **Server-authoritative pricing** — dish ids and prices are resolved against the live menu inside the order action; a forged client price is ignored.
 - **Live data + SWR** — session navbar, debounced menu search, customer order polling, kitchen queue polling, admin metrics/orders/users polling.
+- **Leaflet delivery map** — a browser-only map on `/orders/[id]` with restaurant, destination and illustrative courier markers, plus the same route and address as text. See [`MAPS.md`](./MAPS.md).
 - **Metadata and discovery** — per-page metadata, per-dish Open Graph cards, JSON-LD `MenuItem`, sitemap, robots rules, web manifest, private-page `noindex`.
-- **Documentation** — [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md) is the big-picture codebase tour; [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md) and [`PERF.md`](./PERF.md) cover security, data/caching and performance.
+- **Documentation** — [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md) is the big-picture codebase tour; [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md), [`PERF.md`](./PERF.md) and [`MAPS.md`](./MAPS.md) cover security, data/caching, performance and the map.
 
 ## Stack
 
@@ -47,8 +48,8 @@ The menu is fetched from `API_BASE_URL` on the server with a 5-minute ISR cache.
 
 | Role | Email | Mobile | Password | Can open |
 | --- | --- | --- | --- | --- |
-| Admin | `admin@mesob.house` | `911000001` | `Admin123!` | `/kitchen`, `/admin` (staff portal only) |
-| Employee | `kitchen@mesob.house` | `911000002` | `Kitchen123!` | `/kitchen` (staff portal only) |
+| Admin | `admin@mesob.house` | `911000001` | `Admin123!` | `/account` (sign out), `/kitchen`, `/admin` |
+| Employee | `kitchen@mesob.house` | `911000002` | `Kitchen123!` | `/account` (sign out), `/kitchen` |
 | Customer | `guest@mesob.house` | `911000003` | `Guest123!` | public shop, account, checkout, own orders |
 
 Sign in with either the email (Email tab) or the nine digits after `+251` (Mobile tab).
@@ -72,10 +73,10 @@ Sign in with either the email (Email tab) or the nine digits after `+251` (Mobil
 
 | Route | Guard |
 | --- | --- |
-| `/account` | `requireCustomerPage` |
+| `/account` | `requirePageUser`; every signed-in role, so staff can also sign out |
 | `/checkout` | `requireCustomerPage` + `noindex` |
 | `/orders` | `requireCustomerPage`; only the session user's orders |
-| `/orders/[id]` | `requireCustomerPage`; ownership is part of the lookup |
+| `/orders/[id]` | `requireCustomerPage`; ownership is part of the lookup; includes the Leaflet map |
 
 ### Staff
 
@@ -86,7 +87,7 @@ Sign in with either the email (Email tab) or the nine digits after `+251` (Mobil
 | `/admin/orders` | `admin` |
 | `/admin/users` | `admin` |
 
-Staff sessions are redirected away from the public shop (`/`, `/menu`, `/dish/*`, `/cart`, `/terms`, `/privacy`) and customer pages (`/account`, `/orders`, `/checkout`) to their portal.
+Staff sessions are redirected away from the public shop (`/`, `/menu`, `/dish/*`, `/cart`, `/terms`, `/privacy`) and customer-only pages (`/orders`, `/checkout`) to their portal. `/account` stays available to staff so they can review their profile and sign out.
 
 ### API
 
@@ -117,14 +118,31 @@ src/
     (shop)/         public shop, cart, checkout, dish pages
     (auth)/         sign-in, register, account, orders, kitchen, admin
     api/            route handlers
-  components/       UI, including SWR live views
+  components/       UI, including SWR live views and the Leaflet map card
   data/             curated menu/content fallbacks
   hooks/            useSession, useDebouncedValue, useNavbarState
-  lib/              db, auth, orders, menu, pricing, schemas
+  lib/              db, auth, orders, menu, pricing, schemas, deliveryMap
   proxy.js          Next.js 16 proxy (middleware equivalent)
   store/            Zustand cart/favourites/checkout draft
   styles/           global styles, including portal.css
 ```
+
+## Delivery map
+
+`/orders/[id]` includes a Leaflet map for the customer's order:
+
+- restaurant marker, delivery-area marker and dashed route line;
+- a courier marker while the order is `out_for_delivery`;
+- the same route and full address printed as text beside the map;
+- a pickup variant with one restaurant marker.
+
+The map is isolated behind `next/dynamic(..., { ssr: false })` because Leaflet
+touches `window` on import. The server still renders the address and order
+details, and public shop pages stay static/ISR.
+
+The coordinates are approximate neighbourhood centres, not live GPS. The
+courier dot is intentionally labelled as illustrative. For the full design,
+extension points and testing checklist, see [`MAPS.md`](./MAPS.md).
 
 ## Scripts
 
@@ -155,16 +173,17 @@ The file database is intentionally self-contained for the assessment. It is **no
 2. Keep the same session model: store a SHA-256 token hash, never the raw cookie value.
 3. Set `NEXT_PUBLIC_SITE_URL` to the public HTTPS origin.
 4. Set a strong `REVALIDATE_SECRET` and seed passwords.
-5. Run the Lighthouse/deployed checks in [`PERF.md`](./PERF.md).
+5. Replace the public OpenStreetMap tile URL with a production tile provider; keep the attribution.
+6. Run the Lighthouse/deployed checks in [`PERF.md`](./PERF.md).
 
 ## Verification
 
-The final local run built 44 routes successfully. Runtime checks covered:
+The final local production build succeeded. Runtime checks covered:
 
 - seeded sign-in for all three roles, registration, sign-out;
 - signed-out redirects from `/orders`, `/kitchen`, `/admin`;
 - customer redirect away from `/kitchen` and `/admin`;
-- staff redirect away from public shop and customer pages;
+- staff redirect away from public shop and customer-only pages, while `/account` stays available for sign-out;
 - `403` from public menu/customer APIs for staff sessions;
 - 401/403 responses from private APIs;
 - cross-user order reads and cancellation returning 404;
@@ -173,6 +192,7 @@ The final local run built 44 routes successfully. Runtime checks covered:
 - open-redirect payloads rejected;
 - tampered localStorage price ignored by the server;
 - SWR polling changing a customer order from `PREPARING` to `READY` without a reload;
+- delivery and pickup order maps rendering with the text address, markers and OpenStreetMap attribution;
 - debounced search sending one request for a burst of keystrokes.
 
 See [`AUTH.md`](./AUTH.md) for the attack table and [`PERF.md`](./PERF.md) for measured timings.

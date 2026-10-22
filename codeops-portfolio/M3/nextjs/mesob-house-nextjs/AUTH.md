@@ -76,7 +76,7 @@ The assignment asks for middleware **and** page **and** action checks. In Next.j
 const token = request.cookies.get(SESSION_COOKIE)?.value;
 const user = token ? await getSessionUserByToken(token) : null;
 
-if ((isCustomerPage(pathname) || isStaffPage(pathname)) && !user) {
+if ((isAuthenticatedPage(pathname) || isStaffPage(pathname)) && !user) {
   const url = new URL("/sign-in", request.url);
   url.searchParams.set("next", pathname);
   return NextResponse.redirect(url);
@@ -92,7 +92,7 @@ if (user && isStaffPage(pathname)) {
 
 const staff = user?.role === "employee" || user?.role === "admin";
 
-if (staff && (isPublicPage(pathname) || isCustomerPage(pathname))) {
+if (staff && (isPublicPage(pathname) || isCustomerOnlyPage(pathname))) {
   return NextResponse.redirect(new URL(roleHome(user.role), request.url));
 }
 
@@ -104,7 +104,7 @@ if (staff && isStaffBlockedApi(pathname)) {
 }
 ```
 
-The matcher covers public shop pages (`/`, `/menu`, `/dish`, `/cart`, `/terms`, `/privacy`), customer pages (`/account`, `/orders`, `/checkout`), staff pages (`/kitchen`, `/admin`), and the public/customer APIs (`/api/menu`, `/api/orders`). `/api/auth/session`, `/api/health`, `/api/revalidate`, `/sign-in` and `/register` are not blocked by the proxy; the auth pages redirect signed-in users themselves.
+The matcher covers public shop pages (`/`, `/menu`, `/dish`, `/cart`, `/terms`, `/privacy`), authenticated pages (`/account`, `/orders`, `/checkout`), staff pages (`/kitchen`, `/admin`), and the public/customer APIs (`/api/menu`, `/api/orders`). Staff are blocked from public shop pages and customer-only pages (`/orders`, `/checkout`), but `/account` remains available so they can sign out. `/api/auth/session`, `/api/health`, `/api/revalidate`, `/sign-in` and `/register` are not blocked by the proxy; the auth pages redirect signed-in users themselves.
 
 The proxy now verifies the session because it has to know the role to route staff correctly. It is still a routing layer, not the authorization decision: a forged cookie does not create a session, and the page/API layers repeat the checks. Keeping this check in `proxy.js` instead of `(shop)/layout.jsx` preserves the static/ISR rendering of the public shop.
 
@@ -135,14 +135,14 @@ export async function requireCustomerPage(nextPath) {
 
 | Page | Guard |
 | --- | --- |
-| `/account` | `requireCustomerPage("/account")` |
+| `/account` | `requirePageUser("/account")` — every signed-in role, including staff sign-out |
 | `/checkout` | `requireCustomerPage("/checkout")` |
 | `/orders` | `requireCustomerPage("/orders")` |
 | `/orders/[id]` | `requireCustomerPage(...)` then `getOrderForUser(user.id, id)` |
 | `/kitchen` | `requirePageRole(["employee", "admin"], "/kitchen")` |
 | `/admin`, `/admin/orders`, `/admin/users` | `requirePageRole(["admin"], ...)` |
 
-A customer who manually opens `/kitchen` or `/admin` is redirected to `/`, not shown an empty shell. An employee who opens `/admin` is redirected to `/kitchen`. A signed-in staff member who opens a public shop page or a customer page is redirected to `/admin` or `/kitchen`. A signed-out visitor is sent to `/sign-in?next=...`.
+A customer who manually opens `/kitchen` or `/admin` is redirected to `/`, not shown an empty shell. An employee who opens `/admin` is redirected to `/kitchen`. A signed-in staff member who opens a public shop page or a customer-only page (`/orders`, `/checkout`) is redirected to `/admin` or `/kitchen`; `/account` remains available so they can sign out. A signed-out visitor is sent to `/sign-in?next=...`.
 
 ### Layer 3 — actions and route handlers
 
@@ -171,13 +171,13 @@ if (!isStaff(user)) return NextResponse.json({ message: "Staff access required."
 
 ### Roles
 
-| Role | Public shop + customer pages | Kitchen | Admin |
-| --- | --- | --- | --- |
-| `customer` | yes — public shop, own account, checkout, own orders | no | no |
-| `employee` | no — redirected to `/kitchen` | yes | no |
-| `admin` | no — redirected to `/admin` | yes | yes |
+| Role | Public shop | Account | Customer orders/checkout | Kitchen | Admin |
+| --- | --- | --- | --- | --- | --- |
+| `customer` | yes | yes | yes — own data only | no | no |
+| `employee` | no — redirected to `/kitchen` | yes — profile and sign-out | no — redirected to `/kitchen` | yes | no |
+| `admin` | no — redirected to `/admin` | yes — profile and sign-out | no — redirected to `/admin` | yes | yes |
 
-Staff accounts are deliberately not customer accounts. `/`, `/menu`, `/dish/*`, `/cart`, `/checkout`, `/terms`, `/privacy`, `/account` and `/orders` all redirect admin/employee sessions to their portal, and `/api/menu*` plus `/api/orders*` return `403` for those sessions.
+Staff accounts are deliberately not customer accounts. `/`, `/menu`, `/dish/*`, `/cart`, `/checkout`, `/terms`, `/privacy` and `/orders` redirect admin/employee sessions to their portal, and `/api/menu*` plus `/api/orders*` return `403` for those sessions. `/account` is the deliberate exception: staff can open it to review their profile and sign out.
 
 ### Customer ownership
 
@@ -273,7 +273,7 @@ function safeNext(value) {
 }
 ```
 
-Only same-site relative paths are accepted. Absolute URLs (`https://example.com`), protocol-relative URLs (`//evil.test`) and backslash tricks are reduced to `/`. The sanitized value is passed to the client form and used after a successful sign-in. If that value is the bare home page (`/`), `src/lib/roleHome.js` sends admins to `/admin` and employees to `/kitchen`; customers keep `/`. An explicit private destination such as `/admin/orders` is still honoured. If a staff account asks for a customer page, the proxy or page guard sends it on to the staff portal instead.
+Only same-site relative paths are accepted. Absolute URLs (`https://example.com`), protocol-relative URLs (`//evil.test`) and backslash tricks are reduced to `/`. The sanitized value is passed to the client form and used after a successful sign-in. If that value is the bare home page (`/`), `src/lib/roleHome.js` sends admins to `/admin` and employees to `/kitchen`; customers keep `/`. An explicit private destination such as `/admin/orders` is still honoured. If a staff account asks for a customer-only page, the proxy or page guard sends it on to the staff portal instead.
 
 ## 7. Attack tests and observed results
 
@@ -296,7 +296,8 @@ These were run against the local dev server (`localhost:3000`) and repeated agai
 | 13 | Forged item price | set `localStorage` cart price to `1`, submit checkout | stored subtotal `650`, total `548` (server prices) |
 | 14 | Rapid search typing | type `k`, `ki`, `kit`, `kitfo` quickly | one `/api/menu/search?q=kitfo` request |
 | 15 | Staff opens public shop page | admin opens `/menu`; employee opens `/` | `307` to `/admin` / `/kitchen` |
-| 16 | Staff opens customer page | admin opens `/account`; employee opens `/orders` | `307` to `/admin` / `/kitchen` |
+| 16 | Staff opens customer-only page | admin opens `/orders`; employee opens `/checkout` | `307` to `/admin` / `/kitchen` |
+| 16b | Staff opens account page | admin or employee opens `/account` | `200`; customer-only orders/favourites hidden; Sign Out available |
 | 17 | Staff calls public menu API | admin `GET /api/menu` | `403 {"message":"Staff accounts use the portal. Public ordering is for customers."}` with `Cache-Control: no-store` |
 | 18 | Employee opens admin page | employee opens `/admin` | `307` to `/kitchen` |
 
