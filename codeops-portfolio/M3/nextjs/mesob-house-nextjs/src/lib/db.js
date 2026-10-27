@@ -11,7 +11,22 @@ import {
 } from "node:crypto";
 import { ROLES } from "./roles";
 
-const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), ".data");
+/**
+ * Vercel's deployment filesystem is read-only; only /tmp is writable.
+ */
+function resolveDataDir() {
+  const configured = process.env.DATA_DIR?.trim();
+
+  if (process.env.VERCEL) {
+    return configured?.startsWith("/tmp/")
+      ? configured
+      : path.join("/tmp", "mesob-house");
+  }
+
+  return configured || path.join(process.cwd(), ".data");
+}
+
+const DATA_DIR = resolveDataDir();
 const DB_FILE = path.join(DATA_DIR, "mesob-house.json");
 const SESSION_DAYS = 7;
 const REMEMBER_DAYS = 30;
@@ -145,8 +160,6 @@ export async function readDb() {
 
 /**
  * Serialises writes inside the process and replaces the file atomically.
- * Mutations receive a cloned database so a failed write cannot leave a
- * half-written document on disk.
  */
 export async function mutateDb(mutator) {
   const run = async () => {

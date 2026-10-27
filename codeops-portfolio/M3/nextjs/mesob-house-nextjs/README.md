@@ -187,7 +187,7 @@ See `.env.example` for the full list.
 
 ## Deployment notes
 
-The file database is intentionally self-contained for the assessment. It is **not** suitable for a serverless host with an ephemeral filesystem: sessions and orders would disappear between instances. For a real deployment:
+The file database is intentionally self-contained for the assessment. It is **not** suitable for a serverless host with an ephemeral filesystem: sessions and orders would disappear between instances. On Vercel, `src/lib/db.js` falls back to `/tmp/mesob-house` so the read-only filesystem does not crash; that is a demo-only fallback, not durable storage. For a real deployment:
 
 1. Replace `src/lib/db.js` with a Postgres/Neon/Supabase adapter (the rest of the app only imports the functions in that module).
 2. Keep the same session model: store a SHA-256 token hash, never the raw cookie value.

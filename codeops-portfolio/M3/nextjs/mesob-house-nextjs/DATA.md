@@ -22,6 +22,8 @@ DATA_DIR (default: ./.data)
 
 `src/lib/db.js` creates the directory and file on first read. If the file is missing, `seedDb()` writes the three demo accounts. The file is JSON with three arrays:
 
+> **Vercel:** the deployment filesystem is read-only, so `src/lib/db.js` automatically uses `/tmp/mesob-house` instead of `./.data`. This prevents the `mkdir '.data'` crash, but `/tmp` is ephemeral and per function instance. Sessions and orders are not durable on Vercel; use a shared database for real persistence.
+
 ```json
 {
   "version": 1,
