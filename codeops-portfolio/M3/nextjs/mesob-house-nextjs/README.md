@@ -151,7 +151,7 @@ extension points and testing checklist, see [`MAPS.md`](./MAPS.md).
 
 `/orders/[id]` opens an `EventSource` to
 `/api/orders/[id]/stream`. The route checks the session and order ownership,
-sends the current order immediately, then polls the file database every 2
+sends the current order immediately, then polls the database every 2
 seconds and sends only when `updatedAt` changes. It closes itself when the
 order reaches `completed` or `cancelled`, and the client closes the connection
 on unmount.
@@ -179,22 +179,31 @@ See `.env.example` for the full list.
 | Variable | Purpose |
 | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | Canonical origin for metadata, sitemap and OG URLs |
+| `APP_ORIGIN` | Public origin used by the same-origin check on mutations |
 | `API_BASE_URL` | Menu backend, read on the server only |
 | `REVALIDATE_SECRET` | Shared secret for on-demand ISR |
-| `DATA_DIR` | Directory for the file database (defaults to `./.data`) |
+| `DATABASE_URL` | Postgres connection string. Also accepts `POSTGRES_URL` / `POSTGRES_PRISMA_URL`; required for reliable sign-in on Vercel |
+| `DATA_DIR` | Directory for the file fallback (defaults to `./.data`) |
 | `SEED_*_EMAIL`, `SEED_*_PASSWORD` | First-run demo accounts |
 | `IMAGES_UNOPTIMIZED` | Set `true` to bypass the Next image optimiser |
 
 ## Deployment notes
 
-The file database is intentionally self-contained for the assessment. It is **not** suitable for a serverless host with an ephemeral filesystem: sessions and orders would disappear between instances. On Vercel, `src/lib/db.js` falls back to `/tmp/mesob-house` so the read-only filesystem does not crash; that is a demo-only fallback, not durable storage. For a real deployment:
+The file database is fine locally, but it is **not** reliable on a serverless host with an ephemeral filesystem. Vercel functions do not share `/tmp`, so a session created by one instance can be invisible to the proxy or page on another instance. That is what makes sign-in appear to bounce between `/` and `/sign-in`.
 
-1. Replace `src/lib/db.js` with a Postgres/Neon/Supabase adapter (the rest of the app only imports the functions in that module).
-2. Keep the same session model: store a SHA-256 token hash, never the raw cookie value.
-3. Set `NEXT_PUBLIC_SITE_URL` to the public HTTPS origin.
-4. Set a strong `REVALIDATE_SECRET` and seed passwords.
-5. Replace the public OpenStreetMap tile URL with a production tile provider; keep the attribution.
-6. Run the Lighthouse/deployed checks in [`PERF.md`](./PERF.md).
+Use Postgres (Neon, Supabase or Vercel Postgres) for a Vercel deployment:
+
+1. Create a Postgres database and copy its connection string.
+2. Set `DATABASE_URL` in the Vercel project's environment variables. `POSTGRES_URL` also works.
+3. Redeploy. `src/lib/db.js` creates the `mesob_house_db` table and seeds the demo accounts automatically.
+4. Set `NEXT_PUBLIC_SITE_URL` and `APP_ORIGIN` to the public HTTPS origin.
+5. Set a strong `REVALIDATE_SECRET` and seed passwords.
+6. Replace the public OpenStreetMap tile URL with a production tile provider; keep the attribution.
+7. Run the Lighthouse/deployed checks in [`PERF.md`](./PERF.md).
+
+Without `DATABASE_URL`, Vercel falls back to `/tmp/mesob-house`. That prevents the `mkdir '.data'` crash but remains ephemeral and per-instance; it is only a demo fallback.
+
+The Postgres adapter stores the whole document in one JSONB row. That is deliberate: it keeps the assessment's file model and works across serverless instances. See [`DATA.md`](./DATA.md) for the tradeoffs and the normalised schema path.
 
 ## Verification
 

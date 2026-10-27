@@ -1,19 +1,49 @@
 # Data, Caching and Fetching
 
-This document explains where data lives, how it is fetched, which SWR keys are live, and why the file database is a deliberate assessment choice rather than a production database.
+This document explains where data lives, how it is fetched, which SWR keys are live, and how the database backend is selected. The file store is the local default; Postgres is supported for serverless deployments where the filesystem is ephemeral.
 
 ## 1. Two kinds of data
 
 | Kind | Source | Rendering / cache | Examples |
 | --- | --- | --- | --- |
 | Public catalogue | Remote menu API (`API_BASE_URL`) with curated fallback | Server Components + ISR (5 min) + React `cache` per render | dishes, specials, dish pages, sitemap |
-| Private operational data | `.data/mesob-house.json` | Dynamic server rendering + SWR polling + SSE order stream | users, sessions, orders, kitchen queue, admin stats |
+| Private operational data | Postgres when `DATABASE_URL` is set; otherwise `.data/mesob-house.json` | Dynamic server rendering + SWR polling + SSE order stream | users, sessions, orders, kitchen queue, admin stats |
 
 The browser never calls the menu backend directly. `src/lib/api.js` builds the URLs and `src/lib/menu.js` fetches them on the server, so missing CORS headers on the backend are irrelevant and the API host is not exposed as a client dependency.
 
-## 2. File database
+## 2. Database backends
 
-### Location and lifecycle
+`src/lib/db.js` chooses the backend at startup:
+
+| Condition | Backend |
+| --- | --- |
+| `DATABASE_URL`, `POSTGRES_URL` or `POSTGRES_PRISMA_URL` is set | Postgres |
+| No database URL | Local JSON file |
+
+### Postgres
+
+Postgres is the recommended mode for Vercel. The adapter stores the whole document in one JSONB row so the existing user/order code keeps working without a schema rewrite:
+
+```sql
+CREATE TABLE mesob_house_db (
+  id integer PRIMARY KEY,
+  data jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+```
+
+The table is created automatically on first use. `mutateDb()` opens a transaction, locks the row with `SELECT ... FOR UPDATE`, applies the mutation, and writes the JSON back. Sessions, users and orders are therefore shared by every serverless instance.
+
+Set one of these variables on Vercel (and optionally locally):
+
+```bash
+DATABASE_URL=postgres://...
+# or POSTGRES_URL / POSTGRES_PRISMA_URL
+```
+
+### File database
+
+#### Location and lifecycle
 
 ```text
 DATA_DIR (default: ./.data)
@@ -22,7 +52,7 @@ DATA_DIR (default: ./.data)
 
 `src/lib/db.js` creates the directory and file on first read. If the file is missing, `seedDb()` writes the three demo accounts. The file is JSON with three arrays:
 
-> **Vercel:** the deployment filesystem is read-only, so `src/lib/db.js` automatically uses `/tmp/mesob-house` instead of `./.data`. This prevents the `mkdir '.data'` crash, but `/tmp` is ephemeral and per function instance. Sessions and orders are not durable on Vercel; use a shared database for real persistence.
+> **Vercel without `DATABASE_URL`:** the deployment filesystem is read-only, so `src/lib/db.js` uses `/tmp/mesob-house` instead of `./.data`. This prevents the `mkdir '.data'` crash, but `/tmp` is ephemeral and per function instance. A session created by one instance may be invisible to the proxy or page on another instance, which makes sign-in appear to bounce; orders also disappear. Set `DATABASE_URL` for reliable sign-in and durable data.
 
 ```json
 {
@@ -73,9 +103,9 @@ DATA_DIR (default: ./.data)
 
 The real file contains hashed values, not the illustrative placeholders above.
 
-### Reads
+#### Reads
 
-`readDb()` reads the file on **every call**:
+In file mode, `readDb()` reads the file on **every call**:
 
 ```js
 export async function readDb() {
@@ -86,9 +116,9 @@ export async function readDb() {
 
 An earlier version cached the parsed database in a module variable. That caused a real bug: the API route worker kept a stale copy after a server action in another worker created an order, so `/orders/[id]` rendered but `/api/orders/[id]` returned 404. Reading the small file every time fixed cross-worker consistency. The file is a few kilobytes in this assessment.
 
-### Writes
+#### Writes
 
-`mutateDb()` clones the current document, applies the mutator, then writes to a temporary file and renames it:
+In file mode, `mutateDb()` clones the current document, applies the mutator, then writes to a temporary file and renames it:
 
 ```js
 const tmp = `${DB_FILE}.${process.pid}.tmp`;
@@ -98,22 +128,22 @@ await fs.rename(tmp, DB_FILE);
 
 `writeChain` serialises writes inside one process. The rename is atomic on the same filesystem, so a crash cannot leave a partially written JSON document.
 
-### What this does not do
+#### What this does not do
 
-- **No cross-process lock.** Two Next workers (or two containers) can read the same version and overwrite each other's write. The dev server usually runs one process, so the assessment is safe; a production host is not.
-- **No persistence on serverless.** Vercel functions have an ephemeral filesystem. Orders and sessions would vanish.
-- **No indexes or transactions.** A real database should enforce unique emails/phones and use a transaction for order status changes.
+- **No cross-process lock in file mode.** Two Next workers (or two containers) can read the same version and overwrite each other's write. The dev server usually runs one process, so local development is safe; a production host is not. Postgres mode uses a row lock instead.
+- **No persistence on serverless without Postgres.** Vercel functions have an ephemeral filesystem. Orders and sessions would vanish. Set `DATABASE_URL` to use the shared adapter.
+- **The JSONB adapter stores the whole document in one row.** That keeps the existing code simple and is fine for a demo, but it has no per-user indexes. A high-traffic deployment should normalise the data into tables with unique constraints.
 
-### Production replacement
+### Normalising later
 
-Only `src/lib/db.js` imports the filesystem. To move to Postgres:
+The Postgres adapter is a bridge from the assessment's file model. For a larger deployment:
 
-1. Implement the same exported functions (`findUserByEmail`, `createUser`, `createSessionRecord`, `getSessionUserByToken`, `deleteSessionByToken`, `listUsers`, `updateUserRole`) and move the order queries in `src/lib/orders.js` to SQL.
+1. Move users, sessions and orders into separate tables.
 2. Add unique indexes on `users.email`, `users.phone` and `sessions.token_hash`.
 3. Use `SELECT ... FOR UPDATE` or an atomic update for order transitions.
 4. Keep `toSafeUser` as the boundary that strips password/session fields.
 
-`DATA_DIR` lets a container host point at a persistent volume in the meantime.
+`DATA_DIR` still lets a container host point the file fallback at a persistent volume.
 
 ## 3. Menu data and ISR
 

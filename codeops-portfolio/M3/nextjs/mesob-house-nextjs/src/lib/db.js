@@ -2,6 +2,7 @@ import "server-only";
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { Pool } from "pg";
 import {
   createHash,
   randomBytes,
@@ -11,13 +12,25 @@ import {
 } from "node:crypto";
 import { ROLES } from "./roles";
 
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  "";
+
+const usePostgres = Boolean(DATABASE_URL);
+
 /**
- * Vercel's deployment filesystem is read-only; only /tmp is writable.
+ * With DATABASE_URL set, users, sessions and orders live in Postgres and are
+ * shared by every serverless instance. Without it, this falls back to the
+ * local JSON file. On Vercel that fallback uses /tmp because the deployment
+ * filesystem is read-only, but /tmp is ephemeral and per instance, so sign-in
+ * and orders are not reliable there. Use Postgres for a real deployment.
  */
 function resolveDataDir() {
   const configured = process.env.DATA_DIR?.trim();
 
-  if (process.env.VERCEL) {
+  if (process.env.VERCEL && !usePostgres) {
     return configured?.startsWith("/tmp/")
       ? configured
       : path.join("/tmp", "mesob-house");
@@ -30,6 +43,47 @@ const DATA_DIR = resolveDataDir();
 const DB_FILE = path.join(DATA_DIR, "mesob-house.json");
 const SESSION_DAYS = 7;
 const REMEMBER_DAYS = 30;
+
+const SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS mesob_house_db (
+    id integer PRIMARY KEY,
+    data jsonb NOT NULL,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )
+`;
+
+let schemaReady = null;
+
+function getPool() {
+  const globalForDb = globalThis;
+  if (!globalForDb.__mesobHousePool) {
+    const local = /(^|@)(localhost|127\.0\.0\.1|::1)(:|\/|$)/.test(
+      DATABASE_URL,
+    );
+    const sslDisabled =
+      process.env.PGSSLMODE === "disable" ||
+      /[?&]sslmode=disable(?:&|$)/.test(DATABASE_URL);
+
+    globalForDb.__mesobHousePool = new Pool({
+      connectionString: DATABASE_URL,
+      max: 1,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 15_000,
+      ssl: local || sslDisabled ? false : { rejectUnauthorized: false },
+    });
+  }
+  return globalForDb.__mesobHousePool;
+}
+
+async function ensurePostgresSchema(executor) {
+  if (!schemaReady) {
+    schemaReady = executor.query(SCHEMA_SQL).catch((error) => {
+      schemaReady = null;
+      throw error;
+    });
+  }
+  await schemaReady;
+}
 
 export { ROLES };
 
@@ -154,14 +208,85 @@ async function readFromDisk() {
   }
 }
 
-export async function readDb() {
-  return readFromDisk();
+async function readFromPostgres() {
+  const pool = getPool();
+  await ensurePostgresSchema(pool);
+
+  const { rows } = await pool.query(
+    "SELECT data FROM mesob_house_db WHERE id = 1",
+  );
+  if (rows[0]?.data) return rows[0].data;
+
+  const seeded = seedDb();
+  const inserted = await pool.query(
+    `INSERT INTO mesob_house_db (id, data)
+     VALUES (1, $1::jsonb)
+     ON CONFLICT (id) DO NOTHING
+     RETURNING data`,
+    [JSON.stringify(seeded)],
+  );
+  if (inserted.rows[0]?.data) return inserted.rows[0].data;
+
+  const { rows: again } = await pool.query(
+    "SELECT data FROM mesob_house_db WHERE id = 1",
+  );
+  if (!again[0]?.data) {
+    throw new Error("Could not initialise the Postgres database.");
+  }
+  return again[0].data;
 }
 
-/**
- * Serialises writes inside the process and replaces the file atomically.
- */
+async function mutatePostgres(mutator) {
+  const pool = getPool();
+  await ensurePostgresSchema(pool);
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    let { rows } = await client.query(
+      "SELECT data FROM mesob_house_db WHERE id = 1 FOR UPDATE",
+    );
+
+    if (!rows[0]) {
+      const seeded = seedDb();
+      await client.query(
+        `INSERT INTO mesob_house_db (id, data)
+         VALUES (1, $1::jsonb)
+         ON CONFLICT (id) DO NOTHING`,
+        [JSON.stringify(seeded)],
+      );
+      ({ rows } = await client.query(
+        "SELECT data FROM mesob_house_db WHERE id = 1 FOR UPDATE",
+      ));
+    }
+
+    if (!rows[0]?.data) {
+      throw new Error("Could not initialise the Postgres database.");
+    }
+
+    const current = structuredClone(rows[0].data);
+    const result = await mutator(current);
+    await client.query(
+      "UPDATE mesob_house_db SET data = $1::jsonb, updated_at = now() WHERE id = 1",
+      [JSON.stringify(current)],
+    );
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function readDb() {
+  return usePostgres ? readFromPostgres() : readFromDisk();
+}
+
 export async function mutateDb(mutator) {
+  if (usePostgres) return mutatePostgres(mutator);
+
   const run = async () => {
     const current = structuredClone(await readFromDisk());
     const result = await mutator(current);

@@ -22,9 +22,9 @@
 
 1. **`src/app` is the route map.** Start at the page file, then follow its component imports.
 2. **The server owns security and money.** Sessions, roles, prices, ownership and status transitions are checked in `src/lib` and the API/actions.
-3. **The browser store is only a draft.** Cart, favourites and checkout form state live in Zustand/localStorage; real orders live in `.data/mesob-house.json`.
+3. **The browser store is only a draft.** Cart, favourites and checkout form state live in Zustand/localStorage; real orders live in `.data/mesob-house.json` locally, or Postgres when `DATABASE_URL` is set.
 4. **SWR and SSE are only for live refresh.** The first page render is server-rendered; SWR keeps order, kitchen and admin views current, while the active order detail uses an authenticated SSE stream.
-5. **`src/lib/db.js` is the database boundary.** Replace that one file to move off the JSON store.
+5. **`src/lib/db.js` is the database boundary.** It selects the local JSON file or the Postgres adapter, and every caller uses the same helpers.
 
 ---
 
@@ -46,7 +46,7 @@ It has two sides:
    - Kitchen queue for employees and admins
    - Admin dashboard, all-orders view and user-role management
 
-The project uses a **file-backed JSON database** so it can run without external services. The database layer is isolated in one file, so it can later be replaced with Postgres or another database.
+The project uses a **file-backed JSON database** by default so it can run without external services. Setting `DATABASE_URL` switches the same database layer to Postgres, which is required for reliable sessions and orders on Vercel. The database boundary is isolated in one file either way.
 
 ---
 
@@ -381,13 +381,13 @@ Files:
 
 ## 6. Data model
 
-The database is one JSON file:
+The database is one JSON document. Locally it is stored at:
 
 ```text
 .data/mesob-house.json
 ```
 
-It contains three arrays:
+On Vercel it is stored in the `mesob_house_db` table as a single JSONB row when `DATABASE_URL` is set. It contains three arrays:
 
 ```json
 {
@@ -470,11 +470,11 @@ It contains three arrays:
 
 All reads and writes go through [`src/lib/db.js`](./src/lib/db.js):
 
-- `readDb()` reads the JSON file.
-- `mutateDb()` clones, mutates, writes atomically and serialises writes.
-- Auth, orders and admin code call these helpers instead of touching the file directly.
+- `readDb()` reads the JSON file or the Postgres JSONB row.
+- `mutateDb()` clones, mutates, writes atomically and serialises writes. Postgres mode uses a transaction and a row lock.
+- Auth, orders and admin code call these helpers instead of touching storage directly.
 
-To move to Postgres later, replace `db.js` and keep the same exported functions.
+To normalise the data into separate SQL tables later, replace `db.js` and keep the same exported functions.
 
 More detail: [`DATA.md`](./DATA.md).
 
@@ -707,7 +707,7 @@ All private API responses use `Cache-Control: no-store`.
 
 `OrderDetailLive` is the exception: it opens an `EventSource` to
 `/api/orders/[id]/stream` instead of polling with SWR. The route polls the
-file database every 2 seconds, sends only when `updatedAt` changes, and closes
+database every 2 seconds, sends only when `updatedAt` changes, and closes
 on a terminal status.
 
 The data views (`OrdersLive`, `KitchenBoard`, `AdminOverview`, `AdminOrders`,
@@ -842,7 +842,7 @@ That keeps the displayed total and the stored total consistent.
 
 ### Swap the database
 
-Replace `src/lib/db.js` with an adapter that exports the same functions:
+`src/lib/db.js` already supports Postgres through `DATABASE_URL`. For a normalised schema, replace the adapter while keeping the same exports:
 
 - `readDb`
 - `mutateDb`
@@ -886,7 +886,7 @@ The rest of the app should not need to change.
 
 This project is shaped like a production app, but some parts are deliberately local:
 
-- **File database** — `.data/mesob-house.json` is not suitable for serverless hosting with an ephemeral filesystem.
+- **Database** — the local JSON file is not suitable for serverless hosting with an ephemeral filesystem. Set `DATABASE_URL` to use the shared Postgres adapter; it stores one JSONB document rather than normalised tables.
 - **Payments** — the checkout records a payment method; there is no real Telebirr/CBE/card gateway.
 - **Email and SMS** — no real receipt or rider notifications are sent.
 - **Social sign-in** — the Telebirr/Google buttons create demo customer sessions, not real OAuth sessions.
