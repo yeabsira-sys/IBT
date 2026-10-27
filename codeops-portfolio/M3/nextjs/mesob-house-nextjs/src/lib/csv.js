@@ -84,5 +84,9 @@ export function downloadCsv(filename, csv) {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+
+  // Give the browser time to start reading the blob before releasing it.
+  // Revoking immediately can cancel a large download (for example the
+  // 30,000-row admin export) in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }

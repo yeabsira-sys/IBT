@@ -54,13 +54,30 @@ export default function OrdersLive({ initialOrders }) {
 
   if (orders.length === 0) {
     return (
-      <div className="portal-empty">
-        <FiClock aria-hidden="true" />
-        <h2>No orders yet</h2>
-        <p>Your first feast will appear here with a live kitchen status.</p>
-        <Button as={Link} href="/menu" variant="primary" rightIcon={<FiArrowRight />}>
-          Explore the menu
-        </Button>
+      <div className="orders-live">
+        <div className="portal-toolbar">
+          <p className="portal-toolbar__note">
+            <FiRefreshCw aria-hidden="true" />
+            No orders yet.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            leftIcon={<FiDownload aria-hidden="true" />}
+            disabled
+          >
+            Export CSV
+          </Button>
+        </div>
+        <div className="portal-empty">
+          <FiClock aria-hidden="true" />
+          <h2>No orders yet</h2>
+          <p>Your first feast will appear here with a live kitchen status.</p>
+          <Button as={Link} href="/menu" variant="primary" rightIcon={<FiArrowRight />}>
+            Explore the menu
+          </Button>
+        </div>
       </div>
     );
   }

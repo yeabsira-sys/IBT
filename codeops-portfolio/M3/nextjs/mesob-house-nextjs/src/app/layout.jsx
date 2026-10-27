@@ -20,21 +20,42 @@ import "@/styles/portal.css";
 import "@/styles/app.css";
 
 // next/font self-hosts these at build time: no layout shift, no request to Google from the browser.
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-const sourceSerif = Source_Serif_4({ subsets: ["latin"], variable: "--font-source-serif", display: "swap" });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+const sourceSerif = Source_Serif_4({
+  subsets: ["latin"],
+  variable: "--font-source-serif",
+  display: "swap",
+});
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: "Mesob House — Authentic Habesha Dining in Addis Ababa", template: "%s | Mesob House" },
+  title: {
+    default: "Mesob House — Authentic Habesha Dining in Addis Ababa",
+    template: "%s | Mesob House",
+  },
   description:
     "Slow-cooked Ethiopian wats, stone-ground teff injera and a daily coffee ceremony — order for delivery across Addis Ababa or reserve a communal mesob.",
   applicationName: "Mesob House",
-  keywords: ["Ethiopian restaurant", "Addis Ababa", "doro wat", "injera", "Habesha food delivery"],
+  keywords: [
+    "Ethiopian restaurant",
+    "Addis Ababa",
+    "doro wat",
+    "injera",
+    "Habesha food delivery",
+  ],
   openGraph: { type: "website", siteName: "Mesob House", locale: "en_ET" },
   twitter: { card: "summary_large_image" },
 };
 
-export const viewport = { themeColor: "#8c2116", width: "device-width", initialScale: 1 };
+export const viewport = {
+  themeColor: "#8c2116",
+  width: "device-width",
+  initialScale: 1,
+};
 
 export default function RootLayout({ children }) {
   return (

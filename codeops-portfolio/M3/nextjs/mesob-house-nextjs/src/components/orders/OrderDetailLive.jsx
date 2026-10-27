@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { FiArrowLeft, FiClock, FiMapPin, FiPhone, FiRefreshCw } from "react-icons/fi";
+import { FiArrowLeft, FiClock, FiDownload, FiMapPin, FiPhone, FiRefreshCw } from "react-icons/fi";
 import Button from "../ui/Button";
 import DeliveryMapPanel from "./DeliveryMapPanel";
 import OrderStatusBadge from "./OrderStatusBadge";
-import { etb, timeAgo, when } from "@/lib/format";
+import { downloadCsv, orderHistoryCsv } from "@/lib/csv";
+import { dateStamp, etb, timeAgo, when } from "@/lib/format";
 import { isCancellable, isTerminal, statusStep } from "@/lib/orderStatus";
 import { useToast } from "@/store/toastStore";
 
@@ -39,6 +40,7 @@ export default function OrderDetailLive({ initialOrder }) {
   const [order, setOrder] = useState(initialOrder);
   const [connection, setConnection] = useState(isTerminal(initialOrder.status) ? "closed" : "connecting");
   const [cancelling, setCancelling] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const sourceRef = useRef(null);
 
   useEffect(() => {
@@ -108,16 +110,47 @@ export default function OrderDetailLive({ initialOrder }) {
     }
   };
 
+  const exportHistory = async () => {
+    setExporting(true);
+    try {
+      const response = await fetch("/api/orders");
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.message ?? "Could not export your orders.");
+
+      downloadCsv(
+        `mesob-house-orders-${dateStamp.format(new Date())}.csv`,
+        orderHistoryCsv(body.data ?? []),
+      );
+      toast("Order history exported as CSV.", "info");
+    } catch (exportError) {
+      toast(exportError.message, "error");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="order-detail">
       <div className="portal-toolbar">
         <Link className="portal-back" href="/orders">
           <FiArrowLeft aria-hidden="true" /> All orders
         </Link>
-        <p className="portal-toolbar__note" role="status" aria-live="polite">
-          <FiRefreshCw className={isConnecting ? "is-spinning" : undefined} aria-hidden="true" />
-          {CONNECTION_LABEL[connection] ?? CONNECTION_LABEL.connecting}
-        </p>
+        <div className="portal-toolbar__links">
+          <p className="portal-toolbar__note" role="status" aria-live="polite">
+            <FiRefreshCw className={isConnecting ? "is-spinning" : undefined} aria-hidden="true" />
+            {CONNECTION_LABEL[connection] ?? CONNECTION_LABEL.connecting}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            leftIcon={<FiDownload aria-hidden="true" />}
+            onClick={exportHistory}
+            disabled={exporting}
+          >
+            {exporting ? "Exporting…" : "Export CSV"}
+          </Button>
+        </div>
       </div>
 
       <section className="portal-card order-detail__head" aria-live="polite">

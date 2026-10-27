@@ -244,6 +244,7 @@ Rules:
 - The timeline is derived from the current status; `statusHistory` stores the full audit trail.
 - The order-detail page also renders a Leaflet map: restaurant, destination and an illustrative courier marker. The route and address are repeated as text; see [`MAPS.md`](./MAPS.md).
 - The SSE route sends the current order immediately, polls every 2 seconds and closes on `completed` or `cancelled`. The client shows connecting/live/reconnecting/final states and closes the connection on unmount.
+- `/orders` and the individual order page can export the customer's order history as CSV.
 
 Files:
 
@@ -275,6 +276,7 @@ Files:
   → getAllOrders()
   → SWR /api/admin/orders every 10 seconds
   → search, status filters, 20 orders per page
+  → CSV export of all orders
 
 /admin/users
   → listUsers()
@@ -649,6 +651,8 @@ Shared, client-safe modules include:
 | [`src/components/admin/AdminOverview.jsx`](./src/components/admin/AdminOverview.jsx) | Metrics + recent orders |
 | [`src/components/admin/AdminUsers.jsx`](./src/components/admin/AdminUsers.jsx) | Role management |
 | [`src/lib/analytics.js`](./src/lib/analytics.js) | Server-side chart aggregation |
+| [`src/components/charts/BestSellingItemsChart.jsx`](./src/components/charts/BestSellingItemsChart.jsx) | Horizontal bar: top dishes by units sold |
+| [`src/components/charts/TopCustomersChart.jsx`](./src/components/charts/TopCustomersChart.jsx) | Horizontal bar: top ten customers by lifetime spend |
 | [`src/components/charts/ChartFrame.jsx`](./src/components/charts/ChartFrame.jsx) | Shared chart card |
 | [`src/components/charts/ChartTable.jsx`](./src/components/charts/ChartTable.jsx) | Accessible table for chart data |
 

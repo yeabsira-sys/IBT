@@ -56,7 +56,10 @@ const seedAccounts = [
 
 let writeChain = Promise.resolve();
 
-export const normalizeEmail = (value) => String(value ?? "").trim().toLowerCase();
+export const normalizeEmail = (value) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
 
 /** Ethiopian numbers are stored as the nine digits after +251. */
 export const normalizePhone = (value) => {
@@ -75,10 +78,13 @@ export function verifyPassword(password, stored) {
   const [salt, hash] = stored.split(":");
   const expected = Buffer.from(hash, "hex");
   const candidate = scryptSync(String(password), salt, 64);
-  return expected.length === candidate.length && timingSafeEqual(expected, candidate);
+  return (
+    expected.length === candidate.length && timingSafeEqual(expected, candidate)
+  );
 }
 
-export const hashToken = (token) => createHash("sha256").update(String(token)).digest("hex");
+export const hashToken = (token) =>
+  createHash("sha256").update(String(token)).digest("hex");
 
 /** Never send passwordHash or the session table to the browser. */
 export function toSafeUser(user) {
@@ -126,7 +132,11 @@ async function readFromDisk() {
   try {
     const raw = await fs.readFile(DB_FILE, "utf8");
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed.users) || !Array.isArray(parsed.sessions) || !Array.isArray(parsed.orders)) {
+    if (
+      !Array.isArray(parsed.users) ||
+      !Array.isArray(parsed.sessions) ||
+      !Array.isArray(parsed.orders)
+    ) {
       throw new Error("The local database is missing one of its tables.");
     }
     return parsed;
@@ -176,7 +186,11 @@ export async function findUserByIdentifier(identifier) {
   const db = await readDb();
   const email = normalizeEmail(identifier);
   const phone = normalizePhone(identifier);
-  return db.users.find((user) => user.email === email || (phone && user.phone === phone)) ?? null;
+  return (
+    db.users.find(
+      (user) => user.email === email || (phone && user.phone === phone),
+    ) ?? null
+  );
 }
 
 export async function findUserById(id) {
@@ -193,10 +207,16 @@ export async function createUser(values) {
     const email = normalizeEmail(values.email);
     const phone = normalizePhone(values.phone);
     if (db.users.some((user) => user.email === email)) {
-      return { ok: false, message: "An account with that email already exists." };
+      return {
+        ok: false,
+        message: "An account with that email already exists.",
+      };
     }
     if (phone && db.users.some((user) => user.phone === phone)) {
-      return { ok: false, message: "An account with that mobile number already exists." };
+      return {
+        ok: false,
+        message: "An account with that mobile number already exists.",
+      };
     }
     const user = {
       id: randomUUID(),
@@ -215,7 +235,10 @@ export async function createUser(values) {
 }
 
 export async function findOrCreateSocialUser(provider) {
-  const key = String(provider ?? "Demo").trim().toLowerCase().replace(/\s+/g, "-");
+  const key = String(provider ?? "Demo")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-");
   const email = `${key}.guest@mesob.house`;
   const existing = await findUserByEmail(email);
   if (existing) return existing;
@@ -251,11 +274,15 @@ export async function createSessionRecord(userId, { remember = false } = {}) {
   const tokenHash = hashToken(token);
   const now = new Date();
   const days = remember ? REMEMBER_DAYS : SESSION_DAYS;
-  const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(
+    now.getTime() + days * 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   await mutateDb((db) => {
     // Expired rows are harmless but pruning keeps the file small.
-    db.sessions = db.sessions.filter((session) => new Date(session.expiresAt) > now);
+    db.sessions = db.sessions.filter(
+      (session) => new Date(session.expiresAt) > now,
+    );
     db.sessions.push({
       id: randomUUID(),
       tokenHash,
@@ -271,7 +298,9 @@ export async function createSessionRecord(userId, { remember = false } = {}) {
 export async function getSessionUserByToken(token) {
   if (!token) return null;
   const db = await readDb();
-  const session = db.sessions.find((entry) => entry.tokenHash === hashToken(token));
+  const session = db.sessions.find(
+    (entry) => entry.tokenHash === hashToken(token),
+  );
   if (!session || new Date(session.expiresAt) <= new Date()) return null;
   return toSafeUser(db.users.find((user) => user.id === session.userId));
 }
@@ -280,6 +309,8 @@ export async function deleteSessionByToken(token) {
   if (!token) return;
   await mutateDb((db) => {
     const tokenHash = hashToken(token);
-    db.sessions = db.sessions.filter((session) => session.tokenHash !== tokenHash);
+    db.sessions = db.sessions.filter(
+      (session) => session.tokenHash !== tokenHash,
+    );
   });
 }

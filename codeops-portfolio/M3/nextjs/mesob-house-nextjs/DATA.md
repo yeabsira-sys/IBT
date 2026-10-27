@@ -162,6 +162,8 @@ to draw a dashboard.
 | --- | --- | --- | --- |
 | `ordersPerDay` | Admin | 14 rows: `{ date, label, orders }` | All orders placed in the last 14 Addis days |
 | `revenueByArea` | Admin | Up to 6 rows: `{ area, orders, revenue }` | Completed orders only; pickup is its own `Pickup (Bole)` bucket |
+| `bestSellingItems` | Admin | Up to 8 rows: `{ id, name, quantity, revenue, rank }` | Completed orders only; grouped by item and ranked by units sold |
+| `topCustomers` | Admin | Up to 10 rows: `{ id, name, email, orders, revenue, rank }` | Completed orders only; grouped by customer and ranked by lifetime spend |
 | `queueByStatus` | Kitchen | 4 rows: `{ status, label, tickets }` | Active tickets only |
 | `ordersByHour` | Kitchen | 12 rows: `{ hour, label, orders }` | Every order received today, bucketed into two-hour Addis slots |
 

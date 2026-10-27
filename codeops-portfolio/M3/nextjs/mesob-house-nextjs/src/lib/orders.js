@@ -13,8 +13,18 @@ import { buildAdminCharts, buildKitchenCharts } from "./analytics";
 const byNewest = (a, b) => new Date(b.createdAt) - new Date(a.createdAt);
 const byOldest = (a, b) => new Date(a.createdAt) - new Date(b.createdAt);
 
-/** Inserts an order for the signed-in customer. Prices are already server-validated. */
-export async function createOrder({ user, items, totals, couponCode, note, fulfillment, contact, delivery, method }) {
+/** Inserts an order for the signed-in customer.  */
+export async function createOrder({
+  user,
+  items,
+  totals,
+  couponCode,
+  note,
+  fulfillment,
+  contact,
+  delivery,
+  method,
+}) {
   return mutateDb((db) => {
     const now = new Date().toISOString();
     const order = {
@@ -50,7 +60,11 @@ export async function getOrdersForUser(userId) {
 /** Ownership is part of the lookup, not a check the caller can forget. */
 export async function getOrderForUser(userId, orderId) {
   const db = await readDb();
-  return db.orders.find((order) => order.id === orderId && order.userId === userId) ?? null;
+  return (
+    db.orders.find(
+      (order) => order.id === orderId && order.userId === userId,
+    ) ?? null
+  );
 }
 
 export async function getOrderById(orderId) {
@@ -75,7 +89,9 @@ export async function getKitchenOrders() {
  */
 export async function getKitchenOverview() {
   const db = await readDb();
-  const orders = db.orders.filter((order) => !isTerminal(order.status)).sort(byOldest);
+  const orders = db.orders
+    .filter((order) => !isTerminal(order.status))
+    .sort(byOldest);
   return {
     orders,
     charts: buildKitchenCharts(db.orders),
@@ -94,13 +110,19 @@ export async function cancelOrderForUser(orderId, userId) {
       return {
         ok: false,
         code: "NOT_CANCELLABLE",
-        message: "This order has already moved into the kitchen and can no longer be cancelled online.",
+        message:
+          "This order has already moved into the kitchen and can no longer be cancelled online.",
       };
     }
     const now = new Date().toISOString();
     order.status = "cancelled";
     order.updatedAt = now;
-    order.statusHistory.push({ status: "cancelled", at: now, by: userId, byName: "Customer" });
+    order.statusHistory.push({
+      status: "cancelled",
+      at: now,
+      by: userId,
+      byName: "Customer",
+    });
     return { ok: true, order };
   });
 }
@@ -114,15 +136,21 @@ export async function updateOrderStatus(orderId, status, staff) {
     return { ok: false, code: "FORBIDDEN", message: "Staff access required." };
   }
   if (!ORDER_STATUSES.includes(status)) {
-    return { ok: false, code: "INVALID_STATUS", message: "Unknown order status." };
+    return {
+      ok: false,
+      code: "INVALID_STATUS",
+      message: "Unknown order status.",
+    };
   }
 
   return mutateDb((db) => {
     const order = db.orders.find((entry) => entry.id === orderId);
-    if (!order) return { ok: false, code: "NOT_FOUND", message: "Order not found." };
+    if (!order)
+      return { ok: false, code: "NOT_FOUND", message: "Order not found." };
 
     const allowed = nextStatuses(order.status, order.fulfillment);
-    if (staff.role === "admin" && !isTerminal(order.status)) allowed.push("cancelled");
+    if (staff.role === "admin" && !isTerminal(order.status))
+      allowed.push("cancelled");
     if (!allowed.includes(status)) {
       return {
         ok: false,
@@ -134,7 +162,12 @@ export async function updateOrderStatus(orderId, status, staff) {
     const now = new Date().toISOString();
     order.status = status;
     order.updatedAt = now;
-    order.statusHistory.push({ status, at: now, by: staff.id, byName: staff.fullName });
+    order.statusHistory.push({
+      status,
+      at: now,
+      by: staff.id,
+      byName: staff.fullName,
+    });
     return { ok: true, order };
   });
 }
@@ -145,8 +178,14 @@ export async function getAdminStats() {
   const active = orders.filter((order) => !isTerminal(order.status));
   const completed = orders.filter((order) => order.status === "completed");
   const cancelled = orders.filter((order) => order.status === "cancelled");
-  const revenue = completed.reduce((sum, order) => sum + Number(order.totals?.total ?? 0), 0);
-  const pipeline = active.reduce((sum, order) => sum + Number(order.totals?.total ?? 0), 0);
+  const revenue = completed.reduce(
+    (sum, order) => sum + Number(order.totals?.total ?? 0),
+    0,
+  );
+  const pipeline = active.reduce(
+    (sum, order) => sum + Number(order.totals?.total ?? 0),
+    0,
+  );
 
   return {
     orders: orders.length,

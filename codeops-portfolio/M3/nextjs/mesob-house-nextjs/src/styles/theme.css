@@ -34,8 +34,12 @@
   --c-line-strong: #e2c3b0;
 
   /* Type */
-  --font-display: var(--font-source-serif), "Iowan Old Style", Georgia, "Times New Roman", serif;
-  --font-body: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display:
+    var(--font-source-serif), "Iowan Old Style", Georgia, "Times New Roman",
+    serif;
+  --font-body:
+    var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
 
   /* Radii */
   --r-xs: 5px;
@@ -71,8 +75,6 @@ html {
   height: 100%;
 }
 
-/* Sticky-footer layout: <body> is a flex column (Navbar, <main class="site-main">, Footer),
-   so a page shorter than the viewport still pushes the footer to the bottom. */
 body {
   display: flex;
   flex-direction: column;

@@ -1,12 +1,5 @@
 /**
  * Approximate map data for the delivery-tracking view.
- *
- * These coordinates are intentionally client-safe constants. The Leaflet map
- * itself only loads in the browser, but the same helpers can also be used by a
- * server component to render the text version of an address.
- *
- * Leaflet expects [lat, lng]. GeoJSON uses [lng, lat]. Keeping the object shape
- * named here avoids the classic "Bole is in the Indian Ocean" swap.
  */
 
 export const RESTAURANT_LOCATION = Object.freeze({
@@ -15,12 +8,8 @@ export const RESTAURANT_LOCATION = Object.freeze({
   label: "Mesob House",
   area: "Bole Medhanialem, Addis Ababa",
 });
-
 /**
- * Checkout offers five delivery corridors. These are neighbourhood centroids,
- * not exact door coordinates: the order stores an address as text, not a GPS
- * fix. A production version would replace this lookup with coordinates from a
- * geocoder or a pin dropped by the customer.
+ * mock delivery areas for the map view. These are not real boundaries
  */
 const DELIVERY_AREAS = Object.freeze({
   "Bole Medhanialem (Near Mesob House)": {
@@ -60,19 +49,31 @@ export function getDeliveryArea(subCity) {
  * progress without pretending that a real driver is being tracked.
  */
 export function getCourierLocation(order, now = Date.now()) {
-  if (!order || order.fulfillment !== "delivery" || order.status !== "out_for_delivery") {
+  if (
+    !order ||
+    order.fulfillment !== "delivery" ||
+    order.status !== "out_for_delivery"
+  ) {
     return null;
   }
 
   const destination = getDeliveryArea(order.delivery?.subCity);
-  const outForDelivery = order.statusHistory?.find((entry) => entry.status === "out_for_delivery");
-  const startedAt = outForDelivery?.at ? new Date(outForDelivery.at).getTime() : Number.NaN;
+  const outForDelivery = order.statusHistory?.find(
+    (entry) => entry.status === "out_for_delivery",
+  );
+  const startedAt = outForDelivery?.at
+    ? new Date(outForDelivery.at).getTime()
+    : Number.NaN;
   const elapsed = Number.isFinite(startedAt) ? Math.max(0, now - startedAt) : 0;
   const progress = clamp(0.15 + elapsed / (20 * 60 * 1000), 0.15, 0.88);
 
   return {
-    lat: RESTAURANT_LOCATION.lat + (destination.lat - RESTAURANT_LOCATION.lat) * progress,
-    lng: RESTAURANT_LOCATION.lng + (destination.lng - RESTAURANT_LOCATION.lng) * progress,
+    lat:
+      RESTAURANT_LOCATION.lat +
+      (destination.lat - RESTAURANT_LOCATION.lat) * progress,
+    lng:
+      RESTAURANT_LOCATION.lng +
+      (destination.lng - RESTAURANT_LOCATION.lng) * progress,
     label: "Courier (approximate)",
     progress,
   };

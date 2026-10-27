@@ -15,7 +15,8 @@ This repository is the Day 45 submission for the CodeOps M3 advanced Next.js ass
 - **Live order flow** — `received → preparing → ready → out_for_delivery → completed`, with pickup skipping delivery and customer cancellation only while `received`.
 - **Server-authoritative pricing** — dish ids and prices are resolved against the live menu inside the order action; a forged client price is ignored.
 - **Live data + SWR and SSE** — session navbar, debounced menu search, order-history polling, kitchen queue polling, admin metrics/orders/users polling, and an authenticated SSE stream for the active order detail.
-- **Shared formatters + CSV export** — `src/lib/format.js` builds the `etb`, `when`, `relative` and `number` formatters once; `/orders` can download the customer's history through `src/lib/csv.js`, which quotes commas, quotes and newlines correctly.
+- **Admin charts** — daily order volume, completed revenue by area, best-selling dishes by units sold and the top ten customers by completed lifetime spend, each with an accessible data table.
+- **Shared formatters + CSV export** — `src/lib/format.js` builds the `etb`, `when`, `relative` and `number` formatters once; `/orders`, an individual order page, and `/admin/orders` can download order history through `src/lib/csv.js`, which quotes commas, quotes and newlines correctly.
 - **Leaflet delivery map** — a browser-only map on `/orders/[id]` with restaurant, destination and illustrative courier markers, plus the same route and address as text. See [`MAPS.md`](./MAPS.md).
 - **Metadata and discovery** — per-page metadata, per-dish Open Graph cards, JSON-LD `MenuItem`, sitemap, robots rules, web manifest, private-page `noindex`.
 - **Documentation** — [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md) is the big-picture codebase tour; [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md), [`PERF.md`](./PERF.md) and [`MAPS.md`](./MAPS.md) cover security, data/caching, performance and the map.
@@ -77,7 +78,7 @@ Sign in with either the email (Email tab) or the nine digits after `+251` (Mobil
 | `/account` | `requirePageUser`; every signed-in role, so staff can also sign out |
 | `/checkout` | `requireCustomerPage` + `noindex` |
 | `/orders` | `requireCustomerPage`; only the session user's orders; CSV export |
-| `/orders/[id]` | `requireCustomerPage`; ownership is part of the lookup; includes the Leaflet map and SSE live status |
+| `/orders/[id]` | `requireCustomerPage`; ownership is part of the lookup; includes the Leaflet map, SSE live status and CSV export |
 
 ### Staff
 
@@ -85,7 +86,7 @@ Sign in with either the email (Email tab) or the nine digits after `+251` (Mobil
 | --- | --- |
 | `/kitchen` | `employee`, `admin` |
 | `/admin` | `admin` |
-| `/admin/orders` | `admin` |
+| `/admin/orders` | `admin`; all orders with CSV export |
 | `/admin/users` | `admin` |
 
 Staff sessions are redirected away from the public shop (`/`, `/menu`, `/dish/*`, `/cart`, `/terms`, `/privacy`) and customer-only pages (`/orders`, `/checkout`) to their portal. `/account` stays available to staff so they can review their profile and sign out.
@@ -155,12 +156,13 @@ seconds and sends only when `updatedAt` changes. It closes itself when the
 order reaches `completed` or `cancelled`, and the client closes the connection
 on unmount.
 
-`/orders` keeps its SWR polling and adds **Export CSV**. The export uses
-`src/lib/csv.js`, which doubles quotes and wraps any value containing a comma,
-quote or newline. Money stays numeric in the file; the column names carry the
-ETB unit. Money and date display across the app goes through
-`src/lib/format.js` (`etb`, `when`, `relative`, `number`), so a formatter is
-built once rather than inside a render loop.
+`/orders` keeps its SWR polling and adds **Export CSV**. The individual order
+page has the same button and exports the customer's full history; `/admin/orders`
+exports all orders. The export uses `src/lib/csv.js`, which doubles quotes and
+wraps any value containing a comma, quote or newline. Money stays numeric in
+the file; the column names carry the ETB unit. Money and date display across the
+app goes through `src/lib/format.js` (`etb`, `when`, `relative`, `number`), so a
+formatter is built once rather than inside a render loop.
 
 ## Scripts
 

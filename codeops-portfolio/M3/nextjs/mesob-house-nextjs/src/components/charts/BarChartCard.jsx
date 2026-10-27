@@ -26,6 +26,7 @@ export default function BarChartCard({
   categoryWidth = 150,
   valueFormatter = (value) => String(value),
   tooltipLabel = "Value",
+  barColor = chartColors.brand,
   emptyMessage,
   tableCaption,
   tableColumns,
@@ -81,7 +82,7 @@ export default function BarChartCard({
           <Bar
             dataKey={dataKey}
             name={tooltipLabel}
-            fill={chartColors.brand}
+            fill={barColor}
             radius={[0, 4, 4, 0]}
             barSize={18}
             isAnimationActive={false}

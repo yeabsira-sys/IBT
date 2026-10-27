@@ -4,16 +4,26 @@
              Sticky cart bar
    ============================================================ */
 
-.menu-page { padding-top: var(--space-4); padding-bottom: var(--space-7); }
+.menu-page {
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-7);
+}
 
-.menu-hero { padding-bottom: var(--space-5); }
+.menu-hero {
+  padding-bottom: var(--space-5);
+}
 .menu-hero__title {
   font-family: var(--font-display);
   color: var(--c-brand);
   font-size: 32px;
   margin: var(--space-3) 0 var(--space-3);
 }
-.menu-hero__lede { margin: 0 0 var(--space-4); font-size: 13px; color: var(--c-ink-soft); max-width: 68ch; }
+.menu-hero__lede {
+  margin: 0 0 var(--space-4);
+  font-size: 13px;
+  color: var(--c-ink-soft);
+  max-width: 68ch;
+}
 
 .menu-hero__search {
   display: flex;
@@ -43,9 +53,17 @@
   font-size: 13.5px;
   color: var(--c-ink);
 }
-.menu-hero__search-box input:focus { outline: none; }
-.menu-hero__search-box input::placeholder { color: var(--c-ink-muted); }
-.menu-hero__badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.menu-hero__search-box input:focus {
+  outline: none;
+}
+.menu-hero__search-box input::placeholder {
+  color: var(--c-ink-muted);
+}
+.menu-hero__badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
 .menu-tabs {
   display: flex;
@@ -53,7 +71,10 @@
   gap: 10px;
   margin: var(--space-5) 0;
 }
-.menu-tabs .chip span { opacity: 0.75; font-size: 0.9em; }
+.menu-tabs .chip span {
+  opacity: 0.75;
+  font-size: 0.9em;
+}
 
 .menu-grid {
   display: grid;
@@ -70,7 +91,10 @@
   overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
-.menu-card__media { position: relative; display: block; }
+.menu-card__media {
+  position: relative;
+  display: block;
+}
 .menu-card__media img {
   display: block;
   width: 100%;
@@ -79,11 +103,27 @@
   background: var(--c-line-strong);
   font-size: 0;
 }
-.menu-card__media .tag { position: absolute; top: 9px; left: 9px; }
-.menu-card__body { padding: var(--space-3) var(--space-3) 0; flex: 1; }
-.menu-card__body h3 { margin: 0 0 4px; font-size: 14.5px; font-weight: 700; }
-.menu-card__body h3 a { color: var(--c-ink); text-decoration: none; }
-.menu-card__body h3 a:hover { color: var(--c-brand); }
+.menu-card__media .tag {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+}
+.menu-card__body {
+  padding: var(--space-3) var(--space-3) 0;
+  flex: 1;
+}
+.menu-card__body h3 {
+  margin: 0 0 4px;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+.menu-card__body h3 a {
+  color: var(--c-ink);
+  text-decoration: none;
+}
+.menu-card__body h3 a:hover {
+  color: var(--c-brand);
+}
 .menu-card__body p {
   margin: 0;
   font-size: 11.5px;
@@ -119,9 +159,19 @@
   color: #fff;
   flex-shrink: 0;
 }
-.communal-banner__body { flex: 1; }
-.communal-banner__body h4 { margin: 0 0 3px; font-size: 14.5px; font-weight: 700; }
-.communal-banner__body p { margin: 0; font-size: 12px; color: var(--c-ink-soft); }
+.communal-banner__body {
+  flex: 1;
+}
+.communal-banner__body h4 {
+  margin: 0 0 3px;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+.communal-banner__body p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--c-ink-soft);
+}
 
 .sticky-cart {
   position: sticky;
@@ -139,15 +189,31 @@
   padding: var(--space-3) 0;
   flex-wrap: wrap;
 }
-.sticky-cart__summary { display: grid; }
-.sticky-cart__summary b { font-size: 13.5px; }
-.sticky-cart__summary small { font-size: 11px; opacity: 0.75; }
+.sticky-cart__summary {
+  display: grid;
+}
+.sticky-cart__summary b {
+  font-size: 13.5px;
+}
+.sticky-cart__summary small {
+  font-size: 11px;
+  opacity: 0.75;
+}
 
 @media (max-width: 960px) {
-  .menu-grid { grid-template-columns: 1fr 1fr; }
+  .menu-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 @media (max-width: 640px) {
-  .menu-grid { grid-template-columns: 1fr; }
-  .menu-hero__search { flex-direction: column; align-items: stretch; }
-  .communal-banner { flex-wrap: wrap; }
+  .menu-grid {
+    grid-template-columns: 1fr;
+  }
+  .menu-hero__search {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .communal-banner {
+    flex-wrap: wrap;
+  }
 }

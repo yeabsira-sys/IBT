@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { FiRefreshCw } from "react-icons/fi";
+import { FiDownload, FiRefreshCw } from "react-icons/fi";
 import Button from "../ui/Button";
 import OrderFilters from "../orders/OrderFilters";
 import OrderPagination from "../orders/OrderPagination";
 import OrderStatusBadge from "../orders/OrderStatusBadge";
 import useOrderBrowser from "@/hooks/useOrderBrowser";
+import { downloadCsv, orderHistoryCsv } from "@/lib/csv";
 import { fetcher } from "@/lib/fetcher";
-import { etb, when } from "@/lib/format";
+import { dateStamp, etb, when } from "@/lib/format";
 import { isTerminal, nextStatuses } from "@/lib/orderStatus";
 import { useToast } from "@/store/toastStore";
 
@@ -25,6 +26,7 @@ const ACTION_LABEL = {
 export default function AdminOrders({ initialOrders }) {
   const toast = useToast();
   const [busyId, setBusyId] = useState(null);
+  const [exporting, setExporting] = useState(false);
   const { data, error, mutate, isValidating } = useSWR("/api/admin/orders", fetcher, {
     fallbackData: { data: initialOrders },
     refreshInterval: 10000,
@@ -53,6 +55,23 @@ export default function AdminOrders({ initialOrders }) {
     }
   };
 
+  const exportHistory = () => {
+    setExporting(true);
+    setTimeout(() => {
+      try {
+        downloadCsv(
+          `mesob-house-all-orders-${dateStamp.format(new Date())}.csv`,
+          orderHistoryCsv(orders),
+        );
+        toast("All orders exported as CSV.", "info");
+      } catch (exportError) {
+        toast(exportError.message ?? "Could not export orders.", "error");
+      } finally {
+        setExporting(false);
+      }
+    }, 0);
+  };
+
   return (
     <div className="admin-orders">
       <div className="portal-toolbar">
@@ -60,6 +79,16 @@ export default function AdminOrders({ initialOrders }) {
           <FiRefreshCw className={isValidating ? "is-spinning" : undefined} aria-hidden="true" />
           {isValidating ? "Refreshing orders…" : `${orders.length} orders · refreshes every 10 seconds.`}
         </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          leftIcon={<FiDownload aria-hidden="true" />}
+          onClick={exportHistory}
+          disabled={orders.length === 0 || exporting}
+        >
+          {exporting ? "Exporting…" : "Export CSV"}
+        </Button>
       </div>
 
       {error && <p className="form-error">Could not refresh orders. Showing the last known list.</p>}

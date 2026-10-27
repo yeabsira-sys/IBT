@@ -72,7 +72,9 @@
   color: var(--c-ink);
   margin: 0 0 var(--space-4);
 }
-.account-favorites h2 svg { color: var(--c-brand); }
+.account-favorites h2 svg {
+  color: var(--c-brand);
+}
 .account-favorites__empty {
   margin: 0;
   font-size: 13px;
@@ -107,7 +109,9 @@
   color: var(--c-ink);
   text-decoration: none;
 }
-.account-favorites__list a:hover { color: var(--c-brand); }
+.account-favorites__list a:hover {
+  color: var(--c-brand);
+}
 .account-favorites__list button {
   border: none;
   background: none;
@@ -116,7 +120,9 @@
   display: grid;
   padding: 2px;
 }
-.account-favorites__list button:hover { color: var(--c-brand); }
+.account-favorites__list button:hover {
+  color: var(--c-brand);
+}
 
 .account-guest {
   max-width: 480px;
@@ -141,8 +147,12 @@
 }
 
 @media (max-width: 800px) {
-  .account-layout { grid-template-columns: 1fr; }
+  .account-layout {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 480px) {
-  .account-guest__actions { flex-direction: column; }
+  .account-guest__actions {
+    flex-direction: column;
+  }
 }

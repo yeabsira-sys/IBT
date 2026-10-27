@@ -20,7 +20,7 @@ export default async function AdminPage() {
       <header className="portal-head">
         <p className="portal-eyebrow">Operations</p>
         <h1>Admin overview</h1>
-        <p>Live order volume, revenue and account counts across the restaurant.</p>
+        <p>Live order volume, revenue, best-selling dishes, top customers and account counts across the restaurant.</p>
       </header>
       <AdminNav />
       <AdminOverview initialStats={stats} />

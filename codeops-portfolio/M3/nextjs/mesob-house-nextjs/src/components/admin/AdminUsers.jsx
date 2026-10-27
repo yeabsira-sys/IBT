@@ -12,11 +12,15 @@ import { useToast } from "@/store/toastStore";
 export default function AdminUsers({ initialUsers, currentUserId }) {
   const toast = useToast();
   const [busyId, setBusyId] = useState(null);
-  const { data, error, mutate, isValidating } = useSWR("/api/admin/users", fetcher, {
-    fallbackData: { data: initialUsers },
-    refreshInterval: 30000,
-    revalidateOnFocus: true,
-  });
+  const { data, error, mutate, isValidating } = useSWR(
+    "/api/admin/users",
+    fetcher,
+    {
+      fallbackData: { data: initialUsers },
+      refreshInterval: 30000,
+      revalidateOnFocus: true,
+    },
+  );
 
   const users = data?.data ?? initialUsers;
 
@@ -29,7 +33,8 @@ export default function AdminUsers({ initialUsers, currentUserId }) {
         body: JSON.stringify({ role }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message ?? "Could not update the role.");
+      if (!response.ok)
+        throw new Error(body.message ?? "Could not update the role.");
       toast("Role updated.", "success");
       await mutate();
     } catch (updateError) {
@@ -43,12 +48,21 @@ export default function AdminUsers({ initialUsers, currentUserId }) {
     <div className="admin-users">
       <div className="portal-toolbar">
         <p className="portal-toolbar__note">
-          <FiRefreshCw className={isValidating ? "is-spinning" : undefined} aria-hidden="true" />
-          {isValidating ? "Refreshing users…" : `${users.length} accounts · refreshes every 30 seconds.`}
+          <FiRefreshCw
+            className={isValidating ? "is-spinning" : undefined}
+            aria-hidden="true"
+          />
+          {isValidating
+            ? "Refreshing users…"
+            : `${users.length} accounts · refreshes every 30 seconds.`}
         </p>
       </div>
 
-      {error && <p className="form-error">Could not refresh users. Showing the last known list.</p>}
+      {error && (
+        <p className="form-error">
+          Could not refresh users. Showing the last known list.
+        </p>
+      )}
 
       <div className="data-table-wrap portal-card">
         <table className="data-table">
@@ -66,7 +80,9 @@ export default function AdminUsers({ initialUsers, currentUserId }) {
               <tr key={user.id}>
                 <td>
                   <strong>{user.fullName}</strong>
-                  {user.id === currentUserId && <span className="table-note"> (you)</span>}
+                  {user.id === currentUserId && (
+                    <span className="table-note"> (you)</span>
+                  )}
                 </td>
                 <td>{user.email}</td>
                 <td>{user.phone ? `+251 ${user.phone}` : "—"}</td>
@@ -75,7 +91,9 @@ export default function AdminUsers({ initialUsers, currentUserId }) {
                   <select
                     className="role-select"
                     value={user.role}
-                    onChange={(event) => updateRole(user.id, event.target.value)}
+                    onChange={(event) =>
+                      updateRole(user.id, event.target.value)
+                    }
                     disabled={user.id === currentUserId || busyId === user.id}
                     aria-label={`Role for ${user.fullName}`}
                   >
