@@ -11,15 +11,6 @@ import {
 } from "node:crypto";
 import { ROLES } from "./roles";
 
-/**
- * db — the assignment's server-side persistence layer.
- *
- * A JSON file keeps the project self-contained (no external database
- * credentials are needed to run the assessment). Every read/write goes
- * through this module, so swapping the implementation for Postgres later is
- * a single-file change. On a serverless host the file must be replaced by a
- * real database; DATA.md records that decision.
- */
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), ".data");
 const DB_FILE = path.join(DATA_DIR, "mesob-house.json");
 const SESSION_DAYS = 7;
@@ -149,9 +140,6 @@ async function readFromDisk() {
 }
 
 export async function readDb() {
-  // Read the file on every call. Next dev can serve route handlers and server
-  // actions in different workers, so an in-memory cache would go stale after
-  // a write in another worker. The file is tiny, so this is cheap and correct.
   return readFromDisk();
 }
 

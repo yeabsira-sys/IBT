@@ -7,7 +7,10 @@ import { signInBreadcrumbs, signInPanel, trust } from "@/data/auth";
 import { getSession } from "@/lib/auth";
 import { postLoginPath } from "@/lib/roleHome";
 
-export const metadata = { title: "Sign In", description: "Sign in to manage your feasts and rewards." };
+export const metadata = {
+  title: "Sign In",
+  description: "Sign in to manage your feasts and rewards.",
+};
 
 /**
  * Only same-site relative paths may be used as a post-login destination.
@@ -16,8 +19,14 @@ export const metadata = { title: "Sign In", description: "Sign in to manage your
  */
 function safeNext(value) {
   if (typeof value !== "string") return "/";
-  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return "/";
-  if (value.startsWith("/sign-in") || value.startsWith("/signin") || value.startsWith("/register")) return "/";
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\"))
+    return "/";
+  if (
+    value.startsWith("/sign-in") ||
+    value.startsWith("/signin") ||
+    value.startsWith("/register")
+  )
+    return "/";
   return value;
 }
 
@@ -31,7 +40,11 @@ export default async function SignInPage({ searchParams }) {
     <div className="container">
       <Breadcrumbs
         items={signInBreadcrumbs}
-        trailing={<span className="sign-in__banner">« ጉ ር ሻ » — Welcome Back to Our Table</span>}
+        trailing={
+          <span className="sign-in__banner">
+            « ጉ ር ሻ » — Welcome Back to Our Table
+          </span>
+        }
       />
       <div className="sign-in-page">
         <AuthPanel {...signInPanel} />

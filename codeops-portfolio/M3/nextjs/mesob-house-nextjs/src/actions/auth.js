@@ -1,15 +1,28 @@
 "use server";
 
-import { createUser, findOrCreateSocialUser, findUserByIdentifier, toSafeUser, verifyPassword } from "@/lib/db";
+import {
+  createUser,
+  findOrCreateSocialUser,
+  findUserByIdentifier,
+  toSafeUser,
+  verifyPassword,
+} from "@/lib/db";
 import { createSession, destroySession } from "@/lib/auth";
 import { registerSchema, signInSchema } from "@/lib/schemas";
 
-const invalid = { ok: false, message: "We couldn't match those sign-in details. Register first or try again." };
+const invalid = {
+  ok: false,
+  message:
+    "We couldn't match those sign-in details. Register first or try again.",
+};
 
 export async function signInAction(values) {
   const parsed = signInSchema.safeParse(values);
   if (!parsed.success) {
-    return { ok: false, message: parsed.error.issues[0]?.message ?? "Check your sign-in details." };
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Check your sign-in details.",
+    };
   }
 
   const { method, email, mobile, password, keepSignedIn } = parsed.data;
@@ -28,7 +41,10 @@ export async function signInAction(values) {
 export async function registerAction(values) {
   const parsed = registerSchema.safeParse(values);
   if (!parsed.success) {
-    return { ok: false, message: parsed.error.issues[0]?.message ?? "Check your details." };
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Check your details.",
+    };
   }
 
   const { fullName, phone, email, password, preference } = parsed.data;
@@ -54,7 +70,8 @@ export async function registerAction(values) {
 /** Demo social buttons: they still create a real server session for a demo customer. */
 export async function socialSignInAction(provider) {
   const allowed = ["Telebirr", "Google"];
-  if (!allowed.includes(provider)) return { ok: false, message: "Unknown sign-in provider." };
+  if (!allowed.includes(provider))
+    return { ok: false, message: "Unknown sign-in provider." };
   const user = await findOrCreateSocialUser(provider);
   if (!user) return { ok: false, message: "Could not open a demo session." };
   await createSession(user.id);

@@ -28,7 +28,14 @@ const METHODS = [
   { value: "email", label: "Email Address" },
 ];
 
-const DEFAULTS = { method: "mobile", mobile: "", email: "", password: "", keepSignedIn: false, rememberAddress: false };
+const DEFAULTS = {
+  method: "mobile",
+  mobile: "",
+  email: "",
+  password: "",
+  keepSignedIn: false,
+  rememberAddress: false,
+};
 
 /**
  * SignInForm — member portal card. `next` is the already-sanitised path the
@@ -46,7 +53,11 @@ export default function SignInForm({ next = "/" }) {
     watch,
     clearErrors,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(signInSchema), defaultValues: DEFAULTS, mode: "onTouched" });
+  } = useForm({
+    resolver: zodResolver(signInSchema),
+    defaultValues: DEFAULTS,
+    mode: "onTouched",
+  });
 
   const method = watch("method");
 
@@ -65,7 +76,8 @@ export default function SignInForm({ next = "/" }) {
         <p className="sign-in__eyebrow">Member Portal</p>
         <h2 className="sign-in__title">Welcome to the Mesob Table</h2>
         <p className="sign-in__lede">
-          Sign in to manage your feasts, Telebirr rewards, and reserved dining mesobs.
+          Sign in to manage your feasts, Telebirr rewards, and reserved dining
+          mesobs.
         </p>
       </div>
 
@@ -86,7 +98,11 @@ export default function SignInForm({ next = "/" }) {
 
       <Divider>Or with Phone / Email</Divider>
 
-      <form className="sign-in__fields" onSubmit={handleSubmit((values) => finish(signInAction(values)))} noValidate>
+      <form
+        className="sign-in__fields"
+        onSubmit={handleSubmit((values) => finish(signInAction(values)))}
+        noValidate
+      >
         <Controller
           name="method"
           control={control}
@@ -130,7 +146,12 @@ export default function SignInForm({ next = "/" }) {
           <button
             type="button"
             className="link-quiet"
-            onClick={() => toast("Password reset isn't available in this demo — please contact the kitchen desk.", "info")}
+            onClick={() =>
+              toast(
+                "Password reset isn't available in this demo — please contact the kitchen desk.",
+                "info",
+              )
+            }
           >
             Forgot Password?
           </button>
@@ -165,7 +186,14 @@ export default function SignInForm({ next = "/" }) {
           />
         </div>
 
-        <Button type="submit" variant="primary" size="lg" block rightIcon={<FiArrowRight />} disabled={isSubmitting}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          rightIcon={<FiArrowRight />}
+          disabled={isSubmitting}
+        >
           Sign In to Mesob House
         </Button>
       </form>

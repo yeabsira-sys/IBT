@@ -9,7 +9,12 @@ export default async function sitemap() {
     { path: "/menu", priority: 0.9 },
     { path: "/terms", priority: 0.2 },
     { path: "/privacy", priority: 0.2 },
-  ].map(({ path, priority }) => ({ url: `${SITE_URL}${path}`, lastModified: now, changeFrequency: "daily", priority }));
+  ].map(({ path, priority }) => ({
+    url: `${SITE_URL}${path}`,
+    lastModified: now,
+    changeFrequency: "daily",
+    priority,
+  }));
 
   const dishPages = dishes.map((dish) => ({
     url: `${SITE_URL}/dish/${dish.id}`,
