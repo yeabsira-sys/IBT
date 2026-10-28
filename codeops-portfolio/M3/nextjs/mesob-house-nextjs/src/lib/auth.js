@@ -38,7 +38,11 @@ export async function getSession() {
 export async function createSession(userId, { remember = false } = {}) {
   const session = await createSessionRecord(userId, { remember });
   const jar = await cookies();
-  jar.set(SESSION_COOKIE, session.token, cookieOptions(remember ? session.days * 24 * 60 * 60 : undefined));
+  jar.set(
+    SESSION_COOKIE,
+    session.token,
+    cookieOptions(remember ? session.days * 24 * 60 * 60 : undefined),
+  );
   return session;
 }
 
@@ -70,7 +74,8 @@ export async function requireCustomerPage(nextPath) {
   return user;
 }
 
-export const isStaff = (user) => Boolean(user && (user.role === "employee" || user.role === "admin"));
+export const isStaff = (user) =>
+  Boolean(user && (user.role === "employee" || user.role === "admin"));
 export const isAdmin = (user) => Boolean(user && user.role === "admin");
 
 export { toSafeUser };

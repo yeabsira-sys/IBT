@@ -34,7 +34,8 @@ const DEFAULTS = {
 
 /**
  * RegisterForm — account creation. react-hook-form owns the field state, and the server action owns the session state.
- */
+ */ 
+
 export default function RegisterForm({ dietaryOptions = [] }) {
   const router = useRouter();
   const toast = useToast();

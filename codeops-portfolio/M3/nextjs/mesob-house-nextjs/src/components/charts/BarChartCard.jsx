@@ -32,7 +32,8 @@ export default function BarChartCard({
   tableColumns,
   tableRows,
 }) {
-  const empty = data.length === 0 || data.every((row) => Number(row[dataKey]) === 0);
+  const empty =
+    data.length === 0 || data.every((row) => Number(row[dataKey]) === 0);
 
   return (
     <ChartFrame
@@ -55,7 +56,11 @@ export default function BarChartCard({
           layout="vertical"
           margin={{ top: 8, right: 18, bottom: 0, left: 0 }}
         >
-          <CartesianGrid horizontal={false} stroke={chartColors.line} strokeDasharray="3 3" />
+          <CartesianGrid
+            horizontal={false}
+            stroke={chartColors.line}
+            strokeDasharray="3 3"
+          />
           <XAxis
             type="number"
             domain={[0, "auto"]}

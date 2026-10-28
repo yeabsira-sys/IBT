@@ -4,7 +4,7 @@ A production-shaped Next.js restaurant site for a Habesha kitchen in Addis Ababa
 
 DEPLOYED ON VERCEL [mesob-house / addis-eats](https://mesob-house-phi.vercel.app/).
 
-DEPLOYED ON ONRENDER [mesob-house / addis-eats](https://mesob-house-9f08.onrender.com/).
+DEPLOYED ON ONRENDER [mesob-house / addis-eats](https://addis-eats-9f08.onrender.com/).
 
 > This repository is the Day 45 submission for the CodeOps M3 advanced Next.js assignment.
 
