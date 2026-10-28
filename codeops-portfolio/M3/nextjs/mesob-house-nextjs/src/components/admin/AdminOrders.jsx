@@ -88,7 +88,7 @@ export default function AdminOrders({ initialOrders }) {
           />
           {isValidating
             ? "Refreshing orders…"
-            : `${orders.length} orders · refreshes every 10 seconds.`}
+            : `${orders.length} orders · refreshes every ${(parseInt(process.env.ADMIN_PAGE_REFRESH_INTERVAL) || 30000) / 1000} seconds.`}
         </p>
         <Button
           type="button"
