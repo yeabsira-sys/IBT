@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+  useMap,
+} from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
@@ -13,8 +20,6 @@ import {
 
 /**
  * Leaflet's default marker icon points at image files that bundlers do not
- * copy automatically. A divIcon is self-contained, styleable and avoids the
- * broken-marker problem without touching the build config.
  */
 const markerIcon = (tone) =>
   L.divIcon({
@@ -32,15 +37,23 @@ const COURIER_ICON = markerIcon("courier");
 /** Keeps the restaurant and destination visible after the map mounts. */
 function FitToRoute({ points }) {
   const map = useMap();
-  const signature = points.map((point) => `${point.lat},${point.lng}`).join("|");
+  const signature = points
+    .map((point) => `${point.lat},${point.lng}`)
+    .join("|");
 
   useEffect(() => {
-    const positions = signature.split("|").map((pair) => pair.split(",").map(Number));
+    const positions = signature
+      .split("|")
+      .map((pair) => pair.split(",").map(Number));
     if (positions.length < 2) {
       map.setView(positions[0], 14, { animate: false });
       return;
     }
-    map.fitBounds(positions, { padding: [36, 36], maxZoom: 15, animate: false });
+    map.fitBounds(positions, {
+      padding: [36, 36],
+      maxZoom: 15,
+      animate: false,
+    });
   }, [map, signature]);
 
   return null;
@@ -48,13 +61,17 @@ function FitToRoute({ points }) {
 
 /**
  * The browser-only Leaflet canvas. Its parent loads this module with
- * `ssr: false`; keeping that boundary in DeliveryMapPanel means server
- * components never touch `window` or the Leaflet stylesheet.
+ * `ssr: false`;
  */
 export default function DeliveryMap({ order }) {
-  const delivery = order.fulfillment === "delivery" ? getDeliveryArea(order.delivery?.subCity) : null;
+  const delivery =
+    order.fulfillment === "delivery"
+      ? getDeliveryArea(order.delivery?.subCity)
+      : null;
   const courier = getCourierLocation(order);
-  const routePoints = delivery ? [RESTAURANT_LOCATION, delivery] : [RESTAURANT_LOCATION];
+  const routePoints = delivery
+    ? [RESTAURANT_LOCATION, delivery]
+    : [RESTAURANT_LOCATION];
 
   return (
     <MapContainer
@@ -69,7 +86,10 @@ export default function DeliveryMap({ order }) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
 
-      <Marker position={[RESTAURANT_LOCATION.lat, RESTAURANT_LOCATION.lng]} icon={RESTAURANT_ICON}>
+      <Marker
+        position={[RESTAURANT_LOCATION.lat, RESTAURANT_LOCATION.lng]}
+        icon={RESTAURANT_ICON}
+      >
         <Popup>
           <strong>{RESTAURANT_LOCATION.label}</strong>
           <br />
@@ -81,7 +101,12 @@ export default function DeliveryMap({ order }) {
         <>
           <Polyline
             positions={routePoints.map((point) => [point.lat, point.lng])}
-            pathOptions={{ color: "#8c2116", dashArray: "7 9", weight: 3, opacity: 0.8 }}
+            pathOptions={{
+              color: "#8c2116",
+              dashArray: "7 9",
+              weight: 3,
+              opacity: 0.8,
+            }}
           />
           <Marker position={[delivery.lat, delivery.lng]} icon={DELIVERY_ICON}>
             <Popup>

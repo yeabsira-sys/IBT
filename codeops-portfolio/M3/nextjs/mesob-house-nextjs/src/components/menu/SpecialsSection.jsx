@@ -11,15 +11,33 @@ import { PriceTag, SectionHeading, Tag } from "../ui/Primitives";
 
 /**
  * DishCard — photo, labels, price, description and the add-to-cart row.
- * Reuse anywhere a menu item appears (menu page, search results, upsells).
  */
 export function DishCard({ dish, onAdd }) {
-  const { name, price, currency = "ETB", description, image, imageAlt, label, heat } = dish;
+  const {
+    name,
+    price,
+    currency = "ETB",
+    description,
+    image,
+    imageAlt,
+    label,
+    heat,
+  } = dish;
 
   return (
     <article className="dish">
-      <Link className="dish__media" href={`/dish/${dish.id}`} aria-label={`View ${name}`}>
-        <Image src={image} alt={imageAlt ?? name} width={700} height={525} sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 33vw" />
+      <Link
+        className="dish__media"
+        href={`/dish/${dish.id}`}
+        aria-label={`View ${name}`}
+      >
+        <Image
+          src={image}
+          alt={imageAlt ?? name}
+          width={700}
+          height={525}
+          sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 33vw"
+        />
         {label && (
           <Tag tone={label.tone} className="dish__label">
             {label.text}
@@ -35,7 +53,9 @@ export function DishCard({ dish, onAdd }) {
       <div className="dish__body">
         <div className="dish__head">
           <h3 className="dish__name">
-            <Link className="dish-link" href={`/dish/${dish.id}`}>{name}</Link>
+            <Link className="dish-link" href={`/dish/${dish.id}`}>
+              {name}
+            </Link>
           </h3>
           <PriceTag currency={currency} amount={price} />
         </div>
@@ -46,7 +66,11 @@ export function DishCard({ dish, onAdd }) {
         <Link className="link-quiet" href={`/dish/${dish.id}`}>
           View Details
         </Link>
-        <Button size="sm" leftIcon={<FiShoppingBag />} onClick={() => onAdd?.(dish)}>
+        <Button
+          size="sm"
+          leftIcon={<FiShoppingBag />}
+          onClick={() => onAdd?.(dish)}
+        >
           Quick Add
         </Button>
       </div>
@@ -56,7 +80,6 @@ export function DishCard({ dish, onAdd }) {
 
 /**
  * SpecialsSection — heading, filter pills and the dish grid.
- * Filtering is local; pass `onFilterChange` if the server should do it instead.
  */
 export default function SpecialsSection({
   eyebrow,
@@ -69,8 +92,11 @@ export default function SpecialsSection({
   const [filter, setFilter] = useState(filters[0]?.value ?? "all");
 
   const visible = useMemo(
-    () => (filter === "all" ? dishes : dishes.filter((d) => d.tags?.includes(filter))),
-    [dishes, filter]
+    () =>
+      filter === "all"
+        ? dishes
+        : dishes.filter((d) => d.tags?.includes(filter)),
+    [dishes, filter],
   );
 
   const handleFilter = (value) => {

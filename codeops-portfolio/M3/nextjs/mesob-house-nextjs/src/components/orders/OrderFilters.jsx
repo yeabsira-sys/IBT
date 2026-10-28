@@ -48,7 +48,11 @@ export default function OrderFilters({
         </p>
       </div>
 
-      <div className="order-filter-chips" role="group" aria-label="Filter orders by status">
+      <div
+        className="order-filter-chips"
+        role="group"
+        aria-label="Filter orders by status"
+      >
         {filters.map((filter) => (
           <button
             key={filter.value}

@@ -268,12 +268,24 @@ The search API itself filters name, native name, description and category, and r
 
 ### Date-dispersed test orders
 
-`scripts/seed-orders.mjs` fills the local database with realistic orders for
-chart and queue testing. It replaces the orders table by default, keeps the
-seeded admin/employee/guest accounts, and adds demo customers with the shared
-password `Guest123!`.
+`scripts/seed-orders.mjs` fills the file or Postgres database with realistic
+orders for chart and queue testing. It replaces the orders table by default,
+keeps the seeded admin/employee/guest accounts, and adds demo customers with
+the shared password `Guest123!`.
+
+The script loads `.env.local` and `.env`, just like the app. When
+`DATABASE_URL` (or `POSTGRES_URL` / `POSTGRES_PRISMA_URL`) is present, it
+writes to the same `mesob_house_db` row used by the app. The `Target:` line
+printed at startup confirms which store is being changed. Use `--file` to
+force the local JSON store even when a database URL is configured.
 
 ```bash
+# Seed the Postgres/Neon database from DATABASE_URL in .env
+npm run seed:orders -- --count 3000 --days 365 --customers 50
+
+# Force the local JSON file even when DATABASE_URL is set
+npm run seed:orders -- --file
+
 # 1,500 orders over 120 days, plus 24 demo customers
 npm run seed:orders
 
@@ -286,6 +298,11 @@ npm run seed:orders -- --keep-orders
 # Remove all orders and the @mesob.test demo customers
 npm run seed:orders:clear
 ```
+
+The Postgres adapter stores the whole document in one JSONB row, so every
+read and write loads that document. For a demo, 1,500–5,000 orders is a good
+range; tens of thousands of orders will make admin and order pages noticeably
+slower.
 
 Every past day gets at least one order, with more weight on recent dates.
 Today receives a separate batch, including active tickets for the kitchen

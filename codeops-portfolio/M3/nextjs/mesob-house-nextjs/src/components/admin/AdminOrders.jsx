@@ -27,11 +27,16 @@ export default function AdminOrders({ initialOrders }) {
   const toast = useToast();
   const [busyId, setBusyId] = useState(null);
   const [exporting, setExporting] = useState(false);
-  const { data, error, mutate, isValidating } = useSWR("/api/admin/orders", fetcher, {
-    fallbackData: { data: initialOrders },
-    refreshInterval: 10000,
-    revalidateOnFocus: true,
-  });
+  const { data, error, mutate, isValidating } = useSWR(
+    "/api/admin/orders",
+    fetcher,
+    {
+      fallbackData: { data: initialOrders },
+      refreshInterval:
+        parseInt(process.env.ADMIN_PAGE_REFRESH_INTERVAL) || 30000,
+      revalidateOnFocus: true,
+    },
+  );
 
   const orders = data?.data ?? initialOrders;
   const browser = useOrderBrowser(orders);
@@ -45,7 +50,8 @@ export default function AdminOrders({ initialOrders }) {
         body: JSON.stringify({ status }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message ?? "Could not update the order.");
+      if (!response.ok)
+        throw new Error(body.message ?? "Could not update the order.");
       toast(`${id} moved to ${status.replaceAll("_", " ")}.`, "success");
       await mutate();
     } catch (updateError) {
@@ -76,8 +82,13 @@ export default function AdminOrders({ initialOrders }) {
     <div className="admin-orders">
       <div className="portal-toolbar">
         <p className="portal-toolbar__note">
-          <FiRefreshCw className={isValidating ? "is-spinning" : undefined} aria-hidden="true" />
-          {isValidating ? "Refreshing orders…" : `${orders.length} orders · refreshes every 10 seconds.`}
+          <FiRefreshCw
+            className={isValidating ? "is-spinning" : undefined}
+            aria-hidden="true"
+          />
+          {isValidating
+            ? "Refreshing orders…"
+            : `${orders.length} orders · refreshes every 10 seconds.`}
         </p>
         <Button
           type="button"
@@ -91,7 +102,11 @@ export default function AdminOrders({ initialOrders }) {
         </Button>
       </div>
 
-      {error && <p className="form-error">Could not refresh orders. Showing the last known list.</p>}
+      {error && (
+        <p className="form-error">
+          Could not refresh orders. Showing the last known list.
+        </p>
+      )}
 
       {orders.length === 0 ? (
         <div className="order-no-results">
@@ -113,7 +128,12 @@ export default function AdminOrders({ initialOrders }) {
             <div className="order-no-results">
               <h2>No matching orders</h2>
               <p>Try another search term or status filter.</p>
-              <Button type="button" variant="outline" size="sm" onClick={browser.reset}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={browser.reset}
+              >
                 Clear filters
               </Button>
             </div>
@@ -122,7 +142,10 @@ export default function AdminOrders({ initialOrders }) {
               {browser.pageOrders.map((order) => {
                 const transitions = isTerminal(order.status)
                   ? []
-                  : [...nextStatuses(order.status, order.fulfillment), "cancelled"];
+                  : [
+                      ...nextStatuses(order.status, order.fulfillment),
+                      "cancelled",
+                    ];
                 return (
                   <article className="admin-order" key={order.id}>
                     <header className="admin-order__head">
@@ -134,10 +157,21 @@ export default function AdminOrders({ initialOrders }) {
                     </header>
 
                     <div className="admin-order__grid">
-                      <p><span>Customer</span>{order.customer?.name}</p>
-                      <p><span>Contact</span>+251 {order.contact?.phone}</p>
-                      <p><span>Fulfillment</span>{order.fulfillment === "pickup" ? "Pickup" : "Delivery"}</p>
-                      <p><span>Total</span>{etb.format(Number(order.totals?.total) || 0)}</p>
+                      <p>
+                        <span>Customer</span>
+                        {order.customer?.name}
+                      </p>
+                      <p>
+                        <span>Contact</span>+251 {order.contact?.phone}
+                      </p>
+                      <p>
+                        <span>Fulfillment</span>
+                        {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
+                      </p>
+                      <p>
+                        <span>Total</span>
+                        {etb.format(Number(order.totals?.total) || 0)}
+                      </p>
                     </div>
 
                     <details className="admin-order__details">
@@ -145,8 +179,14 @@ export default function AdminOrders({ initialOrders }) {
                       <ul className="order-card__items">
                         {order.items.map((item) => (
                           <li key={item.id}>
-                            <span>{item.quantity} × {item.name}</span>
-                            <span>{etb.format(Number(item.price) * item.quantity || 0)}</span>
+                            <span>
+                              {item.quantity} × {item.name}
+                            </span>
+                            <span>
+                              {etb.format(
+                                Number(item.price) * item.quantity || 0,
+                              )}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -154,9 +194,13 @@ export default function AdminOrders({ initialOrders }) {
                         {order.fulfillment === "pickup"
                           ? "Pickup at Mesob House, Bole"
                           : `${order.delivery?.street}, ${order.delivery?.subCity}`}
-                        {order.delivery?.landmark ? ` · ${order.delivery.landmark}` : ""}
+                        {order.delivery?.landmark
+                          ? ` · ${order.delivery.landmark}`
+                          : ""}
                       </p>
-                      {order.note && <p className="order-note">Kitchen note: {order.note}</p>}
+                      {order.note && (
+                        <p className="order-note">Kitchen note: {order.note}</p>
+                      )}
                     </details>
 
                     {transitions.length > 0 && (
@@ -165,11 +209,15 @@ export default function AdminOrders({ initialOrders }) {
                           <Button
                             key={status}
                             size="sm"
-                            variant={status === "cancelled" ? "ghost" : "outline"}
+                            variant={
+                              status === "cancelled" ? "ghost" : "outline"
+                            }
                             onClick={() => update(order.id, status)}
                             disabled={busyId === order.id}
                           >
-                            {busyId === order.id ? "Saving…" : ACTION_LABEL[status] ?? status}
+                            {busyId === order.id
+                              ? "Saving…"
+                              : (ACTION_LABEL[status] ?? status)}
                           </Button>
                         ))}
                       </div>

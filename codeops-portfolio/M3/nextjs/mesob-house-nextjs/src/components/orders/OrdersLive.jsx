@@ -25,7 +25,9 @@ export default function OrdersLive({ initialOrders }) {
   const { data, error, mutate, isValidating } = useSWR("/api/orders", fetcher, {
     fallbackData: { data: initialOrders },
     refreshInterval: (latest) =>
-      (latest?.data ?? []).some((order) => !isTerminal(order.status)) ? 10000 : 0,
+      (latest?.data ?? []).some((order) => !isTerminal(order.status))
+        ? 10000
+        : 0,
     revalidateOnFocus: true,
   });
 
@@ -35,9 +37,12 @@ export default function OrdersLive({ initialOrders }) {
   const cancel = async (id) => {
     setCancelling(id);
     try {
-      const response = await fetch(`/api/orders/${id}/cancel`, { method: "POST" });
+      const response = await fetch(`/api/orders/${id}/cancel`, {
+        method: "POST",
+      });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message ?? "Could not cancel the order.");
+      if (!response.ok)
+        throw new Error(body.message ?? "Could not cancel the order.");
       toast(body.message ?? "Order cancelled.", "info");
       await mutate();
     } catch (cancelError) {
@@ -48,7 +53,10 @@ export default function OrdersLive({ initialOrders }) {
   };
 
   const exportHistory = () => {
-    downloadCsv(`mesob-house-orders-${dateStamp.format(new Date())}.csv`, orderHistoryCsv(orders));
+    downloadCsv(
+      `mesob-house-orders-${dateStamp.format(new Date())}.csv`,
+      orderHistoryCsv(orders),
+    );
     toast("Order history exported as CSV.", "info");
   };
 
@@ -74,7 +82,12 @@ export default function OrdersLive({ initialOrders }) {
           <FiClock aria-hidden="true" />
           <h2>No orders yet</h2>
           <p>Your first feast will appear here with a live kitchen status.</p>
-          <Button as={Link} href="/menu" variant="primary" rightIcon={<FiArrowRight />}>
+          <Button
+            as={Link}
+            href="/menu"
+            variant="primary"
+            rightIcon={<FiArrowRight />}
+          >
             Explore the menu
           </Button>
         </div>
@@ -86,8 +99,13 @@ export default function OrdersLive({ initialOrders }) {
     <div className="orders-live">
       <div className="portal-toolbar">
         <p className="portal-toolbar__note">
-          <FiRefreshCw className={isValidating ? "is-spinning" : undefined} aria-hidden="true" />
-          {isValidating ? "Checking the kitchen…" : "Status refreshes automatically while an order is active."}
+          <FiRefreshCw
+            className={isValidating ? "is-spinning" : undefined}
+            aria-hidden="true"
+          />
+          {isValidating
+            ? "Checking the kitchen…"
+            : "Status refreshes automatically while an order is active."}
         </p>
         <Button
           type="button"
@@ -100,7 +118,11 @@ export default function OrdersLive({ initialOrders }) {
         </Button>
       </div>
 
-      {error && <p className="form-error">We could not refresh your orders. Showing the last known status.</p>}
+      {error && (
+        <p className="form-error">
+          We could not refresh your orders. Showing the last known status.
+        </p>
+      )}
 
       <OrderFilters
         query={browser.query}
@@ -115,7 +137,12 @@ export default function OrdersLive({ initialOrders }) {
         <div className="order-no-results">
           <h2>No matching orders</h2>
           <p>Try another search term or status filter.</p>
-          <Button type="button" variant="outline" size="sm" onClick={browser.reset}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={browser.reset}
+          >
             Clear filters
           </Button>
         </div>
@@ -127,7 +154,8 @@ export default function OrdersLive({ initialOrders }) {
                 <div>
                   <p className="order-card__id">{order.id}</p>
                   <p className="order-card__date">
-                    {when.format(new Date(order.createdAt))} · {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
+                    {when.format(new Date(order.createdAt))} ·{" "}
+                    {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
                   </p>
                 </div>
                 <OrderStatusBadge status={order.status} />
@@ -139,7 +167,9 @@ export default function OrdersLive({ initialOrders }) {
                     <span>
                       {item.quantity} × {item.name}
                     </span>
-                    <span>{etb.format(Number(item.price) * item.quantity || 0)}</span>
+                    <span>
+                      {etb.format(Number(item.price) * item.quantity || 0)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -157,7 +187,13 @@ export default function OrdersLive({ initialOrders }) {
                       {cancelling === order.id ? "Cancelling…" : "Cancel order"}
                     </Button>
                   )}
-                  <Button as={Link} href={`/orders/${order.id}`} variant="outline" size="sm" rightIcon={<FiArrowRight />}>
+                  <Button
+                    as={Link}
+                    href={`/orders/${order.id}`}
+                    variant="outline"
+                    size="sm"
+                    rightIcon={<FiArrowRight />}
+                  >
                     View order
                   </Button>
                 </div>

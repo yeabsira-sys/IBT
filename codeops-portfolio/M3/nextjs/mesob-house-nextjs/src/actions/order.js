@@ -7,28 +7,27 @@ import { checkoutSchema } from "@/lib/schemas";
 import { getCartTotals } from "@/lib/pricing";
 import { cancelOrderForUser, createOrder } from "@/lib/orders";
 
-const priceNumber = (value) => Number(String(value ?? 0).replace(/,/g, "")) || 0;
+const priceNumber = (value) =>
+  Number(String(value ?? 0).replace(/,/g, "")) || 0;
 
-/**
- * submitOrder — the authoritative write.
- *
- * 1. The session is read on the server (never a user id sent by the client).
- * 2. The payload is validated again here.
- * 3. Dish ids are resolved against the live menu and prices come from the
- *    server copy, so a crafted request cannot change what an item costs.
- * 4. The row is stored against session.user.id, which is what /orders and
- *    every ownership check query later.
- */
 export async function submitOrder(payload) {
   const user = await getSession();
   if (!user) {
-    return { ok: false, code: "UNAUTHORIZED", message: "Please sign in before placing an order." };
+    return {
+      ok: false,
+      code: "UNAUTHORIZED",
+      message: "Please sign in before placing an order.",
+    };
   }
 
   const parsed = checkoutSchema.safeParse(payload);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    return { ok: false, code: "INVALID", message: issue?.message ?? "Please check your details and try again." };
+    return {
+      ok: false,
+      code: "INVALID",
+      message: issue?.message ?? "Please check your details and try again.",
+    };
   }
 
   const { dishes } = await getAllDishes();
@@ -82,7 +81,11 @@ export async function submitOrder(payload) {
 export async function cancelOrder(orderId) {
   const user = await getSession();
   if (!user) {
-    return { ok: false, code: "UNAUTHORIZED", message: "Please sign in to cancel an order." };
+    return {
+      ok: false,
+      code: "UNAUTHORIZED",
+      message: "Please sign in to cancel an order.",
+    };
   }
 
   const result = await cancelOrderForUser(orderId, user.id);

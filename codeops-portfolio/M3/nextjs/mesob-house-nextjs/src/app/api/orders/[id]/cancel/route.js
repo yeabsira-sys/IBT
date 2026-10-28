@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { isSameOrigin } from "@/lib/http";
 import { cancelOrderForUser } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
 
-function sameOrigin(request) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true; // server-to-server / curl
-  return origin === new URL(request.url).origin;
-}
-
 /** POST /api/orders/[id]/cancel — owner only; mirrors the cancelOrder action. */
 export async function POST(request, { params }) {
-  if (!sameOrigin(request)) {
+  if (!isSameOrigin(request)) {
     return NextResponse.json({ message: "Cross-origin request refused." }, { status: 403 });
   }
 

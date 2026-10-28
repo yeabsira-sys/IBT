@@ -24,7 +24,10 @@ const COLUMNS = [
 
 const KITCHEN_FILTERS = [
   { value: "all", label: "All" },
-  ...COLUMNS.map(({ status }) => ({ value: status, label: STATUS_META[status].label })),
+  ...COLUMNS.map(({ status }) => ({
+    value: status,
+    label: STATUS_META[status].label,
+  })),
 ];
 
 const ACTION_LABEL = {
@@ -38,11 +41,16 @@ const ACTION_LABEL = {
 export default function KitchenBoard({ initialOrders, initialCharts }) {
   const toast = useToast();
   const [busyId, setBusyId] = useState(null);
-  const { data, error, mutate, isValidating } = useSWR("/api/kitchen/orders", fetcher, {
-    fallbackData: { data: initialOrders, charts: initialCharts },
-    refreshInterval: 8000,
-    revalidateOnFocus: true,
-  });
+  const { data, error, mutate, isValidating } = useSWR(
+    "/api/kitchen/orders",
+    fetcher,
+    {
+      fallbackData: { data: initialOrders, charts: initialCharts },
+      refreshInterval:
+        parseInt(process.env.KITCHEN_PAGE_REFRESH_INTERVAL) || 30000,
+      revalidateOnFocus: true,
+    },
+  );
 
   const orders = data?.data ?? initialOrders;
   const charts = data?.charts ?? initialCharts;
@@ -57,7 +65,8 @@ export default function KitchenBoard({ initialOrders, initialCharts }) {
         body: JSON.stringify({ status }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message ?? "Could not update the order.");
+      if (!response.ok)
+        throw new Error(body.message ?? "Could not update the order.");
       toast(`${id} moved to ${status.replaceAll("_", " ")}.`, "success");
       await mutate();
     } catch (updateError) {
@@ -71,18 +80,28 @@ export default function KitchenBoard({ initialOrders, initialCharts }) {
     <div className="kitchen">
       <div className="portal-toolbar">
         <p className="portal-toolbar__note">
-          <FiRefreshCw className={isValidating ? "is-spinning" : undefined} aria-hidden="true" />
-          {isValidating ? "Refreshing the queue…" : "Queue refreshes every 8 seconds."}
+          <FiRefreshCw
+            className={isValidating ? "is-spinning" : undefined}
+            aria-hidden="true"
+          />
+          {isValidating
+            ? "Refreshing the queue…"
+            : `Queue refreshes every ${(parseInt(process.env.KITCHEN_PAGE_REFRESH_INTERVAL) || 30000) / 1000} seconds.`}
         </p>
         <p className="portal-toolbar__count">
-          <FiClock aria-hidden="true" /> {orders.length} active order{orders.length === 1 ? "" : "s"}
+          <FiClock aria-hidden="true" /> {orders.length} active order
+          {orders.length === 1 ? "" : "s"}
         </p>
       </div>
 
       {error && (
         <p className="form-error">
           The queue could not refresh. Showing the last known orders.
-          <button type="button" className="form-error__retry" onClick={() => mutate()}>
+          <button
+            type="button"
+            className="form-error__retry"
+            onClick={() => mutate()}
+          >
             Retry
           </button>
         </p>
@@ -109,7 +128,12 @@ export default function KitchenBoard({ initialOrders, initialCharts }) {
         <div className="order-no-results">
           <h2>No matching tickets</h2>
           <p>Try another search term or status filter.</p>
-          <Button type="button" variant="outline" size="sm" onClick={browser.reset}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={browser.reset}
+          >
             Clear filters
           </Button>
         </div>
@@ -119,7 +143,9 @@ export default function KitchenBoard({ initialOrders, initialCharts }) {
             const total = browser.filteredOrders.filter(
               (order) => order.status === column.status,
             ).length;
-            const tickets = browser.pageOrders.filter((order) => order.status === column.status);
+            const tickets = browser.pageOrders.filter(
+              (order) => order.status === column.status,
+            );
             return (
               <section className="kitchen-column" key={column.status}>
                 <header>
@@ -131,13 +157,17 @@ export default function KitchenBoard({ initialOrders, initialCharts }) {
                         : `${tickets.length} of ${total} tickets on this page`
                     }
                   >
-                    {tickets.length === total ? total : `${tickets.length}/${total}`}
+                    {tickets.length === total
+                      ? total
+                      : `${tickets.length}/${total}`}
                   </span>
                 </header>
                 <div className="kitchen-column__body">
                   {tickets.length === 0 && (
                     <p className="kitchen-empty">
-                      {total > 0 ? "Tickets are on another page." : "Nothing here."}
+                      {total > 0
+                        ? "Tickets are on another page."
+                        : "Nothing here."}
                     </p>
                   )}
                   {tickets.map((order) => (
@@ -147,9 +177,12 @@ export default function KitchenBoard({ initialOrders, initialCharts }) {
                         <OrderStatusBadge status={order.status} />
                       </header>
                       <p className="kitchen-ticket__meta">
-                        {order.customer?.name} · {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
+                        {order.customer?.name} ·{" "}
+                        {order.fulfillment === "pickup" ? "Pickup" : "Delivery"}
                       </p>
-                      <p className="kitchen-ticket__meta">{when.format(new Date(order.createdAt))}</p>
+                      <p className="kitchen-ticket__meta">
+                        {when.format(new Date(order.createdAt))}
+                      </p>
                       <ul>
                         {order.items.map((item) => (
                           <li key={item.id}>
@@ -157,21 +190,31 @@ export default function KitchenBoard({ initialOrders, initialCharts }) {
                           </li>
                         ))}
                       </ul>
-                      {order.note && <p className="kitchen-ticket__note">“{order.note}”</p>}
+                      {order.note && (
+                        <p className="kitchen-ticket__note">“{order.note}”</p>
+                      )}
                       <div className="kitchen-ticket__foot">
-                        <strong>{etb.format(Number(order.totals?.total) || 0)}</strong>
+                        <strong>
+                          {etb.format(Number(order.totals?.total) || 0)}
+                        </strong>
                         <div className="kitchen-ticket__actions">
-                          {nextStatuses(order.status, order.fulfillment).map((next) => (
-                            <Button
-                              key={next}
-                              size="sm"
-                              variant={next === "completed" ? "primary" : "outline"}
-                              onClick={() => update(order.id, next)}
-                              disabled={busyId === order.id}
-                            >
-                              {busyId === order.id ? "Saving…" : ACTION_LABEL[next] ?? next}
-                            </Button>
-                          ))}
+                          {nextStatuses(order.status, order.fulfillment).map(
+                            (next) => (
+                              <Button
+                                key={next}
+                                size="sm"
+                                variant={
+                                  next === "completed" ? "primary" : "outline"
+                                }
+                                onClick={() => update(order.id, next)}
+                                disabled={busyId === order.id}
+                              >
+                                {busyId === order.id
+                                  ? "Saving…"
+                                  : (ACTION_LABEL[next] ?? next)}
+                              </Button>
+                            ),
+                          )}
                         </div>
                       </div>
                     </article>

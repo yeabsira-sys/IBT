@@ -33,9 +33,7 @@ const DEFAULTS = {
 };
 
 /**
- * RegisterForm — account creation. react-hook-form owns the field state and
- * zod (via zodResolver) owns the rules, so validation lives in one schema
- * (lib/schemas.js) instead of a hand-written validate() function.
+ * RegisterForm — account creation. react-hook-form owns the field state, and the server action owns the session state.
  */
 export default function RegisterForm({ dietaryOptions = [] }) {
   const router = useRouter();
@@ -48,7 +46,11 @@ export default function RegisterForm({ dietaryOptions = [] }) {
     control,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(registerSchema), defaultValues: DEFAULTS, mode: "onTouched" });
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: DEFAULTS,
+    mode: "onTouched",
+  });
 
   const finish = async (resultPromise) => {
     const result = await resultPromise;
@@ -65,7 +67,9 @@ export default function RegisterForm({ dietaryOptions = [] }) {
     <Card variant="raised" className="register" as="div">
       <div>
         <h2 className="register__title">Create Your Mesob House Account</h2>
-        <p className="register__lede">Join our culinary heritage circle in less than a minute.</p>
+        <p className="register__lede">
+          Join our culinary heritage circle in less than a minute.
+        </p>
       </div>
 
       <div className="register__social">
@@ -74,12 +78,20 @@ export default function RegisterForm({ dietaryOptions = [] }) {
           label="Telebirr Quick Sign"
           onClick={() => finish(socialSignInAction("Telebirr"))}
         />
-        <SocialButton logo={<FcGoogle />} label="Continue with Google" onClick={() => finish(socialSignInAction("Google"))} />
+        <SocialButton
+          logo={<FcGoogle />}
+          label="Continue with Google"
+          onClick={() => finish(socialSignInAction("Google"))}
+        />
       </div>
 
       <Divider>Or register with your details</Divider>
 
-      <form className="register__fields" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form
+        className="register__fields"
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+      >
         <TextField
           label="Full Name"
           optionalText="(ሙሉ ስም)"
@@ -136,7 +148,8 @@ export default function RegisterForm({ dietaryOptions = [] }) {
             <span className="field__optional">(optional)</span>
           </legend>
           <p className="register__section-note">
-            Helps our chefs tailor your banquet offerings and fasting recommendations.
+            Helps our chefs tailor your banquet offerings and fasting
+            recommendations.
           </p>
           <Controller
             name="preference"
@@ -157,20 +170,33 @@ export default function RegisterForm({ dietaryOptions = [] }) {
           control={control}
           render={({ field }) => (
             <Checkbox checked={field.value} onChange={field.onChange}>
-              I agree to the <Link href="/terms">Mesob House Hospitality Terms</Link> and{" "}
+              I agree to the{" "}
+              <Link href="/terms">Mesob House Hospitality Terms</Link> and{" "}
               <Link href="/privacy">Privacy Guidelines</Link>.
-              {errors.agreed && <span className="field__hint field__hint--error">{errors.agreed.message}</span>}
+              {errors.agreed && (
+                <span className="field__hint field__hint--error">
+                  {errors.agreed.message}
+                </span>
+              )}
             </Checkbox>
           )}
         />
 
-        <Button type="submit" variant="primary" size="lg" block rightIcon={<FiArrowRight />} disabled={isSubmitting}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          rightIcon={<FiArrowRight />}
+          disabled={isSubmitting}
+        >
           Create Account &amp; Receive Welcome Gursha
         </Button>
       </form>
 
       <p className="register__footer">
-        Already part of our dining family? <Link href="/sign-in">Sign in here</Link>
+        Already part of our dining family?{" "}
+        <Link href="/sign-in">Sign in here</Link>
       </p>
     </Card>
   );

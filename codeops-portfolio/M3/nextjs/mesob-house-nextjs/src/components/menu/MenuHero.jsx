@@ -3,7 +3,15 @@ import { Badge } from "../ui/Surface";
 import { Tag } from "../ui/Primitives";
 
 /** MenuHero — heading, search field and quick dietary badges. */
-export default function MenuHero({ eyebrow, title, lede, searchPlaceholder, search, onSearchChange, badges = [] }) {
+export default function MenuHero({
+  eyebrow,
+  title,
+  lede,
+  searchPlaceholder,
+  search,
+  onSearchChange,
+  badges = [],
+}) {
   return (
     <header className="menu-hero">
       <Badge dots={0} icon={null}>

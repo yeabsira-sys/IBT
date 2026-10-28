@@ -55,7 +55,11 @@ export default function OrderPagination({ page, totalPages, onPageChange }) {
                 {item}
               </button>
             ) : (
-              <span key={item} className="order-pagination__gap" aria-hidden="true">
+              <span
+                key={item}
+                className="order-pagination__gap"
+                aria-hidden="true"
+              >
                 …
               </span>
             ),

@@ -17,10 +17,6 @@ import { menuHero, stickyNote } from "@/data/menu";
 
 /**
  * MenuBrowser — search + category tabs over the dish list the server fetched.
- * Filters live in the URL (/menu?category=Tibs%20%26%20Grills&q=doro) so a
- * filtered menu is shareable and survives a refresh. URL updates go through
- * history.replaceState, which Next.js syncs into useSearchParams without a
- * server round trip.
  */
 export default function MenuBrowser({ dishes, source }) {
   const params = useSearchParams();
@@ -51,15 +47,24 @@ export default function MenuBrowser({ dishes, source }) {
       else sp.delete(key);
     }
     const query = sp.toString();
-    window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname);
+    window.history.replaceState(
+      null,
+      "",
+      query ? `${pathname}?${query}` : pathname,
+    );
   };
 
   const categories = useMemo(() => {
     const counts = new Map();
-    for (const dish of dishes) counts.set(dish.category, (counts.get(dish.category) ?? 0) + 1);
+    for (const dish of dishes)
+      counts.set(dish.category, (counts.get(dish.category) ?? 0) + 1);
     return [
       { value: "all", label: "All Dishes", count: dishes.length },
-      ...Array.from(counts, ([value, count]) => ({ value, label: value, count })),
+      ...Array.from(counts, ([value, count]) => ({
+        value,
+        label: value,
+        count,
+      })),
     ];
   }, [dishes]);
 
@@ -70,7 +75,9 @@ export default function MenuBrowser({ dishes, source }) {
       // the server-seeded list locally rather than flashing an empty grid.
       if (searchResults?.data) return searchResults.data;
       return dishes.filter(
-        (dish) => (category === "all" || dish.category === category) && dish.name.toLowerCase().includes(term),
+        (dish) =>
+          (category === "all" || dish.category === category) &&
+          dish.name.toLowerCase().includes(term),
       );
     }
     return dishes.filter(
@@ -95,7 +102,11 @@ export default function MenuBrowser({ dishes, source }) {
 
       <div className="menu-tabs" role="group" aria-label="Filter by category">
         {categories.map((cat) => (
-          <Chip key={cat.value} selected={category === cat.value} onClick={() => syncUrl({ category: cat.value })}>
+          <Chip
+            key={cat.value}
+            selected={category === cat.value}
+            onClick={() => syncUrl({ category: cat.value })}
+          >
             {cat.label} <span>({cat.count})</span>
           </Chip>
         ))}
@@ -112,9 +123,18 @@ export default function MenuBrowser({ dishes, source }) {
           <MenuDishCard key={dish.id} dish={dish} onAdd={addToCart} />
         ))}
       </div>
-      {visible.length === 0 && <p className="menu-empty">No dishes match your search — try another word or category.</p>}
+      {visible.length === 0 && (
+        <p className="menu-empty">
+          No dishes match your search — try another word or category.
+        </p>
+      )}
 
-      <StickyCartBar count={itemCount} amount={number.format(Number(subtotal) || 0)} note={stickyNote} ctaTo="/cart" />
+      <StickyCartBar
+        count={itemCount}
+        amount={number.format(Number(subtotal) || 0)}
+        note={stickyNote}
+        ctaTo="/cart"
+      />
     </>
   );
 }

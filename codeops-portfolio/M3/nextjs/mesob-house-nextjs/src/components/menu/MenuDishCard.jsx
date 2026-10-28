@@ -9,12 +9,21 @@ export default function MenuDishCard({ dish, onAdd }) {
   return (
     <article className="menu-card">
       <Link className="menu-card__media" href={`/dish/${id}`}>
-        <Image src={image} alt={name} width={500} height={375} sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 25vw" />
+        <Image
+          src={image}
+          alt={name}
+          width={500}
+          height={375}
+          sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 25vw"
+          loading="lazy"
+        />
         {label && <Tag tone={label.tone}>{label.text}</Tag>}
       </Link>
       <div className="menu-card__body">
         <h3>
-          <Link className="dish-link" href={`/dish/${id}`}>{name}</Link>
+          <Link className="dish-link" href={`/dish/${id}`}>
+            {name}
+          </Link>
         </h3>
         <p>{description}</p>
       </div>

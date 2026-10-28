@@ -4,14 +4,14 @@ This document records the performance work, the production build shape and the l
 
 ## 1. Measurement setup
 
-| Item | Value |
-| --- | --- |
-| Build | `next build` (Next.js 16.4.2, Turbopack) |
-| Server | `next start` on `localhost:3002` |
-| Browser | Chromium 152 (the OpenCode Electron browser) |
-| Viewport | Desktop, no network/CPU throttling |
-| Cache | Local server warm; first page load uncached, later loads reuse chunks |
-| Date | 2026-10-21 |
+| Item       | Value                                                                                                          |
+| ---------- | -------------------------------------------------------------------------------------------------------------- |
+| Build      | `next build` (Next.js 16.4.2, Turbopack)                                                                       |
+| Server     | `next start` on `localhost:3000`                                                                               |
+| Browser    | Firefox                                                                                                        |
+| Viewport   | Desktop, no network/CPU throttling                                                                             |
+| Cache      | Local server warm; first page load uncached, later loads reuse chunks                                          |
+| Date       | 2026-10-21                                                                                                     |
 | Lighthouse | Not available in this environment (no Chrome/Lighthouse binary). The deployed Lighthouse run is still pending. |
 
 The timing numbers come from the browser's Navigation Timing and `PerformanceObserver` APIs, not from Lighthouse. They are useful for spotting regressions in this environment; they are **not** field data or a substitute for a throttled Lighthouse run.
@@ -29,17 +29,23 @@ new Promise((resolve) => {
     if (entry) lcp = entry.startTime;
   }).observe({ type: "largest-contentful-paint", buffered: true });
   new PerformanceObserver((list) => {
-    for (const entry of list.getEntries()) if (!entry.hadRecentInput) cls += entry.value;
+    for (const entry of list.getEntries())
+      if (!entry.hadRecentInput) cls += entry.value;
   }).observe({ type: "layout-shift", buffered: true });
 
   setTimeout(() => {
     const nav = performance.getEntriesByType("navigation")[0];
-    const js = performance.getEntriesByType("resource").filter((entry) => entry.name.includes(".js"));
+    const js = performance
+      .getEntriesByType("resource")
+      .filter((entry) => entry.name.includes(".js"));
     resolve({
       lcpMs: lcp && Math.round(lcp),
       cls: Number(cls.toFixed(4)),
       ttfbMs: Math.round(nav.responseStart),
-      compressedJsBytes: js.reduce((sum, entry) => sum + (entry.encodedBodySize || 0), 0),
+      compressedJsBytes: js.reduce(
+        (sum, entry) => sum + (entry.encodedBodySize || 0),
+        0,
+      ),
     });
   }, 1500);
 });
@@ -66,13 +72,13 @@ The public catalogue stays on the server-rendered/ISR path. Adding auth did not 
 
 Each row is one page load in the production server. LCP/CLS are from a focused tab after a 1.5 s observation window. Compressed JS is the sum of `encodedBodySize` for script resources (includes shared chunks, so it is not a per-route delta).
 
-| Page | LCP | CLS | TTFB | Compressed JS | DOMContentLoaded |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `/` | 496 ms | 0 | 56 ms | 173.7 KB | 156 ms |
-| `/menu` | 584 ms | 0 | 37 ms | 174.7 KB | 95 ms |
-| `/dish/doro-wat` | 464 ms | 0 | 21 ms | 174.7 KB | 62 ms |
-| `/checkout` | 416 ms | 0 | 68 ms | 193.8 KB | 114 ms |
-| `/orders` | 312 ms | 0 | 86 ms | 167.8 KB | 131 ms |
+| Page             |    LCP | CLS |  TTFB | Compressed JS | DOMContentLoaded |
+| ---------------- | -----: | --: | ----: | ------------: | ---------------: |
+| `/`              | 496 ms |   0 | 56 ms |      173.7 KB |           156 ms |
+| `/menu`          | 584 ms |   0 | 37 ms |      174.7 KB |            95 ms |
+| `/dish/doro-wat` | 464 ms |   0 | 21 ms |      174.7 KB |            62 ms |
+| `/checkout`      | 416 ms |   0 | 68 ms |      193.8 KB |           114 ms |
+| `/orders`        | 312 ms |   0 | 86 ms |      167.8 KB |           131 ms |
 
 Observations:
 
@@ -89,11 +95,11 @@ aggregation in `src/lib/analytics.js` stay on the server. Recharts is only
 loaded by the private `/admin` and `/kitchen` route trees, so the public
 catalogue's JS is unchanged.
 
-| Page | LCP | CLS | TTFB | Compressed JS | Notes |
-| --- | ---: | ---: | ---: | ---: | --- |
-| `/admin` | 360 ms | 0 | 45 ms | 302.6 KB | 5 stat cards + 2 charts + recent orders |
-| `/kitchen` | 384 ms | 0 | 105 ms | 293.9 KB | 2 charts + live board |
-| `/orders` (for comparison) | 312 ms | 0 | 86 ms | 167.8 KB | No chart library |
+| Page                       |    LCP | CLS |   TTFB | Compressed JS | Notes                                   |
+| -------------------------- | -----: | --: | -----: | ------------: | --------------------------------------- |
+| `/admin`                   | 360 ms |   0 |  45 ms |      302.6 KB | 5 stat cards + 2 charts + recent orders |
+| `/kitchen`                 | 384 ms |   0 | 105 ms |      293.9 KB | 2 charts + live board                   |
+| `/orders` (for comparison) | 312 ms |   0 |  86 ms |      167.8 KB | No chart library                        |
 
 Recharts accounts for roughly 126 KB of the private dashboard JS. That is a
 real cost, but it is isolated to routes that already require a staff session.
@@ -116,13 +122,13 @@ A strict before/after on the same route set is not possible: before this phase t
 
 What can be compared is the **public catalogue path**, which was already static/ISR and remains so:
 
-| Area | Before Day 45 | After Day 45 |
-| --- | --- | --- |
-| `/`, `/menu`, dish pages | Static/ISR; no client fetch for first paint | Same; no regression in rendering strategy |
-| Menu search | Client filter over the server-seeded list | 300 ms debounced SWR request, previous data kept while loading |
-| Navbar session | Client-only store/localStorage | SWR-cached `/api/auth/session`; no extra page dynamic render |
-| Private pages | Did not exist | Dynamic server guard + seeded SWR; measured above |
-| Checkout JS | Form bundle | Same form + lazy payment/delivery cards; ~194 KB compressed in the sample |
+| Area                     | Before Day 45                               | After Day 45                                                              |
+| ------------------------ | ------------------------------------------- | ------------------------------------------------------------------------- |
+| `/`, `/menu`, dish pages | Static/ISR; no client fetch for first paint | Same; no regression in rendering strategy                                 |
+| Menu search              | Client filter over the server-seeded list   | 300 ms debounced SWR request, previous data kept while loading            |
+| Navbar session           | Client-only store/localStorage              | SWR-cached `/api/auth/session`; no extra page dynamic render              |
+| Private pages            | Did not exist                               | Dynamic server guard + seeded SWR; measured above                         |
+| Checkout JS              | Form bundle                                 | Same form + lazy payment/delivery cards; ~194 KB compressed in the sample |
 
 The important architectural result is that the new private features did **not** force the public catalogue into dynamic rendering. The 5-minute ISR window and static dish pages are intact.
 
@@ -187,14 +193,14 @@ Compare `audits.largest-contentful-paint.numericValue`, `audits.cumulative-layou
 
 These are the budgets for the next change, not claims about Lighthouse field data:
 
-| Metric | Budget | Current local sample |
-| --- | ---: | ---: |
-| LCP (desktop, warm local) | < 1.0 s | 312–584 ms |
-| CLS | < 0.1 | 0 |
-| Compressed JS, public page | < 200 KB | ~174 KB |
-| Compressed JS, checkout | < 230 KB | ~194 KB |
-| Search requests per burst | 1 | 1 |
-| Private API payload | < 50 KB for a normal queue | small JSON |
+| Metric                     |                     Budget | Current local sample |
+| -------------------------- | -------------------------: | -------------------: |
+| LCP (desktop, warm local)  |                    < 1.0 s |           312–584 ms |
+| CLS                        |                      < 0.1 |                    0 |
+| Compressed JS, public page |                   < 200 KB |              ~174 KB |
+| Compressed JS, checkout    |                   < 230 KB |              ~194 KB |
+| Search requests per burst  |                          1 |                    1 |
+| Private API payload        | < 50 KB for a normal queue |           small JSON |
 
 Before merging a performance-sensitive change:
 

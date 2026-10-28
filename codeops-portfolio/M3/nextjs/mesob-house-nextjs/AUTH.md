@@ -257,7 +257,7 @@ A tampered `localStorage` price changes the client-side basket total, but the st
 
 - Session cookies are `SameSite=Lax`.
 - Server Actions use Next.js's built-in action-origin checks.
-- Mutating route handlers check the `Origin` header when it is present (`src/lib/http.js` and the cancel route). Requests without an `Origin` header are allowed for server-to-server/curl use; browsers send `Origin` for cross-site `fetch`/form posts.
+- Mutating route handlers check the `Origin` header when it is present against the request's public origin and, when configured, `APP_ORIGIN` (`src/lib/http.js`). Requests without an `Origin` header are allowed for server-to-server/curl use; browsers send `Origin` for cross-site `fetch`/form posts.
 - All mutations are `POST`/`PATCH`; no state changes on `GET`.
 
 ### Open redirects

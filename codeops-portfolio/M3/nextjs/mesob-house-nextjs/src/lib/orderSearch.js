@@ -12,7 +12,9 @@ export const ORDER_FILTERS = [
 
 /** Search across the fields staff and customers actually use to find an order. */
 export function orderMatches(order, query) {
-  const needle = String(query ?? "").trim().toLowerCase();
+  const needle = String(query ?? "")
+    .trim()
+    .toLowerCase();
   if (!needle) return true;
 
   const haystack = [
@@ -41,6 +43,8 @@ export function orderMatches(order, query) {
 
 export function filterOrders(orders, status, query) {
   return (orders ?? []).filter(
-    (order) => (status === "all" || order.status === status) && orderMatches(order, query),
+    (order) =>
+      (status === "all" || order.status === status) &&
+      orderMatches(order, query),
   );
 }

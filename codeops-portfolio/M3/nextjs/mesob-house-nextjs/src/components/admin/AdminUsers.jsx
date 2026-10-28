@@ -17,7 +17,8 @@ export default function AdminUsers({ initialUsers, currentUserId }) {
     fetcher,
     {
       fallbackData: { data: initialUsers },
-      refreshInterval: 30000,
+      refreshInterval:
+        parseInt(process.env.ADMIN_PAGE_REFRESH_INTERVAL) || 30000,
       revalidateOnFocus: true,
     },
   );
@@ -54,7 +55,7 @@ export default function AdminUsers({ initialUsers, currentUserId }) {
           />
           {isValidating
             ? "Refreshing users…"
-            : `${users.length} accounts · refreshes every 30 seconds.`}
+            : `${users.length} accounts · refreshes every ${(parseInt(process.env.ADMIN_PAGE_REFRESH_INTERVAL) || 30000) / 1000} seconds.`}
         </p>
       </div>
 

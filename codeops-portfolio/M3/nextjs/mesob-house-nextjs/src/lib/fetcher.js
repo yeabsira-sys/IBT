@@ -6,7 +6,9 @@ export async function fetcher(url) {
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(body?.message ?? `Request failed (${response.status})`);
+    const error = new Error(
+      body?.message ?? `Request failed (${response.status})`,
+    );
     error.status = response.status;
     error.body = body;
     throw error;

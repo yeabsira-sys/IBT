@@ -38,7 +38,8 @@ export default function AdminOverview({ initialStats }) {
     fetcher,
     {
       fallbackData: { data: initialStats },
-      refreshInterval: 15000,
+      refreshInterval:
+        parseInt(process.env.ADMIN_PAGE_REFRESH_INTERVAL) || 30000,
       revalidateOnFocus: true,
     },
   );
@@ -54,7 +55,7 @@ export default function AdminOverview({ initialStats }) {
           />
           {isValidating
             ? "Refreshing metrics…"
-            : "Metrics refresh every 15 seconds."}
+            : `Metrics refresh every ${(parseInt(process.env.ADMIN_PAGE_REFRESH_INTERVAL) || 30000) / 1000} seconds.`}
         </p>
         <div className="portal-toolbar__links">
           <Link href="/admin/orders">

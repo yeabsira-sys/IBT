@@ -31,13 +31,28 @@ export default function NotFoundHero({ eyebrow, lede, message, actions }) {
       {message && <p className="notfound-hero__message">{message}</p>}
 
       <div className="notfound-hero__actions">
-        <Button as={Link} href={actions.primary.to} variant="primary" leftIcon={<FaUtensils />}>
+        <Button
+          as={Link}
+          href={actions.primary.to}
+          variant="primary"
+          leftIcon={<FaUtensils />}
+        >
           {actions.primary.label}
         </Button>
-        <Button as={Link} href={actions.secondary.to} variant="soft" leftIcon={<FiBookOpen />}>
+        <Button
+          as={Link}
+          href={actions.secondary.to}
+          variant="soft"
+          leftIcon={<FiBookOpen />}
+        >
           {actions.secondary.label}
         </Button>
-        <Button as={Link} href={actions.tertiary.to} variant="soft" leftIcon={<FaBagShopping />}>
+        <Button
+          as={Link}
+          href={actions.tertiary.to}
+          variant="soft"
+          leftIcon={<FaBagShopping />}
+        >
           {actions.tertiary.label}
         </Button>
       </div>

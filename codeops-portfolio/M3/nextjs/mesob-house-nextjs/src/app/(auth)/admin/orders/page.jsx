@@ -16,11 +16,16 @@ export default async function AdminOrdersPage() {
 
   return (
     <div className="container portal-page portal-page--wide">
-      <Breadcrumbs items={[{ label: "Admin", to: "/admin" }, { label: "Orders" }]} />
+      <Breadcrumbs
+        items={[{ label: "Admin", to: "/admin" }, { label: "Orders" }]}
+      />
       <header className="portal-head">
         <p className="portal-eyebrow">Operations</p>
         <h1>All orders</h1>
-        <p>Admin-only view of every customer order. Staff transitions are checked again on the server.</p>
+        <p>
+          Admin-only view of every customer order. Staff transitions are checked
+          again on the server.
+        </p>
       </header>
       <AdminNav />
       <AdminOrders initialOrders={orders} />

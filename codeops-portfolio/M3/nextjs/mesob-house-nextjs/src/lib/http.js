@@ -1,41 +1,52 @@
-// /** True when a mutating API request came from this same origin (or a server). */
-// export function isSameOrigin(request) {
-//   const origin = request.headers.get("origin");
-//   if (!origin) return true; // curl, health checks, server-to-server
+/**
+ * Same-origin check for mutating API requests.
+ *
+ * Browsers send `Origin` for both same-origin and cross-site fetch requests.
+ * Compare it with the public origin of the incoming request (including
+ * Vercel's forwarded host) and, when configured, the canonical APP_ORIGIN.
+ *
+ * Requests without an Origin header stay allowed for server-to-server/curl
+ * use, matching the previous behavior.
+ */
 
-//   const parsedOrigin = new URL(origin).origin;
-//   const requestOrigin = new URL(request.url).origin;
-//   try {
-//     console.log("Same-origin check:", {
-//       origin: parsedOrigin,
-//       requestOrigin,
-//       matches: parsedOrigin === requestOrigin,
-//     });
-//     return new URL(origin).origin === new URL(request.url).origin;
-//   } catch {
-//     return false;
-//   }
-// }
-// /
+function normalizeOrigin(value) {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
 
-/** True when a mutating API request came from this same origin. */
+function requestOrigin(request) {
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host =
+    forwardedHost?.split(",")[0].trim() || request.headers.get("host");
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const protocol =
+    forwardedProto?.split(",")[0].trim() ||
+    (forwardedHost ? "https" : new URL(request.url).protocol.replace(":", ""));
+
+  if (host) return normalizeOrigin(`${protocol}://${host}`);
+  return normalizeOrigin(request.url);
+}
+
 export function isSameOrigin(request) {
   const origin = request.headers.get("origin");
-
-  // Preserve support for requests without an Origin header.
   if (!origin) return true;
 
-  try {
-    const expectedOrigin = process.env.APP_ORIGIN;
+  const normalized = normalizeOrigin(origin);
+  if (!normalized) return false;
 
-    if (!expectedOrigin) {
-      console.error("APP_ORIGIN environment variable is missing.");
-      return false;
-    }
+  const allowed = new Set();
 
-    return new URL(origin).origin === new URL(expectedOrigin).origin;
-  } catch (error) {
-    console.error("Origin validation failed:", error);
-    return false;
+  for (const value of [process.env.APP_ORIGIN, process.env.NEXT_PUBLIC_SITE_URL]) {
+    const candidate = normalizeOrigin(value);
+    if (candidate) allowed.add(candidate);
   }
+
+  const currentOrigin = requestOrigin(request);
+  if (currentOrigin) allowed.add(currentOrigin);
+
+  return allowed.has(normalized);
 }

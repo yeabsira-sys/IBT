@@ -1,22 +1,38 @@
 #!/usr/bin/env node
 
 /**
- * Local test-data generator for the file-backed database.
+ * Test-data generator for the file or Postgres-backed database.
  *
  * It replaces the orders table with a large, date-dispersed set and can add
  * demo customer accounts. It never touches the seeded admin/employee/guest
  * accounts or their password hashes.
  *
+ * When DATABASE_URL (or POSTGRES_URL / POSTGRES_PRISMA_URL) is set, it writes
+ * to the shared Postgres row that the app uses. Use --file to force the local
+ * JSON store instead.
+ *
  * Examples:
  *   npm run seed:orders
  *   npm run seed:orders -- --count 2500 --days 180 --customers 30
  *   npm run seed:orders -- --keep-orders
+ *   npm run seed:orders -- --file
  *   npm run seed:orders:clear
  */
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomBytes, randomUUID, scryptSync } from "node:crypto";
+import { Pool } from "pg";
+
+// Match the app's env loading so DATABASE_URL in .env works without extra
+// shell plumbing. Existing environment variables still take precedence.
+for (const envFile of [".env.local", ".env"]) {
+  try {
+    process.loadEnvFile(envFile);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+}
 
 const TIME_ZONE = "Africa/Addis_Ababa";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -53,9 +69,38 @@ const seed = numberFlag("seed", 20261021, 1);
 const keepOrders = flags.has("keep-orders");
 const clear = flags.has("clear");
 const dryRun = flags.has("dry-run");
+const forceFile = flags.has("file");
+
+const databaseUrl = forceFile
+  ? ""
+  : process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    "";
+const usePostgres = Boolean(databaseUrl);
 
 const dataDir = process.env.DATA_DIR || path.join(process.cwd(), ".data");
 const dbFile = path.join(dataDir, "mesob-house.json");
+
+let pool;
+
+function getPool() {
+  if (!pool) {
+    const local = /(^|@)(localhost|127\.0\.0\.1|::1)(:|\/|$)/.test(databaseUrl);
+    const sslDisabled =
+      process.env.PGSSLMODE === "disable" ||
+      /[?&]sslmode=disable(?:&|$)/.test(databaseUrl);
+
+    pool = new Pool({
+      connectionString: databaseUrl,
+      max: 1,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 15_000,
+      ssl: local || sslDisabled ? false : { rejectUnauthorized: false },
+    });
+  }
+  return pool;
+}
 
 function mulberry32(value) {
   let state = value >>> 0;
@@ -238,7 +283,19 @@ function ensureDemoCustomers(db) {
   return created;
 }
 
-function readDatabase() {
+async function readDatabase() {
+  if (usePostgres) {
+    const { rows } = await getPool().query(
+      "SELECT data FROM mesob_house_db WHERE id = 1",
+    );
+    if (!rows[0]) {
+      throw new Error(
+        "No Postgres database row found. Start the app once with DATABASE_URL set so it creates and seeds mesob_house_db, then rerun the seed.",
+      );
+    }
+    return rows[0].data;
+  }
+
   return fs
     .readFile(dbFile, "utf8")
     .then((raw) => JSON.parse(raw))
@@ -251,10 +308,36 @@ function readDatabase() {
 }
 
 async function writeDatabase(db) {
-  await fs.mkdir(dataDir, { recursive: true });
-  const tempFile = `${dbFile}.${process.pid}.tmp`;
-  await fs.writeFile(tempFile, JSON.stringify(db, null, 2), "utf8");
-  await fs.rename(tempFile, dbFile);
+  if (!usePostgres) {
+    await fs.mkdir(dataDir, { recursive: true });
+    const tempFile = `${dbFile}.${process.pid}.tmp`;
+    await fs.writeFile(tempFile, JSON.stringify(db, null, 2), "utf8");
+    await fs.rename(tempFile, dbFile);
+    return;
+  }
+
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const locked = await client.query(
+      "SELECT id FROM mesob_house_db WHERE id = 1 FOR UPDATE",
+    );
+    if (!locked.rowCount) {
+      throw new Error(
+        "No Postgres database row found. Start the app once with DATABASE_URL set, then rerun the seed.",
+      );
+    }
+    await client.query(
+      "UPDATE mesob_house_db SET data = $1::jsonb, updated_at = now() WHERE id = 1",
+      [JSON.stringify(db)],
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 function makeItems() {
@@ -341,6 +424,7 @@ function makeOrder({ createdAt, status, customer, staff }) {
 }
 
 async function main() {
+  console.log(`Target: ${usePostgres ? "Postgres (DATABASE_URL)" : dbFile}`);
   const db = await readDatabase();
 
   if (!Array.isArray(db.users) || !Array.isArray(db.sessions) || !Array.isArray(db.orders)) {
@@ -429,7 +513,16 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exitCode = 1;
-});
+main()
+  .catch((error) => {
+    console.error(error.message);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    if (!pool) return;
+    try {
+      await pool.end();
+    } catch {
+      // The process is already exiting; nothing useful to do here.
+    }
+  });
