@@ -652,6 +652,8 @@ Shared, client-safe modules include:
 | [`src/components/admin/AdminUsers.jsx`](./src/components/admin/AdminUsers.jsx)                         | Role management                                     |
 | [`src/lib/analytics.js`](./src/lib/analytics.js)                                                       | Server-side chart aggregation                       |
 | [`src/components/charts/BestSellingItemsChart.jsx`](./src/components/charts/BestSellingItemsChart.jsx) | Horizontal bar: top dishes by units sold            |
+| [`src/components/charts/MenuItemSalesChart.jsx`](./src/components/charts/MenuItemSalesChart.jsx)       | Donut: every sold menu item's share of units        |
+| [`src/components/charts/PieChartCard.jsx`](./src/components/charts/PieChartCard.jsx)                   | Shared donut chart card with centre total and table |
 | [`src/components/charts/TopCustomersChart.jsx`](./src/components/charts/TopCustomersChart.jsx)         | Horizontal bar: top ten customers by lifetime spend |
 | [`src/components/charts/ChartFrame.jsx`](./src/components/charts/ChartFrame.jsx)                       | Shared chart card                                   |
 | [`src/components/charts/ChartTable.jsx`](./src/components/charts/ChartTable.jsx)                       | Accessible table for chart data                     |

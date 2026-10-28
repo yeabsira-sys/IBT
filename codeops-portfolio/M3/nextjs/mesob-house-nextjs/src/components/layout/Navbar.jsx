@@ -147,6 +147,15 @@ export default function Navbar({ brand = "Mesob House", links = [] }) {
                 {link.label}
               </Link>
             ))}
+
+            {!user && (
+              <div className="navbar__mobile-auth">
+                <Link href="/sign-in">Sign In</Link>
+                <Link href="/register" className="navbar__mobile-cta">
+                  Register
+                </Link>
+              </div>
+            )}
           </nav>
         </>
       )}

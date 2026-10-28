@@ -45,8 +45,8 @@ function total(order) {
 
 /**
  * Orders per day for the last 14 days, completed revenue by delivery area,
- * best-selling dishes and the top customers by completed lifetime spend.
- * Pickup orders have no sub-city, so they get their own explicit bucket
+ * the full menu-item sales mix and the top customers by completed lifetime
+ * spend. Pickup orders have no sub-city, so they get their own explicit bucket
  * instead of silently disappearing from the neighbourhood chart.
  */
 export function buildAdminCharts(orders, now = new Date()) {
@@ -121,15 +121,26 @@ export function buildAdminCharts(orders, now = new Date()) {
     }
   }
 
-  const bestSellingItems = [...items.values()]
-    .sort(
-      (a, b) =>
-        b.quantity - a.quantity ||
-        b.revenue - a.revenue ||
-        a.name.localeCompare(b.name),
-    )
+  const sortedItems = [...items.values()].sort(
+    (a, b) =>
+      b.quantity - a.quantity ||
+      b.revenue - a.revenue ||
+      a.name.localeCompare(b.name),
+  );
+
+  const bestSellingItems = sortedItems
     .slice(0, BEST_SELLING_ITEMS)
     .map((item, index) => ({ ...item, rank: index + 1 }));
+
+  const totalUnits = sortedItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0,
+  );
+  const menuItemShare = sortedItems.map((item, index) => ({
+    ...item,
+    rank: index + 1,
+    share: totalUnits > 0 ? item.quantity / totalUnits : 0,
+  }));
 
   const topCustomers = [...customers.values()]
     .sort(
@@ -147,6 +158,7 @@ export function buildAdminCharts(orders, now = new Date()) {
       (a, b) => b.revenue - a.revenue || a.area.localeCompare(b.area),
     ),
     bestSellingItems,
+    menuItemShare,
     topCustomers,
   };
 }

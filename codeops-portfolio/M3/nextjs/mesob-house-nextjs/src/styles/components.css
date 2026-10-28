@@ -537,6 +537,28 @@
   background: var(--c-brand-tint);
   color: var(--c-brand);
 }
+.navbar__mobile-auth {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--c-line);
+}
+.navbar__mobile-auth a {
+  border: 1px solid var(--c-line-strong);
+  background: var(--c-surface);
+  text-align: center;
+}
+.navbar__mobile-auth a.navbar__mobile-cta {
+  border-color: var(--c-brand);
+  background: var(--c-brand);
+  color: #fff;
+}
+.navbar__mobile-auth a.navbar__mobile-cta:hover {
+  background: var(--c-brand-strong);
+  color: #fff;
+}
 
 @media (max-width: 900px) {
   .navbar {
@@ -556,6 +578,26 @@
 @media (min-width: 901px) {
   .navbar__backdrop,
   .navbar__mobile {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .navbar__inner {
+    flex-wrap: nowrap;
+    gap: var(--space-3);
+    min-height: 60px;
+    padding-block: 8px;
+  }
+  .navbar__brand {
+    font-size: 18px;
+  }
+  .navbar__right {
+    gap: var(--space-2);
+  }
+  .navbar__actions {
+    gap: var(--space-2);
+  }
+  .navbar__actions > .btn {
     display: none;
   }
 }
@@ -637,6 +679,12 @@
 @media (max-width: 900px) {
   .account-page {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .account-page > * {
+    min-width: 0;
+  }
+  .account-page .register {
+    order: -1;
   }
 }
 
@@ -748,6 +796,7 @@
 .register {
   padding: var(--space-6);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
 }
 .register__title {
@@ -794,6 +843,48 @@
   }
   .register {
     padding: var(--space-5) var(--space-4);
+  }
+  .register,
+  .register * {
+    min-width: 0;
+  }
+  .register fieldset {
+    min-inline-size: 0;
+  }
+  .register__title {
+    font-size: 21px;
+  }
+  .register .btn {
+    white-space: normal;
+    line-height: 1.25;
+  }
+  .register__row {
+    gap: var(--space-3);
+  }
+  .phone-field__row {
+    gap: 8px;
+  }
+  .phone-field__prefix {
+    gap: 6px;
+    padding-inline: 10px;
+  }
+  .chip {
+    padding: 7px 11px;
+    font-size: 12.5px;
+  }
+  .membership {
+    padding: var(--space-5) var(--space-4);
+  }
+  .membership__title {
+    font-size: 26px;
+    max-width: none;
+  }
+  .testimonial {
+    align-items: flex-start;
+  }
+  .testimonial__thumb {
+    width: 52px;
+    height: 52px;
   }
 }
 

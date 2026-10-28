@@ -25,6 +25,24 @@ export const chartTooltipStyle = {
   fontSize: 12,
 };
 
+/** A warm, high-contrast sequence for pie / donut slices. */
+export const pieColors = [
+  "#8c2116",
+  "#a9761a",
+  "#1e4634",
+  "#c15b3b",
+  "#6e8b5b",
+  "#d9a441",
+  "#7b3f2f",
+  "#9b7b5c",
+];
+
 export const formatETBCurrency = (value) => etb.format(Number(value) || 0);
 
 export const formatCount = (value) => new Intl.NumberFormat("en-ET").format(Number(value) || 0);
+
+export const formatPercent = (value) =>
+  new Intl.NumberFormat("en-ET", {
+    style: "percent",
+    maximumFractionDigits: 1,
+  }).format(Number(value) || 0);

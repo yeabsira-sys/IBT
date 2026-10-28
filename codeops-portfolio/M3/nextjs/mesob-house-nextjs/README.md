@@ -19,7 +19,7 @@ DEPLOYED ON ONRENDER [mesob-house / addis-eats](https://addis-eats-9f08.onrender
 - **Live order flow** — `received → preparing → ready → out_for_delivery → completed`, with pickup skipping delivery and customer cancellation only while `received`.
 - **Server-authoritative pricing** — dish ids and prices are resolved against the live menu inside the order action; a forged client price is ignored.
 - **Live data + SWR and SSE** — session navbar, debounced menu search, order-history polling, kitchen queue polling, admin metrics/orders/users polling, and an authenticated SSE stream for the active order detail.
-- **Admin charts** — daily order volume, completed revenue by area, best-selling dishes by units sold and the top ten customers by completed lifetime spend, each with an accessible data table.
+- **Admin charts** — daily order volume, completed revenue by area, the full menu-item sales mix by units sold and the top ten customers by completed lifetime spend, each with an accessible data table.
 - **Shared formatters + CSV export** — `src/lib/format.js` builds the `etb`, `when`, `relative` and `number` formatters once; `/orders`, an individual order page, and `/admin/orders` can download order history through `src/lib/csv.js`, which quotes commas, quotes and newlines correctly.
 - **Leaflet delivery map** — a browser-only map on `/orders/[id]` with restaurant, destination and illustrative courier markers, plus the same route and address as text. See [`MAPS.md`](./MAPS.md).
 - **Metadata and discovery** — per-page metadata, per-dish Open Graph cards, JSON-LD `MenuItem`, sitemap, robots rules, web manifest, private-page `noindex`.

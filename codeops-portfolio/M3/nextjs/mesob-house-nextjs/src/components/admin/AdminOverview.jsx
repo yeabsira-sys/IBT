@@ -11,12 +11,13 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import OrderStatusBadge from "../orders/OrderStatusBadge";
-import BestSellingItemsChart from "../charts/BestSellingItemsChart";
+import MenuItemSalesChart from "../charts/MenuItemSalesChart";
 import OrdersPerDayChart from "../charts/OrdersPerDayChart";
 import RevenueByAreaChart from "../charts/RevenueByAreaChart";
 import TopCustomersChart from "../charts/TopCustomersChart";
 import { fetcher } from "@/lib/fetcher";
 import { etb, when } from "@/lib/format";
+import PieChartCard from "../charts/PieChartCard";
 
 const cards = [
   { key: "orders", label: "All orders", icon: <FiClipboard /> },
@@ -100,7 +101,7 @@ export default function AdminOverview({ initialStats }) {
       )}
 
       <div className="chart-grid">
-        <BestSellingItemsChart data={stats.charts?.bestSellingItems} />
+        <MenuItemSalesChart data={stats.charts?.menuItemShare} />
         <TopCustomersChart data={stats.charts?.topCustomers} />
         <OrdersPerDayChart data={stats.charts?.ordersPerDay} />
         <RevenueByAreaChart data={stats.charts?.revenueByArea} />

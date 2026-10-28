@@ -21,7 +21,7 @@ export default async function AdminPage() {
         <p className="portal-eyebrow">Operations</p>
         <h1>Admin overview</h1>
         <p>
-          Live order volume, revenue, best-selling dishes, top customers and
+          Live order volume, revenue, menu item sales, top customers and
           account counts across the restaurant.
         </p>
       </header>
