@@ -53,8 +53,17 @@ export const metadata = {
     siteName: "Mesob House",
     locale: "en_ET",
     url: SITE_URL,
+    title: "Mesob House — Authentic Habesha Dining in Addis Ababa",
+    description:
+      "Slow-cooked Ethiopian wats, stone-ground teff injera and a daily coffee ceremony in Addis Ababa.",
   },
-  twitter: { card: "summary_large_image" },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "Mesob House — Authentic Habesha Dining in Addis Ababa",
+    description:
+      "Experience authentic Habesha dining, traditional coffee ceremonies, and Ethiopian hospitality.",
+  },
 };
 
 export const viewport = {

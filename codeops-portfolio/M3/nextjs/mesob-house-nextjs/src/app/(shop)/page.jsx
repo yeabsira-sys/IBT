@@ -6,7 +6,14 @@ import ReflectionsSection from "@/components/marketing/ReflectionsSection";
 import CtaBanner from "@/components/marketing/CtaBanner";
 import SpecialsSection from "@/components/menu/SpecialsSection";
 import FallbackNotice from "@/components/menu/FallbackNotice";
-import { announcement, closingCta, gursha, hero, reflections, specials } from "@/data/home";
+import {
+  announcement,
+  closingCta,
+  gursha,
+  hero,
+  reflections,
+  specials,
+} from "@/data/home";
 import { getSpecials } from "@/lib/menu";
 
 // Incremental Static Regeneration: served as static HTML, rebuilt in the
@@ -18,11 +25,21 @@ export const metadata = {
   description:
     "Handcrafted wats, stone-ground teff injera and a daily jebena buna ceremony. Order for delivery across Addis Ababa or reserve a communal mesob.",
   alternates: { canonical: "/" },
+  openGraph: {
+    title: "Mesob House — Authentic Habesha Dining in Addis Ababa",
+    description:
+      "Handcrafted wats, stone-ground teff injera and a daily jebena buna ceremony. Order for delivery across Addis Ababa or reserve a communal mesob.",
+    url: "/",
+  },
 };
 
 function SpecialsSkeleton() {
   return (
-    <section className="section" aria-busy="true" aria-label="Loading today's specials">
+    <section
+      className="section"
+      aria-busy="true"
+      aria-label="Loading today's specials"
+    >
       <div className="skeleton skeleton--title" />
       <div className="skeleton-grid skeleton-grid--3">
         {[0, 1, 2].map((i) => (
