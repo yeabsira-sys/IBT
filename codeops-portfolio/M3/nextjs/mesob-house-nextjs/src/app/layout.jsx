@@ -18,6 +18,7 @@ import "@/styles/notfound.css";
 import "@/styles/account.css";
 import "@/styles/portal.css";
 import "@/styles/app.css";
+import { url } from "zod/v4";
 
 // next/font self-hosts these at build time: no layout shift, no request to Google from the browser.
 const inter = Inter({
@@ -47,7 +48,12 @@ export const metadata = {
     "injera",
     "Habesha food delivery",
   ],
-  openGraph: { type: "website", siteName: "Mesob House", locale: "en_ET" },
+  openGraph: {
+    type: "website",
+    siteName: "Mesob House",
+    locale: "en_ET",
+    url: SITE_URL,
+  },
   twitter: { card: "summary_large_image" },
 };
 

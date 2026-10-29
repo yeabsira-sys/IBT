@@ -94,6 +94,7 @@ export default function OrderDetailLive({ initialOrder }) {
     source.onerror = () => {
       if (!disposed) setConnection("reconnecting");
     };
+    connection;
 
     return () => {
       closeSource();
