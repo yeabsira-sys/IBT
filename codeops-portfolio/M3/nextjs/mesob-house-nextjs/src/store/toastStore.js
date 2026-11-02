@@ -12,7 +12,8 @@ export const useToastStore = create((set, get) => ({
     setTimeout(() => get().dismissToast(id), duration);
     return id;
   },
-  dismissToast: (id) => set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
+  dismissToast: (id) =>
+    set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
 }));
 
 /** useToast — returns `toast(message, tone?, duration?)`. tone: "success" | "error" | "info". */

@@ -210,10 +210,10 @@ Before merging a performance-sensitive change:
 4. Confirm `/orders` polling stops after the order reaches `completed` or `cancelled`.
 5. Re-run the deployed Lighthouse commands in section 4 and attach the JSON files.
 
-## 7. Known gaps
+<!-- ## 7. Known gaps
 
 - **No Lighthouse score yet.** The environment has no Chrome/Lighthouse binary. The local API timings above are real, but the assessment still needs a deployed Lighthouse run with mobile and desktop presets.
 - **No throttled mobile measurement.** A 4G/CPU-throttled run will be slower than these warm local numbers.
 - **Warm server.** The first request after a cold start may pay the menu API fetch; ISR hides it after the first render.
 - **File database.** Reads are cheap for the assessment file, but every API request reads and parses JSON. A Postgres adapter removes that cost and the single-instance limitation.
-- **No RUM.** There is no real-user monitoring; field LCP/CLS/INP would require a deployment with analytics.
+- **No RUM.** There is no real-user monitoring; field LCP/CLS/INP would require a deployment with analytics. -->

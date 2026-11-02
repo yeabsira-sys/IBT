@@ -8,19 +8,28 @@ import { getCartTotals } from "@/lib/pricing";
 const DEFAULT_IMAGE =
   "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=700&q=70";
 
-const itemKey = (item, options) => `${item.id ?? item.slug ?? item.name}-${JSON.stringify(options ?? {})}`;
+const itemKey = (item, options) =>
+  `${item.id ?? item.slug ?? item.name}-${JSON.stringify(options ?? {})}`;
 
 function cartItemFrom(source, quantity = 1, options) {
   const label = source.label ?? source.tag;
-  const optionText = options ? Object.values(options).flat().filter(Boolean).join(" · ") : "";
+  const optionText = options
+    ? Object.values(options).flat().filter(Boolean).join(" · ")
+    : "";
   const sourceTags = source.tags?.map((tag) =>
-    typeof tag === "string" ? { text: tag === "popular" ? "Popular Choice" : tag, tone: "brand" } : tag,
+    typeof tag === "string"
+      ? { text: tag === "popular" ? "Popular Choice" : tag, tone: "brand" }
+      : tag,
   );
   return {
     key: itemKey(source, options),
     id: source.id ?? source.slug ?? source.name,
     name: source.name ?? source.nameEn,
-    note: source.note ?? ((source.nativeName ?? source.nameAm) ? `(${source.nativeName ?? source.nameAm})` : ""),
+    note:
+      source.note ??
+      ((source.nativeName ?? source.nameAm)
+        ? `(${source.nativeName ?? source.nameAm})`
+        : ""),
     price: String(source.price ?? source.priceETB ?? 0),
     quantity,
     description: optionText
@@ -32,7 +41,11 @@ function cartItemFrom(source, quantity = 1, options) {
   };
 }
 
-const normalizeName = (value) => String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+const normalizeName = (value) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 
 /**
  * The menu, the featured specials and the dish page all pass slightly
@@ -48,13 +61,16 @@ function sameDish(a, b) {
   return Boolean(aName) && aName === normalizeName(b.name ?? b.nameEn);
 }
 
-const sameOptions = (a, b) => JSON.stringify(a ?? {}) === JSON.stringify(b ?? {});
+const sameOptions = (a, b) =>
+  JSON.stringify(a ?? {}) === JSON.stringify(b ?? {});
 
 /** Merges persisted lines that describe the same dish with the same options. */
 function mergeCartLines(items = []) {
   const merged = [];
   for (const item of items) {
-    const existing = merged.find((line) => sameDish(line, item) && sameOptions(line.options, item.options));
+    const existing = merged.find(
+      (line) => sameDish(line, item) && sameOptions(line.options, item.options),
+    );
     if (existing) existing.quantity += Number(item.quantity) || 0;
     else merged.push({ ...item });
   }
@@ -71,7 +87,11 @@ const defaultCheckout = {
 
 /** Demo values that older builds persisted; dropped on upgrade so forms start empty. */
 const legacyCheckout = {
-  contact: { name: "Abebe Bekele", phone: "911 45 7890", email: "abebe.b@example.com" },
+  contact: {
+    name: "Abebe Bekele",
+    phone: "911 45 7890",
+    email: "abebe.b@example.com",
+  },
   telebirrPhone: "911 45 7890",
   delivery: {
     street: "Behind Edna Mall, House No. 402, 3rd Floor",
@@ -79,7 +99,8 @@ const legacyCheckout = {
   },
 };
 
-const withoutLegacy = (value, fallback) => (value === fallback ? "" : (value ?? ""));
+const withoutLegacy = (value, fallback) =>
+  value === fallback ? "" : (value ?? "");
 
 function migrateCheckout(checkout) {
   if (!checkout) return defaultCheckout;
@@ -94,12 +115,21 @@ function migrateCheckout(checkout) {
       email: withoutLegacy(contact.email, legacyCheckout.contact.email),
     },
     delivery: {
-      subCity: withoutLegacy(delivery.subCity, "Bole Medhanialem (Near Mesob House)"),
+      subCity: withoutLegacy(
+        delivery.subCity,
+        "Bole Medhanialem (Near Mesob House)",
+      ),
       street: withoutLegacy(delivery.street, legacyCheckout.delivery.street),
-      landmark: withoutLegacy(delivery.landmark, legacyCheckout.delivery.landmark),
+      landmark: withoutLegacy(
+        delivery.landmark,
+        legacyCheckout.delivery.landmark,
+      ),
       timing: delivery.timing ?? defaultCheckout.delivery.timing,
     },
-    telebirrPhone: withoutLegacy(checkout.telebirrPhone, legacyCheckout.telebirrPhone),
+    telebirrPhone: withoutLegacy(
+      checkout.telebirrPhone,
+      legacyCheckout.telebirrPhone,
+    ),
   };
 }
 
@@ -128,32 +158,53 @@ export const useStore = create(
         const next = cartItemFrom(source, quantity, options);
         set((state) => {
           const existing = state.cartItems.find(
-            (item) => sameDish(item, next) && sameOptions(item.options, next.options),
+            (item) =>
+              sameDish(item, next) && sameOptions(item.options, next.options),
           );
           const cartItems = existing
             ? state.cartItems.map((item) =>
-                item === existing ? { ...item, quantity: item.quantity + next.quantity } : item,
+                item === existing
+                  ? { ...item, quantity: item.quantity + next.quantity }
+                  : item,
               )
             : [...state.cartItems, next];
-          return { cartItems, totals: getCartTotals(cartItems, state.couponCode) };
+          return {
+            cartItems,
+            totals: getCartTotals(cartItems, state.couponCode),
+          };
         });
       },
       setQuantity: (key, quantity) => {
         const nextQuantity = Math.max(1, Number(quantity) || 1);
         set((state) => {
-          const cartItems = state.cartItems.map((item) => (item.key === key ? { ...item, quantity: nextQuantity } : item));
-          return { cartItems, totals: getCartTotals(cartItems, state.couponCode) };
+          const cartItems = state.cartItems.map((item) =>
+            item.key === key ? { ...item, quantity: nextQuantity } : item,
+          );
+          return {
+            cartItems,
+            totals: getCartTotals(cartItems, state.couponCode),
+          };
         });
       },
       removeFromCart: (key) =>
         set((state) => {
           const cartItems = state.cartItems.filter((item) => item.key !== key);
-          return { cartItems, totals: getCartTotals(cartItems, state.couponCode) };
+          return {
+            cartItems,
+            totals: getCartTotals(cartItems, state.couponCode),
+          };
         }),
-      clearCart: () => set((state) => ({ cartItems: [], totals: getCartTotals([], state.couponCode) })),
+      clearCart: () =>
+        set((state) => ({
+          cartItems: [],
+          totals: getCartTotals([], state.couponCode),
+        })),
       setCartNote: (cartNote) => set({ cartNote }),
       setCouponCode: (couponCode) =>
-        set((state) => ({ couponCode, totals: getCartTotals(state.cartItems, couponCode) })),
+        set((state) => ({
+          couponCode,
+          totals: getCartTotals(state.cartItems, couponCode),
+        })),
 
       toggleFavorite: (dish) => {
         const id = dish.id ?? dish.slug;
@@ -165,8 +216,14 @@ export const useStore = create(
       },
 
       updateCheckout: (section, values) =>
-        set((state) => ({ checkout: { ...state.checkout, [section]: { ...state.checkout[section], ...values } } })),
-      updateCheckoutValue: (key, value) => set((state) => ({ checkout: { ...state.checkout, [key]: value } })),
+        set((state) => ({
+          checkout: {
+            ...state.checkout,
+            [section]: { ...state.checkout[section], ...values },
+          },
+        })),
+      updateCheckoutValue: (key, value) =>
+        set((state) => ({ checkout: { ...state.checkout, [key]: value } })),
     }),
     {
       name: "mesob-house-store",
@@ -189,14 +246,19 @@ export const useStore = create(
         }
         return next;
       },
-      partialize: ({ totals, ...persisted }) => Object.fromEntries(Object.entries(persisted).filter(([, v]) => typeof v !== "function")),
+      partialize: ({ totals, ...persisted }) =>
+        Object.fromEntries(
+          Object.entries(persisted).filter(([, v]) => typeof v !== "function"),
+        ),
       merge: (persisted, current) => {
         const next = { ...current, ...persisted };
         delete next.accounts;
         delete next.session;
         delete next.orders;
         try {
-          next.cartItems = mergeCartLines(Array.isArray(next.cartItems) ? next.cartItems : []);
+          next.cartItems = mergeCartLines(
+            Array.isArray(next.cartItems) ? next.cartItems : [],
+          );
         } catch {
           // Never let a malformed saved cart block hydration.
           next.cartItems = Array.isArray(next.cartItems) ? next.cartItems : [];
@@ -212,5 +274,9 @@ const subscribe = (callback) => useStore.persist.onFinishHydration(callback);
 
 /** useHydrated — false on the server and first client render, true once saved state has loaded. */
 export function useHydrated() {
-  return useSyncExternalStore(subscribe, () => useStore.persist.hasHydrated(), () => false);
+  return useSyncExternalStore(
+    subscribe,
+    () => useStore.persist.hasHydrated(),
+    () => false,
+  );
 }

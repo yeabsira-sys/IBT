@@ -9,7 +9,13 @@ import ContactDetailsCard from "./ContactDetailsCard";
 import PromiseBanner from "./PromiseBanner";
 import CheckoutSummary from "./CheckoutSummary";
 import ErrorBoundary from "../error/ErrorBoundary";
-import { contact, delivery, fulfillmentOptions, payment, promise } from "@/data/checkout";
+import {
+  contact,
+  delivery,
+  fulfillmentOptions,
+  payment,
+  promise,
+} from "@/data/checkout";
 import { useStore } from "@/store/appStore";
 import { useToast } from "@/store/toastStore";
 import { checkoutSchema } from "@/lib/schemas";
@@ -18,9 +24,15 @@ import { submitOrder } from "@/actions/order";
 
 // Lazy-loaded: the address and payment cards sit below the fold, so their JS
 // is split into separate chunks and downloaded after the page is interactive.
-const CardSkeleton = () => <div className="skeleton" style={{ height: 280 }} aria-busy="true" />;
-const DeliveryLocationCard = dynamic(() => import("./DeliveryLocationCard"), { loading: CardSkeleton });
-const PaymentMethodCard = dynamic(() => import("./PaymentMethodCard"), { loading: CardSkeleton });
+const CardSkeleton = () => (
+  <div className="skeleton" style={{ height: 280 }} aria-busy="true" />
+);
+const DeliveryLocationCard = dynamic(() => import("./DeliveryLocationCard"), {
+  loading: CardSkeleton,
+});
+const PaymentMethodCard = dynamic(() => import("./PaymentMethodCard"), {
+  loading: CardSkeleton,
+});
 
 /** CheckoutView — contact, delivery and payment forms plus the live order summary. */
 export default function CheckoutView({ user }) {
@@ -45,7 +57,8 @@ export default function CheckoutView({ user }) {
   const cartNote = useStore((s) => s.cartNote);
   const couponCode = useStore((s) => s.couponCode);
   const totals = useStore((s) => s.totals);
-  const { updateCheckout, updateCheckoutValue, clearCart } = useStore.getState();
+  const { updateCheckout, updateCheckoutValue, clearCart } =
+    useStore.getState();
 
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -57,7 +70,12 @@ export default function CheckoutView({ user }) {
       method: checkout.method,
       couponCode,
       note: cartNote,
-      items: cartItems.map(({ id, name, price, quantity }) => ({ id: String(id), name, price, quantity })),
+      items: cartItems.map(({ id, name, price, quantity }) => ({
+        id: String(id),
+        name,
+        price,
+        quantity,
+      })),
     };
 
     // Same schema, two places: instant feedback here, authoritative check on the server.
@@ -103,15 +121,40 @@ export default function CheckoutView({ user }) {
       eta: "Estimated arrival ~35–45 mins from clay oven sealing",
     },
     costs: [
-      { label: `Items Subtotal (${itemCount} item${itemCount === 1 ? "" : "s"})`, value: etb.format(Number(totals.subtotal) || 0) },
-      { label: "100% Teff Injera (4 Rolls)", value: "Included", tone: "positive" },
-      { label: "Insulated Traditional Clay-Pak", value: "Free", tone: "positive" },
-      { label: "City VAT & Tourism Levy (15%)", value: etb.format(Number(totals.vat) || 0) },
-      ...(totals.discount > 0 ? [{ label: "Coupon Discount", value: `− ${etb.format(Number(totals.discount) || 0)}`, tone: "positive" }] : []),
+      {
+        label: `Items Subtotal (${itemCount} item${itemCount === 1 ? "" : "s"})`,
+        value: etb.format(Number(totals.subtotal) || 0),
+      },
+      {
+        label: "100% Teff Injera (4 Rolls)",
+        value: "Included",
+        tone: "positive",
+      },
+      {
+        label: "Insulated Traditional Clay-Pak",
+        value: "Free",
+        tone: "positive",
+      },
+      {
+        label: "City VAT & Tourism Levy (15%)",
+        value: etb.format(Number(totals.vat) || 0),
+      },
+      ...(totals.discount > 0
+        ? [
+            {
+              label: "Coupon Discount",
+              value: `− ${etb.format(Number(totals.discount) || 0)}`,
+              tone: "positive",
+            },
+          ]
+        : []),
     ],
     total: number.format(Number(totals.total) || 0),
-    guarantee: "Guaranteed steaming hot in woven sealed carriers or 100% remade.",
-    ctaLabel: confirming ? "Confirming your order…" : `Confirm Order & Pay ${etb.format(Number(totals.total) || 0)}`,
+    guarantee:
+      "Guaranteed steaming hot in woven sealed carriers or 100% remade.",
+    ctaLabel: confirming
+      ? "Confirming your order…"
+      : `Confirm Order & Pay ${etb.format(Number(totals.total) || 0)}`,
     support: {
       icon: <FaHeadset />,
       title: "Need Phone Support?",
@@ -133,7 +176,9 @@ export default function CheckoutView({ user }) {
           <ContactDetailsCard
             badge={contact.badge}
             values={checkout.contact}
-            onChange={(field, value) => updateCheckout("contact", { [field]: value })}
+            onChange={(field, value) =>
+              updateCheckout("contact", { [field]: value })
+            }
           />
 
           <ErrorBoundary>
@@ -141,7 +186,9 @@ export default function CheckoutView({ user }) {
               badge={delivery.badge}
               subCities={delivery.subCities}
               values={checkout.delivery}
-              onChange={(field, value) => updateCheckout("delivery", { [field]: value })}
+              onChange={(field, value) =>
+                updateCheckout("delivery", { [field]: value })
+              }
               timingOptions={delivery.timingOptions}
               route={delivery.route}
             />
@@ -151,8 +198,15 @@ export default function CheckoutView({ user }) {
             <PaymentMethodCard
               telebirr={payment.telebirr}
               phone={checkout.telebirrPhone}
-              onPhoneChange={(value) => updateCheckoutValue("telebirrPhone", value)}
-              onVerify={() => toast(`Verification code sent to +251 ${checkout.telebirrPhone}`, "info")}
+              onPhoneChange={(value) =>
+                updateCheckoutValue("telebirrPhone", value)
+              }
+              onVerify={() =>
+                toast(
+                  `Verification code sent to +251 ${checkout.telebirrPhone}`,
+                  "info",
+                )
+              }
               otherMethods={payment.otherMethods}
               selectedMethod={checkout.method}
               onSelectMethod={(method) => updateCheckoutValue("method", method)}
@@ -162,7 +216,11 @@ export default function CheckoutView({ user }) {
           <PromiseBanner {...promise} />
         </div>
 
-        <CheckoutSummary {...summaryProps} onConfirm={handleConfirm} confirming={confirming} />
+        <CheckoutSummary
+          {...summaryProps}
+          onConfirm={handleConfirm}
+          confirming={confirming}
+        />
       </div>
     </>
   );
