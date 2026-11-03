@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - development
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    defaults:
+      run:
+        working-directory: codeops-portfolio/M3/nextjs/mesob-house-nextjs
+
+    services:
+      postgres:
+        image: postgres:18
+
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mesob_house
+
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mesob_house"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mesob_house
+      PGSSLMODE: disable
+      APP_ORIGIN: http://localhost:3101
+      NEXT_PUBLIC_SITE_URL: http://localhost:3101
+      NEXT_TELEMETRY_DISABLED:
+        "1"
+
+        # CI-only accounts created by the bootstrap step below.
+      SEED_GUEST_EMAIL: guest@mesob.test
+      SEED_GUEST_PASSWORD: Guest123!
+      SEED_KITCHEN_EMAIL: kitchen@mesob.test
+      SEED_KITCHEN_PASSWORD: CiPass123!
+      SEED_ADMIN_EMAIL: admin@mesob.test
+      SEED_ADMIN_PASSWORD: CiPass123!
+
+      SECURITY_CUSTOMER_A_EMAIL: guest@mesob.test
+      SECURITY_CUSTOMER_A_PASSWORD: Guest123!
+      SECURITY_CUSTOMER_B_EMAIL: diner01@mesob.test
+      SECURITY_CUSTOMER_B_PASSWORD: Guest123!
+      SECURITY_EMPLOYEE_EMAIL: kitchen@mesob.test
+      SECURITY_EMPLOYEE_PASSWORD: CiPass123!
+      SECURITY_ADMIN_EMAIL: admin@mesob.test
+      SECURITY_ADMIN_PASSWORD: CiPass123!
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: codeops-portfolio/M3/nextjs/mesob-house-nextjs/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate and validate Prisma Client
+        run: |
+          npx prisma validate --schema prisma/schema.prisma
+          npm run prisma:generate
+
+      - name: Apply SQL migrations
+        run: npm run db:migrate
+
+      - name: Create CI accounts
+        run: |
+          node --input-type=module <<'EOF'
+          import { Client } from 'pg';
+          import { randomBytes, scryptSync } from "node:crypto";
+
+          const hash = (password) => {
+            const salt = randomBytes(16).toString("hex");
+            const digest = scryptSync(password, salt, 64).toString("hex");
+            return `${salt}:${digest}`;
+          };  
+
+
+          const accounts = [
+            ["CI Guest", "guest@mesob.test", "911000003", "customer", "Guest123!"],
+            ["CI Diner One", "diner01@mesob.test", "912000000", "customer", "Guest123!"],
+            ["CI Kitchen", "kitchen@mesob.test", "911000002", "employee", "CiPass123!"],
+            ["CI Admin", "admin@mesob.test", "911000001", "admin", "CiPass123!"],
+          ];
+
+          const client = new Client({ connectionString: process.env.DATABASE_URL });
+          await client.connect();
+
+          for (const [name, email, phone, role, password] of accounts) {
+            await client.query(
+              `INSERT INTO users
+                (full_name, email, phone, password_hash, role, preference, provider)
+              VALUES ($1, $2, $3, $4, $5::user_role, 'all-heritage', 'password')
+              ON CONFLICT DO NOTHING`,
+              [name, email, phone, hash(password), role],
+            );
+          }
+
+          await client.end();
+          EOF
+
+      - name: Seed representative orders
+        run: npm run seed:orders -- --count 500 --days 30 --customers 24
+
+      - name: Build
+        run: npm run build
+      - name: Start app
+        run: |
+          nohup npm run start -- -p 3101 > /tmp/mesob-ci.log 2>&1 &
+          echo $! > /tmp/mesob-ci.pid
+
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3101/api/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat /tmp/mesob-ci.log
+          exit 1
+
+      - name: Verify database invariants
+        run: npm run db:verify -- --base http://127.0.0.1:3101
+
+      - name: Run concurrent checkout test
+        run: npm run db:load-test -- --base http://127.0.0.1:3101 --count 50 --cleanup
+
+      - name: Run security matrix
+        run: node scripts/security-matrix.mjs --base http://127.0.0.1:3101
+
+      - name: Show app log on failure
+        if: failure()
+        run: cat /tmp/mesob-ci.log || true
+
+      - name: Stop app
+        if: always()
+        run: kill "$(cat /tmp/mesob-ci.pid)" 2>/dev/null || true
