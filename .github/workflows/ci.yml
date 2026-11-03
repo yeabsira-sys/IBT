@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - development
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -49,6 +50,7 @@ jobs:
         "1"
 
         # CI-only accounts created by the bootstrap step below.
+      LOAD_TEST_EMAIL: guest@mesob.test
       SEED_GUEST_EMAIL: guest@mesob.test
       SEED_GUEST_PASSWORD: Guest123!
       SEED_KITCHEN_EMAIL: kitchen@mesob.test
