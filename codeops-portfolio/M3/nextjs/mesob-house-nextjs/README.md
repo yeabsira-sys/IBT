@@ -23,7 +23,7 @@ DEPLOYED ON ONRENDER [mesob-house / addis-eats](https://addis-eats-9f08.onrender
 - **Shared formatters + CSV export** — `src/lib/format.js` builds the `etb`, `when`, `relative` and `number` formatters once; `/orders`, an individual order page, and `/admin/orders` can download order history through `src/lib/csv.js`, which quotes commas, quotes and newlines correctly.
 - **Leaflet delivery map** — a browser-only map on `/orders/[id]` with restaurant, destination and illustrative courier markers, plus the same route and address as text. See [`MAPS.md`](./MAPS.md).
 - **Metadata and discovery** — per-page metadata, per-dish Open Graph cards, JSON-LD `MenuItem`, sitemap, robots rules, web manifest, private-page `noindex`.
-- **Documentation** — [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md) is the big-picture codebase tour; [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md), [`PERF.md`](./PERF.md) and [`MAPS.md`](./MAPS.md) cover security, data/caching, performance and the map.
+- **Documentation** — [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md) is the big-picture codebase tour; [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md), [`PERF.md`](./PERF.md), [`MAPS.md`](./MAPS.md), and [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md) cover security, data/caching, performance, the map, and the database migration.
 
 ## Stack
 
@@ -32,7 +32,7 @@ DEPLOYED ON ONRENDER [mesob-house / addis-eats](https://addis-eats-9f08.onrender
 | Framework     | Next.js 16 App Router (Turbopack)                     |
 | UI            | React 19, CSS modules-free global styles              |
 | Client state  | Zustand for cart, favourites and checkout draft       |
-| Server data   | File-backed JSON store at `.data/mesob-house.json`    |
+| Server data   | Prisma ORM over normalized Postgres tables            |
 | Client data   | SWR 2 + EventSource for the order status stream       |
 | Validation    | Zod + react-hook-form                                 |
 | Passwords     | Node `scrypt` with a per-user salt                    |
@@ -43,10 +43,26 @@ DEPLOYED ON ONRENDER [mesob-house / addis-eats](https://addis-eats-9f08.onrender
 ```bash
 npm install
 cp .env.example .env.local
+# Set DATABASE_URL in .env.local to a Postgres database.
+npm run db:migrate
+# First migration of an existing deployment: import the legacy document.
+npm run db:import -- --file .data/mesob-house.json
+# npm install already runs prisma generate; this refreshes it after schema edits.
+npm run prisma:generate
 npm run dev
 ```
 
-Open <http://localhost:3000>. The first request creates `.data/mesob-house.json` and seeds the demo accounts.
+Open <http://localhost:3000>. Runtime queries use Prisma Client through the
+`PrismaPg` adapter. SQL migrations remain authoritative for triggers, generated
+columns, checks and partial indexes. The app is Postgres-only; it no longer
+creates a JSON file or seeds accounts on first request. If you do not have the
+legacy document, register a customer and promote that account:
+
+```sql
+UPDATE users SET role = 'admin' WHERE lower(email) = lower('you@example.com');
+```
+
+See [`DATA.md`](./DATA.md) and [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md).
 
 The menu is fetched from `API_BASE_URL` on the server with a 5-minute ISR cache. If the remote menu is unavailable, curated fallback dishes are used and the UI shows a “fallback” notice. The site remains usable offline.
 
@@ -60,7 +76,7 @@ The menu is fetched from `API_BASE_URL` on the server with a 5-minute ISR cache.
 
 Sign in with either the email (Email tab) or the nine digits after `+251` (Mobile tab).
 
-> Change the seed passwords with `SEED_*_PASSWORD` in `.env.local` before deploying. Seed values are only used when the database file does not exist yet; delete `.data/` to reseed.
+> These accounts are present in the legacy document used for the first import. Change their passwords in the database before deploying. `SEED_*_EMAIL` / `SEED_*_PASSWORD` are used by the verification scripts, not to create accounts automatically.
 
 ## Routes
 
@@ -174,7 +190,25 @@ formatter is built once rather than inside a render loop.
 npm run dev      # Next dev server
 npm run build    # production build
 npm start        # serve the production build
+
+npm run prisma:generate  # regenerate Prisma Client from prisma/schema.prisma
+npm run db:migrate       # apply versioned SQL migrations
+npm run db:status        # show applied/pending migrations
+npm run db:import        # import the legacy document (transactional)
+npm run db:reconcile     # compare legacy counts/revenue to Postgres
+npm run db:explain       # EXPLAIN ANALYZE the kitchen/admin/analytics queries
+npm run db:load-test     # 50 concurrent Server Action checkouts
+npm run db:verify        # trigger invariants + session revocation
+npm run db:backup-drill  # pg_dump/pg_restore and counter comparison
+npm run seed:orders      # generate test orders in Postgres
 ```
+
+Application reads/writes use Prisma. Migration, import, seed, EXPLAIN,
+reconciliation and restore scripts intentionally use SQL because they operate on
+schema features or independent verification rather than application records.
+Migration, import, seed, and restore scripts refuse non-local targets unless
+`--allow-remote` is passed. This prevents an accidental write to the Neon
+production database. See [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md).
 
 ## Environment variables
 
@@ -186,34 +220,40 @@ See `.env.example` for the full list.
 | `APP_ORIGIN`                      | Public origin used by the same-origin check on mutations                                                                 |
 | `API_BASE_URL`                    | Menu backend, read on the server only                                                                                    |
 | `REVALIDATE_SECRET`               | Shared secret for on-demand ISR                                                                                          |
-| `DATABASE_URL`                    | Postgres connection string. Also accepts `POSTGRES_URL` / `POSTGRES_PRISMA_URL`; required for reliable sign-in on Vercel |
-| `DATA_DIR`                        | Directory for the file fallback (defaults to `./.data`)                                                                  |
-| `SEED_*_EMAIL`, `SEED_*_PASSWORD` | First-run demo accounts                                                                                                  |
+| `DATABASE_URL`                    | Postgres connection string. Also accepts `POSTGRES_URL` / `POSTGRES_PRISMA_URL`; required for all persistence |
+| `PG_POOL_MAX`                     | Maximum app connection pool size (default `10`)                                                              |
+| `SEED_*_EMAIL`, `SEED_*_PASSWORD` | Demo credentials used by the security/load-test scripts; they do not create accounts                         |
 | `IMAGES_UNOPTIMIZED`              | Set `true` to bypass the Next image optimiser                                                                            |
 
 ## Deployment notes
 
-The file database is fine locally, but it is **not** reliable on a serverless host with an ephemeral filesystem. Vercel functions do not share `/tmp`, so a session created by one instance can be invisible to the proxy or page on another instance. That is what makes sign-in appear to bounce between `/` and `/sign-in`.
-
-Use Postgres (Neon, Supabase or Vercel Postgres) for a Vercel deployment:
+Postgres is required. There is no file or `/tmp` fallback, so a missing
+`DATABASE_URL` fails closed: `/api/health` returns `503` and the
+persistence layer refuses to start. `postinstall` runs `prisma generate`, so the
+Prisma Client is present before `next build`; keep `prisma/schema.prisma` in the
+deployment checkout.
 
 1. Create a Postgres database and copy its connection string.
 2. Set `DATABASE_URL` in the Vercel project's environment variables. `POSTGRES_URL` also works.
-3. Redeploy. `src/lib/db.js` creates the `mesob_house_db` table and seeds the demo accounts automatically.
-4. Seed test orders from your machine. The script reads `DATABASE_URL` from `.env` and prints `Target: Postgres (DATABASE_URL)`:
+3. Run the versioned migrations against a staging copy first:
 
    ```bash
-   npm run seed:orders -- --count 3000 --days 365 --customers 50
+   DATABASE_URL=postgres://... npm run db:migrate
+   DATABASE_URL=postgres://... npm run db:import -- --file /path/to/legacy-mesob-house.json
+   DATABASE_URL=postgres://... npm run db:reconcile -- --file /path/to/legacy-mesob-house.json
    ```
 
+   The scripts refuse a non-local host unless `--allow-remote` is passed. Take and verify a backup before the first remote import.
+
+4. Redeploy, then verify `/api/health` reports `{"database":"postgres"}`.
 5. Set `NEXT_PUBLIC_SITE_URL` and `APP_ORIGIN` to the public HTTPS origin, for example `https://mesob-house-phi.vercel.app`. Do not reuse the `http://localhost:3000` values from `.env` in Vercel.
-6. Set a strong `REVALIDATE_SECRET` and seed passwords.
+6. Set a strong `REVALIDATE_SECRET` and change the imported demo passwords.
 7. Replace the public OpenStreetMap tile URL with a production tile provider; keep the attribution.
 8. Run the Lighthouse/deployed checks in [`PERF.md`](./PERF.md).
 
-Without `DATABASE_URL`, Vercel falls back to `/tmp/mesob-house`. That prevents the `mkdir '.data'` crash but remains ephemeral and per-instance; it is only a demo fallback.
-
-The Postgres adapter stores the whole document in one JSONB row. That is deliberate: it keeps the assessment's file model and works across serverless instances. Keep demo seeds in the low thousands rather than tens of thousands for usable page times. See [`DATA.md`](./DATA.md) for the tradeoffs and the normalised schema path.
+The schema, index rationale, reconciliation, 50-checkout load test, trigger/session
+checks, and restore drill are documented in
+[`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md).
 
 ## Verification
 
@@ -237,4 +277,19 @@ The final local production build succeeded. Runtime checks covered:
 - delivery and pickup order maps rendering with the text address, markers and OpenStreetMap attribution;
 - debounced search sending one request for a burst of keystrokes.
 
-See [`AUTH.md`](./AUTH.md) for the attack table and [`PERF.md`](./PERF.md) for measured timings.
+Database checks:
+
+- the legacy import reconciles 3,000 orders, 7,387 items, 13,188 history rows, 55 users, 6 sessions, and both revenue totals exactly;
+- 50 simultaneous checkouts produced 50 HTTP 200 responses and 50 unique persisted orders, with zero lost orders;
+- invalid transitions are rejected by SQLSTATE, valid staff transitions are accepted, and the transaction rolls back cleanly;
+- signing out sets `sessions.revoked_at` and the old cookie no longer authenticates;
+- a `pg_dump`/`pg_restore` copy matches every table and revenue counter;
+- `EXPLAIN ANALYZE` plans are recorded before and after the selected indexes;
+- the Prisma repositories passed create/read/cancel/transition, generated-total,
+  trigger-history, duplicate-account, role-audit and session-revocation smoke
+  checks against the local database.
+
+See [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md),
+[`docs/DB_PERFORMANCE.md`](./docs/DB_PERFORMANCE.md),
+[`AUTH.md`](./AUTH.md) for the attack table, and [`PERF.md`](./PERF.md) for
+measured timings.

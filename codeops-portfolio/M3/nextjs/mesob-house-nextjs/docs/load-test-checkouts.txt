@@ -1,0 +1,14 @@
+Verification database: 127.0.0.1:55432/mesob_house (local)
+Concurrent checkouts: 50
+Customer: guest@mesob.house (53dff28f-46ce-46ee-9329-41a2624776bc)
+Dish: Classic Doro Wat (doro-wat), server price 650 ETB
+Note prefix: prisma-final
+
+HTTP requests: 50 fulfilled, 0 rejected
+HTTP statuses: 200×50
+Database rows: 50 orders, 50 unique ids, 50 unique notes, 50 item rows, 37,400 ETB
+API list rows with prefix: 50
+Duration: 1713 ms (29.2 checkouts/s)
+
+RESULT: PASS — 50/50 simultaneous checkouts persisted with zero lost orders.
+Cleanup: deleted 50 verification orders.

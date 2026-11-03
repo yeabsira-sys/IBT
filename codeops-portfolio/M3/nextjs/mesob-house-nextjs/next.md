@@ -105,7 +105,8 @@ Admin watches the business
 | `@hookform/resolvers` | 5.9.1 | Connects Zod to React Hook Form | `zodResolver` gives field-level errors |
 | `recharts` | 3.10.1 | Admin/kitchen charts | Declarative SVG charts that work as client components |
 | `leaflet` / `react-leaflet` | 1.9.4 / 5.0.0 | Delivery-area map | Browser-only map without a paid map SDK; loaded lazily |
-| `pg` | 8.23.1 | Optional Postgres backend | Production-capable shared storage for serverless deployments |
+| `@prisma/client` / `@prisma/adapter-pg` | 7.10.1 | Postgres ORM + pg driver adapter | Typed-ish model queries, nested writes and transactions without hand-written SQL |
+| `pg` | 8.23.1 | Postgres driver and operational scripts | Pool used by the Prisma adapter; SQL tooling for migrations/import/checks |
 | `react-icons` | 5.7.0 | Icons | Tree-shakeable icon components, no icon-font request |
 | `server-only` | 0.0.1 | Marks server modules | Build-time guard against accidentally bundling secrets/DB code into the browser |
 
@@ -502,6 +503,7 @@ The same pattern repeats:
 These modules import `"server-only"`:
 
 ```text
+src/lib/prisma.js
 src/lib/db.js
 src/lib/auth.js
 src/lib/orders.js
@@ -526,7 +528,7 @@ src/lib/csv.js
 
 > **Why split the libs this way?** Shared business vocabulary (statuses,
 > pricing rules, schemas, formatting) is safe and useful in both environments.
-> The moment a module touches `pg`, `fs`, `crypto` or cookies, it gets
+> The moment a module touches Prisma, `pg`, `fs`, `crypto` or cookies, it gets
 > `server-only`.
 
 ### 7.4 Passing data across the boundary
@@ -2121,29 +2123,32 @@ Change these before any real deployment.
 | `APP_ORIGIN` | Additional allowed origin for same-origin mutation checks |
 | `API_BASE_URL` | Menu backend base URL (server-side only) |
 | `REVALIDATE_SECRET` | Shared secret for `POST /api/revalidate` |
-| `DATABASE_URL` (or `POSTGRES_URL`, `POSTGRES_PRISMA_URL`) | Switch to Postgres |
-| `DATA_DIR` | Local JSON store directory |
+| `DATABASE_URL` (or `POSTGRES_URL`, `POSTGRES_PRISMA_URL`) | Required Postgres connection string |
+| `PG_POOL_MAX` | App connection pool size (default `10`) |
 | `IMAGES_UNOPTIMIZED` | Serve source images directly instead of optimizing |
-| `SEED_*` | Seed account credentials for the first database init |
+| `SEED_*` | Credentials used by verification scripts; they do not create accounts |
 | `ADMIN_PAGE_REFRESH_INTERVAL` | Intended admin polling interval (see caveat above) |
 
-### 20.2 File store vs Postgres
+### 20.2 Postgres-only persistence
 
-`src/lib/db.js` chooses at startup:
+`src/lib/prisma.js` requires `DATABASE_URL`; there is no file or `/tmp`
+fallback. Runtime queries use Prisma Client with the `PrismaPg` adapter. The
+schema is created by versioned SQL migrations, not at startup:
 
-```js
-const usePostgres = Boolean(DATABASE_URL);
+```bash
+npm run db:migrate
+npm run db:import -- --file .data/mesob-house.json   # existing deployment only
+npm run db:reconcile -- --file .data/mesob-house.json
+npm run prisma:generate
 ```
 
-- **No database URL:** users, sessions and orders live in
-  `.data/mesob-house.json`.
-- **Database URL present:** the same data lives in a Postgres table
-  (`mesob_house_db`) as a JSONB row.
-
-On Vercel without Postgres, the app redirects the file store to `/tmp`. That
-prevents a read-only filesystem crash, but `/tmp` is ephemeral and per
-instance, so sign-in and orders are not reliable. Use Postgres for a real
-deployment.
+Users, sessions, menu items, orders, line items, status history and audit rows
+live in separate tables. Money is stored as integer cents, order totals are
+generated, status transitions are enforced by a trigger, and sign-out revokes
+the session row. Prisma cannot model triggers or generated columns, so those
+remain in the SQL migrations; the Prisma schema mirrors the tables for the
+client. See [`DATA.md`](./DATA.md) and
+[`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md).
 
 ### 20.3 Build and run
 
@@ -2160,9 +2165,13 @@ The seed script supports:
 
 ```bash
 npm run seed:orders -- --count 2500 --days 180 --customers 30
-npm run seed:orders -- --file     # force the local JSON store
 npm run seed:orders -- --keep-orders
+npm run seed:orders -- --dry-run
+npm run seed:orders -- --clear --dry-run
 ```
+
+It writes normalized Postgres tables only and refuses a remote host unless
+`--allow-remote` is passed.
 
 ### 20.4 `next.config.mjs`
 
@@ -2263,7 +2272,7 @@ A Client Component imported a server module. Trace the import chain:
 
 ```text
 Client Component
-  -> src/lib/db.js / auth.js / orders.js / menu.js / analytics.js
+  -> src/lib/prisma.js / db.js / auth.js / orders.js / menu.js / analytics.js
 ```
 
 Move the data fetch into a Server Component or Route Handler, then pass plain

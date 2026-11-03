@@ -8,9 +8,8 @@
  *
  * Typical local staging run:
  *
- *   cp .data/mesob-house.json /tmp/opencode/security-staging/mesob-house.json
- *   DATABASE_URL= DATA_DIR=/tmp/opencode/security-staging npm run build
- *   DATABASE_URL= DATA_DIR=/tmp/opencode/security-staging PORT=3100 npm start
+ *   DATABASE_URL=postgresql://postgres@127.0.0.1:55432/mesob_house npm run build
+ *   DATABASE_URL=postgresql://postgres@127.0.0.1:55432/mesob_house PORT=3100 npm start
  *   node scripts/security-matrix.mjs --base http://localhost:3100
  *
  * The pricing check writes one order. It is opt-in:

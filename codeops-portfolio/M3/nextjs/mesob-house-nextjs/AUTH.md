@@ -24,10 +24,12 @@ The design assumes the browser is hostile. No client-supplied user id, role, pri
 ```js
 const token = randomBytes(32).toString("base64url");
 const tokenHash = hashToken(token); // sha256
-db.sessions.push({ tokenHash, userId, expiresAt, ... });
+INSERT INTO sessions (id, token_hash, user_id, expires_at)
+VALUES ($1, $2, $3, $4);
 ```
 
-The raw token is sent to the browser once, in the cookie. A leaked database file therefore does not contain usable session cookies.
+The raw token is sent to the browser once, in the cookie. A leaked database
+backup therefore does not contain usable session cookies.
 
 ### Cookie flags
 
@@ -42,7 +44,7 @@ path: "/",
 
 `httpOnly` keeps the token away from JavaScript, so an XSS bug cannot read it with `document.cookie`. `SameSite=Lax` blocks most cross-site form posts while keeping normal top-level navigation working. `Secure` is enabled in production.
 
-Sessions last **7 days** by default and **30 days** when “keep signed in” is selected. Expired rows are pruned when a new session is created; `getSessionUserByToken` also checks the expiry before returning a user.
+Sessions last **7 days** by default and **30 days** when “keep signed in” is selected. `getSessionUserByToken` rejects a row when `expires_at <= now()` or `revoked_at IS NOT NULL`. Expired/revoked rows are retained for audit and can be purged by an operational cleanup job.
 
 ### Passwords
 
@@ -52,7 +54,7 @@ Passwords are hashed with Node's `scryptSync` and a random 16-byte salt:
 salt:hash
 ```
 
-`verifyPassword` uses `timingSafeEqual` after length checks. Plaintext passwords are never written to the JSON store and never put in `localStorage`.
+`verifyPassword` uses `timingSafeEqual` after length checks. Plaintext passwords are never stored in Postgres and never put in `localStorage`.
 
 ### Session lookup
 
@@ -186,20 +188,29 @@ Customer reads are scoped in the query, not checked after the fact:
 ```js
 // src/lib/orders.js
 export async function getOrderForUser(userId, orderId) {
-  const db = await readDb();
-  return db.orders.find((order) => order.id === orderId && order.userId === userId) ?? null;
+  const row = await getPrisma().order.findFirst({
+    where: { id: orderId, userId },
+    include: orderInclude,
+  });
+  return mapOrder(row);
 }
 ```
 
-`getOrdersForUser(userId)` filters the list by `userId`. `cancelOrderForUser(orderId, userId)` looks up the row and returns the same `NOT_FOUND` result for “does not exist” and “belongs to someone else”:
+`getOrdersForUser(userId)` filters the list by `userId`. `cancelOrderForUser(orderId, userId)` uses a conditional update and returns the same `NOT_FOUND` result for “does not exist” and “belongs to someone else”:
 
 ```js
-if (!order || order.userId !== userId) {
+const updated = await tx.order.updateMany({
+  where: { id: orderId, userId, status: "received" },
+  data: { status: "cancelled" },
+});
+if (updated.count === 0) {
   return { ok: false, code: "NOT_FOUND", message: "Order not found." };
 }
 ```
 
-That prevents an attacker from using the API as an order-id oracle.
+That prevents an attacker from using the API as an order-id oracle. The
+conditional write also makes concurrent cancellations safe without a raw
+`SELECT ... FOR UPDATE`.
 
 ### Order status rules
 
@@ -324,9 +335,9 @@ For the ownership tests, sign in as `guest@mesob.house`, note an order id, then 
 
 ## 8. Known limitations
 
-- **The proxy verifies the session to route by role.** It reads the local JSON store for matched requests that carry a session cookie. That is fine for this assessment, but a production deployment should use an indexed session lookup, a signed role claim or a fast session store. The page and action layers still make the authorization decision.
+- **The proxy verifies the session to route by role.** It performs an indexed SHA-256 token lookup in Postgres for matched requests that carry a session cookie. The page and action layers still make the authorization decision, so a routing bug cannot grant data access.
 - **The role check stays out of the public layout.** It lives in `proxy.js` instead of `(shop)/layout.jsx`, so `/`, `/menu`, `/dish/*`, `/cart`, `/terms` and `/privacy` keep their static/ISR rendering.
 - **The demo social buttons create real customer sessions.** They are labelled as demo flows and do not call an external OAuth provider.
 - **No rate limiting or account lockout.** A production deployment should add rate limiting on `/sign-in`, `/register` and order creation.
-- **File database.** It is single-instance and has no cross-process write lock. See [`DATA.md`](./DATA.md) before deploying to a serverless host.
+- **Session retention.** Revoked and expired rows are deliberately kept for audit; add a scheduled cleanup if storage becomes a concern.
 - **No password reset flow.** The sign-in page links to support; reset tokens are outside the assignment scope.

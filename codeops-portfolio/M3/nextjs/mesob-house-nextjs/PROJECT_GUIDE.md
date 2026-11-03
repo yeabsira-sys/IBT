@@ -22,9 +22,9 @@
 
 1. **`src/app` is the route map.** Start at the page file, then follow its component imports.
 2. **The server owns security and money.** Sessions, roles, prices, ownership and status transitions are checked in `src/lib` and the API/actions.
-3. **The browser store is only a draft.** Cart, favourites and checkout form state live in Zustand/localStorage; real orders live in `.data/mesob-house.json` locally, or Postgres when `DATABASE_URL` is set.
+3. **The browser store is only a draft.** Cart, favourites and checkout form state live in Zustand/localStorage; real users, sessions and orders live in normalized Postgres tables.
 4. **SWR and SSE are only for live refresh.** The first page render is server-rendered; SWR keeps order, kitchen and admin views current, while the active order detail uses an authenticated SSE stream.
-5. **`src/lib/db.js` is the database boundary.** It selects the local JSON file or the Postgres adapter, and every caller uses the same helpers.
+5. **`src/lib/prisma.js` is the persistence boundary.** It owns the Prisma Client and pg adapter; `src/lib/db.js` and `src/lib/orders.js` expose user, session and order operations on top of it, including the actor context used by database triggers.
 
 ---
 
@@ -46,7 +46,7 @@ It has two sides:
    - Kitchen queue for employees and admins
    - Admin dashboard, all-orders view and user-role management
 
-The project uses a **file-backed JSON database** by default so it can run without external services. Setting `DATABASE_URL` switches the same database layer to Postgres, which is required for reliable sessions and orders on Vercel. The database boundary is isolated in one file either way.
+The project uses **normalized PostgreSQL tables through Prisma ORM**. `DATABASE_URL` is required: there is no file or `/tmp` fallback. Versioned SQL migrations create the schema and its triggers/generated columns, a legacy import moves the old document into it, and the app reads and writes the tables through Prisma Client in `src/lib/prisma.js`, `src/lib/db.js` and `src/lib/orders.js`.
 
 ---
 
@@ -74,7 +74,8 @@ Think of the app in three layers:
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
 │ 3. Data                                                     │
-│    • .data/mesob-house.json: users, sessions, orders        │
+│    • Prisma Client -> Postgres: users, sessions, menu,      │
+│      orders, history, audit                                 │
 │    • Remote menu API with ISR cache                         │
 │    • Curated fallback menu if the API is unavailable        │
 └─────────────────────────────────────────────────────────────┘
@@ -153,6 +154,7 @@ Files:
 - [`src/components/auth/SignInForm.jsx`](./src/components/auth/SignInForm.jsx)
 - [`src/actions/auth.js`](./src/actions/auth.js)
 - [`src/lib/auth.js`](./src/lib/auth.js)
+- [`src/lib/prisma.js`](./src/lib/prisma.js)
 - [`src/lib/db.js`](./src/lib/db.js)
 - [`src/lib/roleHome.js`](./src/lib/roleHome.js)
 - [`src/app/(auth)/sign-in/page.jsx`](./src/app/%28auth%29/sign-in/page.jsx)
@@ -169,7 +171,7 @@ CheckoutView
   → validate payload again with Zod
   → getAllDishes() to resolve current menu prices
   → getCartTotals() to calculate subtotal, VAT and discount
-  → createOrder() writes to .data/mesob-house.json
+  → createOrder() writes orders + order_items in one Postgres transaction
   → revalidatePath() for /orders, /orders/[id], /kitchen, /admin, /admin/orders
   → redirect to /orders/[order-id]
 ```
@@ -381,100 +383,74 @@ Files:
 
 ## 6. Data model
 
-The database is one JSON document. Locally it is stored at:
+Persistence is normalized PostgreSQL. The schema is created by versioned
+migrations in `migrations/`:
 
-```text
-.data/mesob-house.json
-```
+| Table | What it holds |
+| --- | --- |
+| `users` | account, role, scrypt password hash |
+| `sessions` | SHA-256 token hash, user, expiry, `revoked_at` |
+| `menu_items` | menu catalogue with integer-cent prices |
+| `orders` | order header, customer/contact/delivery snapshot, generated total |
+| `order_items` | item snapshot, quantity, generated line total |
+| `order_status_history` | one row per status transition |
+| `audit_log` | order creation, status changes, role changes |
 
-On Vercel it is stored in the `mesob_house_db` table as a single JSONB row when `DATABASE_URL` is set. It contains three arrays:
-
-```json
-{
-  "version": 1,
-  "users": [],
-  "sessions": [],
-  "orders": []
-}
-```
-
-### User
-
-```json
-{
-  "id": "uuid",
-  "fullName": "Guest Diner",
-  "email": "guest@mesob.house",
-  "phone": "911000003",
-  "passwordHash": "salt:scrypt-hash",
-  "role": "customer",
-  "preference": "all-heritage",
-  "provider": "password",
-  "createdAt": "2026-01-01T00:00:00.000Z"
-}
-```
-
-`toSafeUser()` removes `passwordHash` before the user reaches the browser.
-
-### Session
-
-```json
-{
-  "id": "uuid",
-  "tokenHash": "sha256-hash",
-  "userId": "uuid",
-  "createdAt": "2026-01-01T00:00:00.000Z",
-  "expiresAt": "2026-01-08T00:00:00.000Z"
-}
-```
-
-### Order
+Money is stored as integer cents and converted to birr only at the repository
+boundary. The API still exposes a nested order shape:
 
 ```json
 {
   "id": "MH-1A2B3C4D",
   "userId": "uuid",
-  "customer": { "name": "Guest Diner", "email": "...", "phone": "..." },
   "status": "received",
-  "items": [
-    { "id": "doro-wat", "name": "Doro Wat", "price": 650, "quantity": 2 }
-  ],
-  "totals": {
-    "subtotal": 1300,
-    "injera": 0,
-    "packaging": 0,
-    "vat": 195,
-    "discount": 0,
-    "total": 1495
-  },
-  "couponCode": null,
-  "note": "",
+  "items": [{ "id": "doro-wat", "name": "Doro Wat", "price": 650, "quantity": 2 }],
+  "totals": { "subtotal": 1300, "injera": 0, "packaging": 0, "vat": 195, "discount": 0, "total": 1495 },
   "fulfillment": "delivery",
-  "contact": { "name": "...", "phone": "...", "email": "..." },
-  "delivery": {
-    "subCity": "Bole Medhanialem",
-    "street": "Bole Road",
-    "landmark": "Opposite Edna Mall",
-    "timing": "immediate"
-  },
-  "method": "telebirr",
-  "createdAt": "2026-01-01T00:00:00.000Z",
-  "updatedAt": "2026-01-01T00:00:00.000Z",
-  "statusHistory": [
-    { "status": "received", "at": "...", "by": "uuid", "byName": "Guest Diner" }
-  ]
+  "delivery": { "subCity": "...", "street": "...", "landmark": "...", "timing": "immediate" },
+  "statusHistory": [{ "status": "received", "at": "...", "by": "uuid", "byName": "Guest Diner" }]
 }
 ```
 
-### Why the database layer is one file
+### Users and sessions
 
-All reads and writes go through [`src/lib/db.js`](./src/lib/db.js):
+`mapUser()` converts a Prisma `User` model to the app's user shape.
+`toSafeUser()` is the only user shape that reaches the browser; it removes
+`passwordHash`. Session tokens are random 256-bit values; only their SHA-256
+hash is stored. Sign-out sets `revoked_at` instead of deleting the row.
 
-- `readDb()` reads the JSON file or the Postgres JSONB row.
-- `mutateDb()` clones, mutates, writes atomically and serialises writes. Postgres mode uses a transaction and a row lock.
-- Auth, orders and admin code call these helpers instead of touching storage directly.
+### Orders and transitions
 
-To normalise the data into separate SQL tables later, replace `db.js` and keep the same exported functions.
+Order writes go through [`src/lib/orders.js`](./src/lib/orders.js), which uses
+Prisma nested writes for `orders` and `order_items`; the triggers write
+`order_status_history` / `audit_log`. `createOrder()` runs in a Prisma
+transaction with `setDbActor()`; a status update does the same. Cancellation
+uses a conditional `updateMany` on `status = 'received'` instead of
+`SELECT ... FOR UPDATE`, so concurrent callers cannot both win. The Postgres
+trigger remains the final authority, so an API bug cannot smuggle in an invalid
+transition.
+
+The database enforces:
+
+```text
+received -> preparing -> ready -> out_for_delivery -> completed
+received -> cancelled       (customer only while received)
+any non-terminal -> cancelled (admin only)
+```
+
+### Why the repository is split
+
+- [`src/lib/prisma.js`](./src/lib/prisma.js) owns the cached Prisma Client,
+  `PrismaPg` adapter and database URL / pool configuration.
+- [`src/lib/db.js`](./src/lib/db.js) owns user/session repositories, password
+  hashing, transactions and actor context.
+- [`src/lib/orders.js`](./src/lib/orders.js) owns Prisma order reads, the
+  kitchen/admin views, analytics inputs and the checkout transaction.
+- `analytics.js` is a pure server-side transformer over the fetched rows.
+
+More detail, including the migration report and EXPLAIN plans:
+[`DATA.md`](./DATA.md), [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md),
+[`docs/DB_PERFORMANCE.md`](./docs/DB_PERFORMANCE.md).
 
 More detail: [`DATA.md`](./DATA.md).
 
@@ -570,6 +546,7 @@ Everything else is a Server Component by default.
 
 These modules import `server-only` and must never be imported into a client component:
 
+- `src/lib/prisma.js`
 - `src/lib/db.js`
 - `src/lib/auth.js`
 - `src/lib/orders.js`
@@ -596,6 +573,7 @@ Shared, client-safe modules include:
 | ------------------------------------------------------ | --------------------------------------------------------------------- |
 | [`src/proxy.js`](./src/proxy.js)                       | Role-aware routing gate for private, public and customer URL prefixes |
 | [`src/lib/auth.js`](./src/lib/auth.js)                 | Session read/create/destroy + page guards                             |
+| [`src/lib/prisma.js`](./src/lib/prisma.js)             | Cached Prisma Client, `PrismaPg` adapter and pool configuration      |
 | [`src/lib/db.js`](./src/lib/db.js)                     | Users, sessions, password hashing                                     |
 | [`src/actions/auth.js`](./src/actions/auth.js)         | Sign-in, register, sign-out actions                                   |
 | [`src/hooks/useSession.js`](./src/hooks/useSession.js) | Client session cache                                                  |
@@ -744,7 +722,7 @@ a prop and renders that before the stream's first event.
 | Change portal layout                   | `src/styles/portal.css`                                                                             |
 | Change cart persistence                | `src/store/appStore.js`                                                                             |
 | Seed large order data                  | `scripts/seed-orders.mjs`                                                                           |
-| Replace the database                   | `src/lib/db.js` only                                                                                |
+| Change the schema                      | Add a numbered migration, update `prisma/schema.prisma`, regenerate Prisma Client, keep repository boundaries |
 
 ---
 
@@ -758,7 +736,7 @@ Read in this order:
 4. [`src/lib/api.js`](./src/lib/api.js) and [`src/lib/menu.js`](./src/lib/menu.js) — menu data.
 5. [`src/app/(shop)/menu/page.jsx`](./src/app/%28shop%29/menu/page.jsx) and [`MenuBrowser.jsx`](./src/components/menu/MenuBrowser.jsx) — server/client split.
 6. [`src/store/appStore.js`](./src/store/appStore.js) — cart and checkout state.
-7. [`src/actions/order.js`](./src/actions/order.js), [`src/lib/orders.js`](./src/lib/orders.js), [`src/lib/db.js`](./src/lib/db.js) — order write path.
+7. [`src/actions/order.js`](./src/actions/order.js), [`src/lib/orders.js`](./src/lib/orders.js), [`src/lib/db.js`](./src/lib/db.js) — order write path over Prisma Client.
 8. [`src/proxy.js`](./src/proxy.js), [`src/lib/auth.js`](./src/lib/auth.js), [`src/actions/auth.js`](./src/actions/auth.js) — auth.
 9. [`src/app/(auth)/orders/page.jsx`](./src/app/%28auth%29/orders/page.jsx) and [`OrdersLive.jsx`](./src/components/orders/OrdersLive.jsx) — customer portal.
 10. [`src/components/orders/OrderDetailLive.jsx`](./src/components/orders/OrderDetailLive.jsx) and [`src/app/api/orders/[id]/stream/route.js`](./src/app/api/orders/%5Bid%5D/stream/route.js) — SSE order tracking.
@@ -773,12 +751,16 @@ Read in this order:
 ```bash
 npm install
 cp .env.example .env.local
+# set DATABASE_URL to a Postgres database
+npm run db:migrate
+# only when moving an existing deployment:
+npm run db:import -- --file .data/mesob-house.json
 npm run dev
 ```
 
-Open <http://localhost:3000>.
-
-The first request creates `.data/mesob-house.json` and seeds the demo accounts.
+Open <http://localhost:3000>. The app does not create tables or seed accounts
+on the first request. If you have no legacy document, register a customer and
+promote that account with SQL, or import your production export.
 
 ### Demo accounts
 
@@ -796,15 +778,24 @@ You can sign in with the email tab or the mobile tab.
 npm run dev                 # development server
 npm run build               # production build
 npm start                   # serve the production build
+npm run db:migrate          # apply versioned migrations
+npm run db:status           # show applied/pending migrations
+npm run db:import           # import the legacy document
+npm run db:reconcile        # compare source and Postgres counts/revenue
 npm run seed:orders         # replace orders with 1,500 test orders + 24 demo customers
-npm run seed:orders:clear   # remove test orders and @mesob.test customers
+npm run seed:orders:clear   # remove @mesob.test demo orders/customers
+npm run db:load-test        # 50 concurrent checkouts
+npm run db:verify           # trigger invariants + session revocation
+npm run db:backup-drill     # pg_dump/pg_restore comparison
 ```
 
-When `DATABASE_URL` is set (including via `.env`), `seed:orders` writes to the
-same Postgres row as the app. Add `--file` to force the local JSON store. The
-script prints the active target at startup.
+`seed:orders` writes only to Postgres. It prints the target and refuses a
+remote host unless `--allow-remote` is passed. `--dry-run` generates the same
+set without writing; `--clear --dry-run` reports what would be removed.
 
-The seed script never changes the seeded admin/employee/guest passwords.
+The seed script never changes imported admin/employee/guest passwords. The
+migration, import, seed and restore commands are documented in
+[`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md).
 
 ---
 
@@ -846,22 +837,21 @@ Edit `src/lib/pricing.js`. The same function is used by:
 
 That keeps the displayed total and the stored total consistent.
 
-### Swap the database
+### Extend the database
 
-`src/lib/db.js` already supports Postgres through `DATABASE_URL`. For a normalised schema, replace the adapter while keeping the same exports:
+Add a new numbered migration; never edit an applied file because its checksum
+is recorded. Keep the repository boundaries intact:
 
-- `readDb`
-- `mutateDb`
-- `findUserByIdentifier`
-- `findUserById`
-- `createUser`
-- `createSessionRecord`
-- `getSessionUserByToken`
-- `deleteSessionByToken`
-- `listUsers`
-- `updateUserRole`
+- `prisma/schema.prisma`: Prisma models that mirror the migrated tables
+- `src/lib/prisma.js`: Prisma Client, `PrismaPg` adapter and pool configuration
+- `src/lib/db.js`: users, sessions, password hashing, actor context
+- `src/lib/orders.js`: order reads/writes, kitchen/admin queries, checkout
+- `src/lib/analytics.js`: pure summaries over fetched rows
 
-The rest of the app should not need to change.
+Export the new data through `toSafeUser()` or `mapOrder()` rather than leaking
+Prisma models to components. Run `npm run db:migrate`, update the Prisma schema
+if the table shape changed, run `npm run prisma:generate`, then run the
+reconciliation and the build.
 
 ---
 
@@ -892,7 +882,7 @@ The rest of the app should not need to change.
 
 This project is shaped like a production app, but some parts are deliberately local:
 
-- **Database** — the local JSON file is not suitable for serverless hosting with an ephemeral filesystem. Set `DATABASE_URL` to use the shared Postgres adapter; it stores one JSONB document rather than normalised tables.
+- **Database** — Postgres is required. The schema, migrations, legacy import and validation scripts are real; the demo deployment still depends on an operator running them against a managed database.
 - **Payments** — the checkout records a payment method; there is no real Telebirr/CBE/card gateway.
 - **Email and SMS** — no real receipt or rider notifications are sent.
 - **Social sign-in** — the Telebirr/Google buttons create demo customer sessions, not real OAuth sessions.
@@ -910,7 +900,9 @@ For a real deployment, replace the database, add a payment provider, add notific
 | [`README.md`](./README.md)               | Setup, routes, demo accounts, deployment notes         |
 | [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md) | This big-picture guide                                 |
 | [`AUTH.md`](./AUTH.md)                   | Sessions, password hashing, route guards, attack tests |
-| [`DATA.md`](./DATA.md)                   | File database, ISR, SWR, caching, seed data            |
+| [`DATA.md`](./DATA.md)                   | Postgres schema, ISR, SWR, caching, seed data          |
+| [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md) | Reconciliation, load, invariants, restore drill |
+| [`docs/DB_PERFORMANCE.md`](./docs/DB_PERFORMANCE.md) | EXPLAIN plans and index rationale                    |
 | [`PERF.md`](./PERF.md)                   | Build size, Lighthouse notes, performance decisions    |
 
 ---

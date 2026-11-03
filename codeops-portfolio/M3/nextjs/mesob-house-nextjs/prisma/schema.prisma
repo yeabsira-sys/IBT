@@ -1,0 +1,185 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  customer
+  employee
+  admin
+
+  @@map("user_role")
+}
+
+enum OrderStatus {
+  received
+  preparing
+  ready
+  out_for_delivery
+  completed
+  cancelled
+
+  @@map("order_status")
+}
+
+enum OrderFulfillment {
+  pickup
+  delivery
+
+  @@map("order_fulfillment")
+}
+
+model User {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName     String   @map("full_name")
+  email        String
+  phone        String   @unique(where: raw("(btrim(phone) <> ''::text)")) @default("")
+  passwordHash String?  @map("password_hash")
+  role         UserRole @default(customer)
+  preference   String?
+  provider     String?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  sessions           Session[]
+  orders             Order[]
+  orderStatusHistory OrderStatusHistory[] @relation("StatusActor")
+  auditLogs          AuditLog[]           @relation("AuditActor")
+
+  @@index([role])
+  @@map("users")
+}
+
+model Session {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  userId     String    @map("user_id") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(6)
+  lastSeenAt DateTime? @map("last_seen_at") @db.Timestamptz(6)
+  userAgent  String?   @map("user_agent")
+  ipAddress  String?   @map("ip_address")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "sessions_user_idx")
+  @@index([expiresAt], map: "sessions_active_expiry_idx", where: raw("(revoked_at IS NULL)"))
+  @@map("sessions")
+}
+
+model MenuItem {
+  id          String   @id
+  name        String
+  description String   @default("")
+  category    String   @default("menu")
+  priceCents  Int      @map("price_cents")
+  imageUrl    String   @default("") @map("image_url")
+  isSpecial   Boolean  @default(false) @map("is_special")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  orderItems OrderItem[]
+
+  @@index([category, isActive], map: "menu_items_category_idx")
+  @@map("menu_items")
+}
+
+model Order {
+  id               String           @id
+  userId           String           @map("user_id") @db.Uuid
+  status           OrderStatus      @default(received)
+  fulfillment      OrderFulfillment
+  customerName     String           @map("customer_name")
+  customerEmail    String           @map("customer_email")
+  customerPhone    String           @default("") @map("customer_phone")
+  contactName      String           @map("contact_name")
+  contactPhone     String           @map("contact_phone")
+  contactEmail     String           @map("contact_email")
+  deliverySubCity  String           @default("") @map("delivery_sub_city")
+  deliveryStreet   String           @default("") @map("delivery_street")
+  deliveryLandmark String           @default("") @map("delivery_landmark")
+  deliveryTiming   String           @default("immediate") @map("delivery_timing")
+  paymentMethod    String           @map("payment_method")
+  couponCode       String?          @map("coupon_code")
+  note             String           @default("")
+  subtotalCents    Int              @map("subtotal_cents")
+  injeraCents      Int              @default(0) @map("injera_cents")
+  packagingCents   Int              @default(0) @map("packaging_cents")
+  vatCents         Int              @default(0) @map("vat_cents")
+  discountCents    Int              @default(0) @map("discount_cents")
+  totalCents       Int?             @default(dbgenerated("GREATEST(0, ((((subtotal_cents + injera_cents) + packaging_cents) + vat_cents) - discount_cents))")) @map("total_cents")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+
+  @@index([createdAt(sort: Desc)], map: "orders_created_at_idx")
+  @@index([status, createdAt(sort: Desc)], map: "orders_status_created_at_idx")
+  @@index([userId, createdAt(sort: Desc)], map: "orders_user_created_at_idx")
+  @@index([createdAt], map: "orders_live_queue_idx", where: raw("(status = ANY (ARRAY['received'::order_status, 'preparing'::order_status, 'ready'::order_status, 'out_for_delivery'::order_status]))"))
+  @@index([fulfillment, deliverySubCity, totalCents], map: "orders_completed_area_cover_idx", where: raw("(status = 'completed'::order_status)"))
+  @@index([userId, totalCents], map: "orders_completed_user_cover_idx", where: raw("(status = 'completed'::order_status)"))
+  @@map("orders")
+}
+
+model OrderItem {
+  id             BigInt @id @default(autoincrement())
+  orderId        String @map("order_id")
+  lineNo         Int    @map("line_no")
+  menuItemId     String @map("menu_item_id")
+  itemName       String @map("item_name")
+  unitPriceCents Int    @map("unit_price_cents")
+  quantity       Int
+  lineTotalCents Int?   @default(dbgenerated("(unit_price_cents * quantity)")) @map("line_total_cents")
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, lineNo], map: "order_items_order_id_line_no_key")
+  @@index([menuItemId, orderId], map: "order_items_menu_item_idx")
+  @@index([menuItemId, orderId, quantity, unitPriceCents], map: "order_items_menu_completed_idx")
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id            BigInt      @id @default(autoincrement())
+  orderId       String      @map("order_id")
+  status        OrderStatus
+  changedAt     DateTime    @default(now()) @map("changed_at") @db.Timestamptz(6)
+  changedBy     String?     @map("changed_by") @db.Uuid
+  changedByName String      @default("") @map("changed_by_name")
+  note          String?
+
+  order         Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedByUser User? @relation("StatusActor", fields: [changedBy], references: [id], onDelete: SetNull)
+
+  @@unique([orderId, status, changedAt], map: "order_status_history_order_id_status_changed_at_key")
+  @@index([orderId, changedAt], map: "order_status_history_order_idx")
+  @@index([orderId, changedAt(sort: Desc)], map: "order_status_history_recent_idx")
+  @@map("order_status_history")
+}
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  action     String
+  actorId    String?  @map("actor_id") @db.Uuid
+  actorRole  String?  @map("actor_role")
+  beforeData Json?    @map("before_data")
+  afterData  Json?    @map("after_data")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt(sort: Desc)], map: "audit_log_entity_idx")
+  @@index([createdAt(sort: Desc)], map: "audit_log_created_idx")
+  @@map("audit_log")
+}

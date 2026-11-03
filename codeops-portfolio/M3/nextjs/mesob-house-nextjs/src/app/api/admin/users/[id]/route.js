@@ -26,7 +26,7 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ message: "You cannot remove your own admin role." }, { status: 409 });
   }
 
-  const result = await updateUserRole(id, body.role);
+  const result = await updateUserRole(id, body.role, user);
   if (!result.ok) return NextResponse.json({ message: result.message }, { status: 404 });
   return NextResponse.json({ user: result.user });
 }

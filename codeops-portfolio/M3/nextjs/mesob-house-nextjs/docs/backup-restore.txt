@@ -1,0 +1,25 @@
+
+Source: 127.0.0.1:55432/mesob_house (local)
+Restore target: 127.0.0.1:55432/mesob_house_restore (local)
+
+1. pg_dump (custom format)
+   /tmp/opencode/mesob-house-backup.dump (0.40 MiB)
+2. recreate scratch database
+   mesob_house_restore created
+3. pg_restore
+   restore complete
+4. compare source and restored counters
+
+   counter                         source            restored
+   PASS  users                                    55                55
+   PASS  sessions                                  6                 6
+   PASS  menu_items                                8                 8
+   PASS  orders                                 3000              3000
+   PASS  order_items                            7387              7387
+   PASS  history                               13188             13188
+   PASS  audit_log                                 1                 1
+   PASS  migrations                                3                 3
+   PASS  revenue_cents              9,977,342.00 ETB  9,977,342.00 ETB
+   PASS  completed_revenue_cents    8,753,529.00 ETB  8,753,529.00 ETB
+
+RESULT: PASS — restored copy matches the source on every counter.

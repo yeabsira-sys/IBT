@@ -10,17 +10,16 @@ const hasDatabaseUrl = Boolean(
 
 /**
  * GET /api/health — liveness probe for uptime checks and deploy platforms.
- * `database` makes it possible to confirm which storage backend a deployment
- * is actually using without exposing any connection details.
+ * The app has no file fallback: without DATABASE_URL it is misconfigured, not
+ * silently backed by a per-instance JSON file.
  */
 export function GET() {
-  return NextResponse.json({
-    status: "ok",
-    uptime: Math.round(process.uptime()),
-    database: hasDatabaseUrl
-      ? "postgres"
-      : process.env.VERCEL
-        ? "file-tmp"
-        : "file",
-  });
+  return NextResponse.json(
+    {
+      status: hasDatabaseUrl ? "ok" : "misconfigured",
+      uptime: Math.round(process.uptime()),
+      database: hasDatabaseUrl ? "postgres" : "unconfigured",
+    },
+    { status: hasDatabaseUrl ? 200 : 503 },
+  );
 }

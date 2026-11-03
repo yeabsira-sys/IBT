@@ -1,106 +1,73 @@
 #!/usr/bin/env node
 
 /**
- * Test-data generator for the file or Postgres-backed database.
+ * Test-data generator for the normalized Postgres schema.
  *
  * It replaces the orders table with a large, date-dispersed set and can add
  * demo customer accounts. It never touches the seeded admin/employee/guest
  * accounts or their password hashes.
  *
- * When DATABASE_URL (or POSTGRES_URL / POSTGRES_PRISMA_URL) is set, it writes
- * to the shared Postgres row that the app uses. Use --file to force the local
- * JSON store instead.
+ * The JSON-file store has been retired. This script writes to Postgres only.
  *
  * Examples:
  *   npm run seed:orders
  *   npm run seed:orders -- --count 2500 --days 180 --customers 30
  *   npm run seed:orders -- --keep-orders
- *   npm run seed:orders -- --file
  *   npm run seed:orders:clear
  */
 
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { randomBytes, randomUUID, scryptSync } from "node:crypto";
-import { Pool } from "pg";
+import {
+  assertLocalWriteTarget,
+  createPool,
+  databaseUrlFromEnv,
+  has,
+  loadEnv,
+  numberValue,
+  parseArgs,
+  printDatabaseTarget,
+  value,
+  withTransaction,
+} from "./lib/db-cli.mjs";
 
-// Match the app's env loading so DATABASE_URL in .env works without extra
-// shell plumbing. Existing environment variables still take precedence.
-for (const envFile of [".env.local", ".env"]) {
-  try {
-    process.loadEnvFile(envFile);
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
+loadEnv();
+const args = parseArgs(process.argv.slice(2));
+
+if (has(args, "help")) {
+  console.log(`Usage: node scripts/seed-orders.mjs [options]
+
+  --count N          Number of orders to generate (default: 1500)
+  --days N           Spread completed history across N days (default: 120)
+  --customers N      Demo customers to ensure (default: 24)
+  --seed N           Deterministic RNG seed (default: 20261021)
+  --keep-orders      Append instead of replacing all orders
+  --clear            Remove all orders and @mesob.test demo customers
+  --dry-run          Generate but do not write
+  --allow-remote     Permit writes to a non-local database
+`);
+  process.exit(0);
 }
+
+const count = numberValue(args, "count", 1500, 1);
+const days = numberValue(args, "days", 120, 2);
+const customerCount = numberValue(args, "customers", 24, 0);
+const seed = numberValue(args, "seed", 20261021, 1);
+const keepOrders = has(args, "keep-orders");
+const clear = has(args, "clear");
+const dryRun = has(args, "dry-run");
+
+const databaseUrl = value(args, "database-url", databaseUrlFromEnv());
+assertLocalWriteTarget(databaseUrl, args);
+printDatabaseTarget("Target", databaseUrl);
+
+// One connection is held for the validation queries while withTransaction()
+// checks out a second one for the seed writes.
+const pool = createPool(databaseUrl, { max: 2 });
 
 const TIME_ZONE = "Africa/Addis_Ababa";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEMO_EMAIL_SUFFIX = "@mesob.test";
 const DEMO_PASSWORD = "Guest123!";
-
-const argv = process.argv.slice(2);
-const flags = new Map();
-
-for (let index = 0; index < argv.length; index += 1) {
-  const arg = argv[index];
-  if (!arg.startsWith("--")) continue;
-  const [key, inline] = arg.slice(2).split("=");
-  if (inline !== undefined) {
-    flags.set(key, inline);
-  } else if (argv[index + 1] && !argv[index + 1].startsWith("--")) {
-    flags.set(key, argv[index + 1]);
-    index += 1;
-  } else {
-    flags.set(key, true);
-  }
-}
-
-const numberFlag = (name, fallback, minimum = 0) => {
-  const raw = flags.get(name);
-  const value = raw === undefined || raw === true ? fallback : Number(raw);
-  return Number.isFinite(value) ? Math.max(minimum, Math.floor(value)) : fallback;
-};
-
-const count = numberFlag("count", 1500, 1);
-const days = numberFlag("days", 120, 2);
-const customerCount = numberFlag("customers", 24, 0);
-const seed = numberFlag("seed", 20261021, 1);
-const keepOrders = flags.has("keep-orders");
-const clear = flags.has("clear");
-const dryRun = flags.has("dry-run");
-const forceFile = flags.has("file");
-
-const databaseUrl = forceFile
-  ? ""
-  : process.env.DATABASE_URL ||
-    process.env.POSTGRES_URL ||
-    process.env.POSTGRES_PRISMA_URL ||
-    "";
-const usePostgres = Boolean(databaseUrl);
-
-const dataDir = process.env.DATA_DIR || path.join(process.cwd(), ".data");
-const dbFile = path.join(dataDir, "mesob-house.json");
-
-let pool;
-
-function getPool() {
-  if (!pool) {
-    const local = /(^|@)(localhost|127\.0\.0\.1|::1)(:|\/|$)/.test(databaseUrl);
-    const sslDisabled =
-      process.env.PGSSLMODE === "disable" ||
-      /[?&]sslmode=disable(?:&|$)/.test(databaseUrl);
-
-    pool = new Pool({
-      connectionString: databaseUrl,
-      max: 1,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 15_000,
-      ssl: local || sslDisabled ? false : { rejectUnauthorized: false },
-    });
-  }
-  return pool;
-}
 
 function mulberry32(value) {
   let state = value >>> 0;
@@ -113,7 +80,8 @@ function mulberry32(value) {
 }
 
 const random = mulberry32(seed);
-const randomInt = (minimum, maximum) => minimum + Math.floor(random() * (maximum - minimum + 1));
+const randomInt = (minimum, maximum) =>
+  minimum + Math.floor(random() * (maximum - minimum + 1));
 const pick = (items) => items[Math.floor(random() * items.length)];
 
 function hashPassword(password) {
@@ -146,7 +114,6 @@ function addisParts(date) {
 const now = new Date();
 const today = addisParts(now);
 
-/** Addis Ababa is UTC+3 all year, so a local wall-clock time is easy to build. */
 function addisDate(dayOffset, hour = 0, minute = 0) {
   return new Date(
     Date.UTC(today.year, today.month - 1, today.day + dayOffset, hour - 3, minute, 0, 0),
@@ -209,14 +176,14 @@ const NOTES = [
 const METHODS = ["telebirr", "cbe", "cash", "card"];
 
 const DISHES = [
-  { id: "doro-wat", name: "Doro Wat", price: 650 },
-  { id: "siga-derek-tibs", name: "Siga Derek Tibs", price: 620 },
-  { id: "prime-beef-kitfo", name: "Prime Beef Kitfo", price: 720 },
-  { id: "full-vegan-beyaynetu", name: "Full Vegan Beyaynetu", price: 480 },
-  { id: "house-tej-carafe", name: "House Tej (Carafe)", price: 350 },
-  { id: "clay-pot-shiro-bozena", name: "Clay-pot Shiro Bozena", price: 450 },
-  { id: "awaze-lamb-tibs", name: "Awaze Lamb Tibs", price: 680 },
-  { id: "gored-gored", name: "Gored Gored", price: 750 },
+  { id: "doro-wat", name: "Doro Wat", price: 650, category: "stews" },
+  { id: "siga-derek-tibs", name: "Siga Derek Tibs", price: 620, category: "grills" },
+  { id: "prime-beef-kitfo", name: "Prime Beef Kitfo", price: 720, category: "kitfo" },
+  { id: "full-vegan-beyaynetu", name: "Full Vegan Beyaynetu", price: 480, category: "fasting" },
+  { id: "house-tej-carafe", name: "House Tej (Carafe)", price: 350, category: "drinks" },
+  { id: "clay-pot-shiro-bozena", name: "Clay-pot Shiro Bozena", price: 450, category: "stews" },
+  { id: "awaze-lamb-tibs", name: "Awaze Lamb Tibs", price: 680, category: "grills" },
+  { id: "gored-gored", name: "Gored Gored", price: 750, category: "kitfo" },
 ];
 
 const ACTIVE_STATUSES = [
@@ -251,7 +218,8 @@ function statusPath(status, fulfillment) {
 
 function demoCustomer(index) {
   const firstName = FIRST_NAMES[index % FIRST_NAMES.length];
-  const lastName = LAST_NAMES[Math.floor(index / FIRST_NAMES.length) % LAST_NAMES.length];
+  const lastName =
+    LAST_NAMES[Math.floor(index / FIRST_NAMES.length) % LAST_NAMES.length];
   return {
     fullName: `${firstName} ${lastName}`,
     email: `diner${String(index + 1).padStart(2, "0")}${DEMO_EMAIL_SUFFIX}`,
@@ -259,85 +227,35 @@ function demoCustomer(index) {
   };
 }
 
-function ensureDemoCustomers(db) {
+async function loadUsers(client) {
+  return (await client.query("SELECT * FROM users")).rows;
+}
+
+async function ensureDemoCustomers(client, existingUsers) {
   const created = [];
   for (let index = 0; index < customerCount; index += 1) {
     const details = demoCustomer(index);
-    let user = db.users.find((entry) => entry.email === details.email);
-    if (!user) {
-      user = {
-        id: randomUUID(),
-        fullName: details.fullName,
-        email: details.email,
-        phone: details.phone,
-        passwordHash: hashPassword(DEMO_PASSWORD),
-        role: "customer",
-        preference: "all-heritage",
-        provider: "password",
-        createdAt: new Date(now.getTime() - randomInt(1, 365) * DAY_MS).toISOString(),
-      };
-      db.users.push(user);
-      created.push(user);
-    }
+    if (existingUsers.some((user) => user.email === details.email)) continue;
+
+    const inserted = await client.query(
+      `INSERT INTO users (
+         id, full_name, email, phone, password_hash, role, preference, provider,
+         created_at
+       ) VALUES ($1, $2, $3, $4, $5, 'customer', 'all-heritage', 'password', $6)
+       ON CONFLICT DO NOTHING
+       RETURNING *`,
+      [
+        randomUUID(),
+        details.fullName,
+        details.email,
+        details.phone,
+        hashPassword(DEMO_PASSWORD),
+        new Date(now.getTime() - randomInt(1, 365) * DAY_MS).toISOString(),
+      ],
+    );
+    if (inserted.rows[0]) created.push(inserted.rows[0]);
   }
   return created;
-}
-
-async function readDatabase() {
-  if (usePostgres) {
-    const { rows } = await getPool().query(
-      "SELECT data FROM mesob_house_db WHERE id = 1",
-    );
-    if (!rows[0]) {
-      throw new Error(
-        "No Postgres database row found. Start the app once with DATABASE_URL set so it creates and seeds mesob_house_db, then rerun the seed.",
-      );
-    }
-    return rows[0].data;
-  }
-
-  return fs
-    .readFile(dbFile, "utf8")
-    .then((raw) => JSON.parse(raw))
-    .catch((error) => {
-      if (error.code === "ENOENT") {
-        throw new Error(`No local database at ${dbFile}. Run the app once to seed it first.`);
-      }
-      throw error;
-    });
-}
-
-async function writeDatabase(db) {
-  if (!usePostgres) {
-    await fs.mkdir(dataDir, { recursive: true });
-    const tempFile = `${dbFile}.${process.pid}.tmp`;
-    await fs.writeFile(tempFile, JSON.stringify(db, null, 2), "utf8");
-    await fs.rename(tempFile, dbFile);
-    return;
-  }
-
-  const client = await getPool().connect();
-  try {
-    await client.query("BEGIN");
-    const locked = await client.query(
-      "SELECT id FROM mesob_house_db WHERE id = 1 FOR UPDATE",
-    );
-    if (!locked.rowCount) {
-      throw new Error(
-        "No Postgres database row found. Start the app once with DATABASE_URL set, then rerun the seed.",
-      );
-    }
-    await client.query(
-      "UPDATE mesob_house_db SET data = $1::jsonb, updated_at = now() WHERE id = 1",
-      [JSON.stringify(db)],
-    );
-    await client.query("COMMIT");
-  } catch (error) {
-    await client.query("ROLLBACK").catch(() => {});
-    throw error;
-  } finally {
-    client.release();
-  }
 }
 
 function makeItems() {
@@ -361,7 +279,10 @@ function makeItems() {
 function makeOrder({ createdAt, status, customer, staff }) {
   const fulfillment = random() < 0.28 ? "pickup" : "delivery";
   const items = makeItems();
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
   const couponCode = random() < 0.09 ? "GURSHA2025" : null;
   const discount = couponCode && subtotal > 500 ? 200 : 0;
   const vat = Math.round(subtotal * 0.15);
@@ -373,14 +294,19 @@ function makeOrder({ createdAt, status, customer, staff }) {
   let at = new Date(createdAt);
   for (const [index, step] of statusPath(status, fulfillment).entries()) {
     if (index > 0) {
-      at = new Date(Math.min(now.getTime(), at.getTime() + randomInt(5, 28) * 60 * 1000));
+      at = new Date(
+        Math.min(
+          now.getTime(),
+          at.getTime() + randomInt(5, 28) * 60 * 1000,
+        ),
+      );
     }
     const byCustomer = step === "received" || step === "cancelled";
     history.push({
       status: step,
       at: at.toISOString(),
       by: byCustomer ? customer.id : staff.id,
-      byName: byCustomer ? customer.fullName : staff.fullName,
+      byName: byCustomer ? customer.full_name : staff.full_name,
     });
   }
 
@@ -388,7 +314,7 @@ function makeOrder({ createdAt, status, customer, staff }) {
     id: `MH-${randomUUID().slice(0, 8).toUpperCase()}`,
     userId: customer.id,
     customer: {
-      name: customer.fullName,
+      name: customer.full_name,
       email: customer.email,
       phone: customer.phone,
     },
@@ -406,7 +332,7 @@ function makeOrder({ createdAt, status, customer, staff }) {
     note,
     fulfillment,
     contact: {
-      name: customer.fullName,
+      name: customer.full_name,
       phone: customer.phone,
       email: customer.email,
     },
@@ -423,93 +349,288 @@ function makeOrder({ createdAt, status, customer, staff }) {
   };
 }
 
+const orderRows = (orders) =>
+  orders.map((order) => ({
+    id: order.id,
+    user_id: order.userId,
+    status: order.status,
+    fulfillment: order.fulfillment,
+    customer_name: order.customer.name,
+    customer_email: order.customer.email,
+    customer_phone: order.customer.phone,
+    contact_name: order.contact.name,
+    contact_phone: order.contact.phone,
+    contact_email: order.contact.email,
+    delivery_sub_city: order.delivery.subCity,
+    delivery_street: order.delivery.street,
+    delivery_landmark: order.delivery.landmark,
+    delivery_timing: order.delivery.timing,
+    payment_method: order.method,
+    coupon_code: order.couponCode,
+    note: order.note,
+    subtotal_cents: order.totals.subtotal * 100,
+    injera_cents: order.totals.injera * 100,
+    packaging_cents: order.totals.packaging * 100,
+    vat_cents: order.totals.vat * 100,
+    discount_cents: order.totals.discount * 100,
+    created_at: order.createdAt,
+    updated_at: order.updatedAt,
+  }));
+
+const itemRows = (orders) =>
+  orders.flatMap((order) =>
+    order.items.map((item, index) => ({
+      order_id: order.id,
+      line_no: index + 1,
+      menu_item_id: item.id,
+      item_name: item.name,
+      unit_price_cents: item.price * 100,
+      quantity: item.quantity,
+    })),
+  );
+
+const historyRows = (orders) =>
+  orders.flatMap((order) =>
+    order.statusHistory.map((entry) => ({
+      order_id: order.id,
+      status: entry.status,
+      changed_at: entry.at,
+      changed_by: entry.by,
+      changed_by_name: entry.byName,
+      note: "seed",
+    })),
+  );
+
+async function insertSeed(client, orders, { replace }) {
+  await client.query("SELECT set_config('app.importing', 'on', true)");
+
+  if (replace) {
+    await client.query("DELETE FROM orders");
+  }
+
+  for (const dish of DISHES) {
+    await client.query(
+      `INSERT INTO menu_items (id, name, price_cents, category)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (id) DO UPDATE SET
+         name = EXCLUDED.name,
+         price_cents = EXCLUDED.price_cents,
+         category = EXCLUDED.category`,
+      [dish.id, dish.name, dish.price * 100, dish.category],
+    );
+  }
+
+  const batchSize = 250;
+  const rows = orderRows(orders);
+  for (let offset = 0; offset < rows.length; offset += batchSize) {
+    await client.query(
+      `INSERT INTO orders (
+         id, user_id, status, fulfillment, customer_name, customer_email,
+         customer_phone, contact_name, contact_phone, contact_email,
+         delivery_sub_city, delivery_street, delivery_landmark,
+         delivery_timing, payment_method, coupon_code, note,
+         subtotal_cents, injera_cents, packaging_cents, vat_cents,
+         discount_cents, created_at, updated_at
+       )
+       SELECT
+         x.id, x.user_id::uuid, x.status::order_status,
+         x.fulfillment::order_fulfillment, x.customer_name, x.customer_email,
+         x.customer_phone, x.contact_name, x.contact_phone, x.contact_email,
+         x.delivery_sub_city, x.delivery_street, x.delivery_landmark,
+         x.delivery_timing, x.payment_method, x.coupon_code, x.note,
+         x.subtotal_cents, x.injera_cents, x.packaging_cents, x.vat_cents,
+         x.discount_cents, x.created_at::timestamptz, x.updated_at::timestamptz
+       FROM json_to_recordset($1::json) AS x(
+         id text, user_id text, status text, fulfillment text,
+         customer_name text, customer_email text, customer_phone text,
+         contact_name text, contact_phone text, contact_email text,
+         delivery_sub_city text, delivery_street text, delivery_landmark text,
+         delivery_timing text, payment_method text, coupon_code text, note text,
+         subtotal_cents integer, injera_cents integer, packaging_cents integer,
+         vat_cents integer, discount_cents integer, created_at text,
+         updated_at text
+       )`,
+      [JSON.stringify(rows.slice(offset, offset + batchSize))],
+    );
+  }
+
+  const items = itemRows(orders);
+  for (let offset = 0; offset < items.length; offset += batchSize) {
+    await client.query(
+      `INSERT INTO order_items (
+         order_id, line_no, menu_item_id, item_name, unit_price_cents, quantity
+       )
+       SELECT
+         x.order_id, x.line_no, x.menu_item_id, x.item_name,
+         x.unit_price_cents, x.quantity
+       FROM json_to_recordset($1::json) AS x(
+         order_id text, line_no integer, menu_item_id text, item_name text,
+         unit_price_cents integer, quantity integer
+       )`,
+      [JSON.stringify(items.slice(offset, offset + batchSize))],
+    );
+  }
+
+  const history = historyRows(orders);
+  for (let offset = 0; offset < history.length; offset += batchSize) {
+    await client.query(
+      `INSERT INTO order_status_history (
+         order_id, status, changed_at, changed_by, changed_by_name, note
+       )
+       SELECT
+         x.order_id, x.status::order_status, x.changed_at::timestamptz,
+         x.changed_by::uuid, x.changed_by_name, x.note
+       FROM json_to_recordset($1::json) AS x(
+         order_id text, status text, changed_at text, changed_by text,
+         changed_by_name text, note text
+       )
+       ON CONFLICT (order_id, status, changed_at) DO NOTHING`,
+      [JSON.stringify(history.slice(offset, offset + batchSize))],
+    );
+  }
+}
+
 async function main() {
-  console.log(`Target: ${usePostgres ? "Postgres (DATABASE_URL)" : dbFile}`);
-  const db = await readDatabase();
+  const client = await pool.connect();
+  try {
+    if (clear) {
+      if (dryRun) {
+        const counts = await client.query(
+          `SELECT
+             (SELECT count(*)::int FROM orders
+              WHERE user_id IN (SELECT id FROM users WHERE email LIKE $1)) AS orders,
+             (SELECT count(*)::int FROM users WHERE email LIKE $1) AS users`,
+          [`%${DEMO_EMAIL_SUFFIX}`],
+        );
+        console.log(
+          `Would clear ${counts.rows[0].orders} demo orders and ${counts.rows[0].users} demo customers.`,
+        );
+        return;
+      }
 
-  if (!Array.isArray(db.users) || !Array.isArray(db.sessions) || !Array.isArray(db.orders)) {
-    throw new Error("The local database is missing one of its tables.");
-  }
+      const result = await withTransaction(pool, async (tx) => {
+        const orders = await tx.query(
+          "DELETE FROM orders WHERE user_id IN (SELECT id FROM users WHERE email LIKE $1)",
+          [`%${DEMO_EMAIL_SUFFIX}`],
+        );
+        const users = await tx.query("DELETE FROM users WHERE email LIKE $1", [
+          `%${DEMO_EMAIL_SUFFIX}`,
+        ]);
+        return { orders: orders.rowCount, users: users.rowCount };
+      });
+      console.log(
+        `Cleared ${result.orders} demo orders and ${result.users} demo customers.`,
+      );
+      return;
+    }
 
-  if (clear) {
-    const removedOrders = db.orders.length;
-    const beforeUsers = db.users.length;
-    db.orders = [];
-    db.users = db.users.filter((user) => !String(user.email).endsWith(DEMO_EMAIL_SUFFIX));
-    const removedUsers = beforeUsers - db.users.length;
-    if (!dryRun) await writeDatabase(db);
-    console.log(
-      `${dryRun ? "Would clear" : "Cleared"} ${removedOrders} orders and ${removedUsers} demo customers.`,
+    let users = await loadUsers(client);
+    if (dryRun) {
+      console.log("Dry run: generating the order set without writing.");
+    }
+
+    let createdCustomers = [];
+    if (!dryRun) {
+      createdCustomers = await withTransaction(pool, (tx) =>
+        ensureDemoCustomers(tx, users),
+      );
+      users = await loadUsers(client);
+    } else {
+      const existingEmails = new Set(users.map((user) => user.email));
+      createdCustomers = Array.from({ length: customerCount }, (_, index) =>
+        demoCustomer(index),
+      ).filter((candidate) => !existingEmails.has(candidate.email));
+    }
+
+    const demoCustomers = users.filter((user) =>
+      String(user.email).endsWith(DEMO_EMAIL_SUFFIX),
     );
-    return;
-  }
-
-  const createdCustomers = ensureDemoCustomers(db);
-  const demoCustomers = db.users.filter((user) => String(user.email).endsWith(DEMO_EMAIL_SUFFIX));
-  const otherCustomers = db.users.filter(
-    (user) => user.role === "customer" && !String(user.email).endsWith(DEMO_EMAIL_SUFFIX),
-  );
-  const customerPool = [...demoCustomers, ...otherCustomers];
-
-  if (customerPool.length === 0) {
-    throw new Error("No customer account found. Seed the app first or pass --customers 1.");
-  }
-
-  const admin = db.users.find((user) => user.role === "admin") ?? db.users[0];
-  const employee = db.users.find((user) => user.role === "employee") ?? admin;
-  const staff = random() < 0.7 ? admin : employee;
-
-  const todayCount = Math.min(count, Math.max(24, Math.round(count * 0.05)));
-  const pastCount = count - todayCount;
-  const pastDays = Math.max(1, days - 1);
-  const coveredDays = Math.min(pastDays, pastCount);
-
-  const dayOffsets = [];
-  for (let offset = 1; offset <= coveredDays; offset += 1) dayOffsets.push(offset);
-  for (let index = coveredDays; index < pastCount; index += 1) {
-    dayOffsets.push(1 + Math.floor(Math.pow(random(), 1.65) * pastDays));
-  }
-
-  const orders = [];
-  const todayStart = addisDate(0, 0, 0);
-  const todayElapsed = Math.max(0, now.getTime() - todayStart.getTime() - 60 * 1000);
-
-  for (let index = 0; index < todayCount; index += 1) {
-    const createdAt = new Date(todayStart.getTime() + Math.floor(random() * Math.max(1, todayElapsed)));
-    const roll = random();
-    const status = roll < 0.62 ? pick(ACTIVE_STATUSES) : roll < 0.88 ? "completed" : "cancelled";
-    orders.push(makeOrder({ createdAt, status, customer: pick(customerPool), staff }));
-  }
-
-  for (const dayOffset of dayOffsets) {
-    const createdAt = addisDate(-dayOffset, randomInt(10, 22), randomInt(0, 59));
-    const status = random() < 0.91 ? "completed" : "cancelled";
-    orders.push(makeOrder({ createdAt, status, customer: pick(customerPool), staff }));
-  }
-
-  if (keepOrders) {
-    db.orders.push(...orders);
-  } else {
-    db.orders = orders;
-  }
-
-  const active = orders.filter(
-    (order) => !["completed", "cancelled"].includes(order.status),
-  ).length;
-
-  if (!dryRun) await writeDatabase(db);
-
-  console.log(`${dryRun ? "Would seed" : "Seeded"} ${orders.length} orders across ${days} days.`);
-  console.log(`Orders in database: ${db.orders.length}`);
-  console.log(`Today: ${todayCount} orders, ${active} active in the kitchen queue.`);
-  console.log(
-    `Customers: ${db.users.filter((user) => user.role === "customer").length} total` +
-      (createdCustomers.length ? `, ${createdCustomers.length} demo accounts created.` : "."),
-  );
-  if (demoCustomers.length) {
-    console.log(
-      `Demo login: ${demoCustomers[0].email} / ${DEMO_PASSWORD} (diner01–diner${String(demoCustomers.length).padStart(2, "0")}).`,
+    const otherCustomers = users.filter(
+      (user) =>
+        user.role === "customer" &&
+        !String(user.email).endsWith(DEMO_EMAIL_SUFFIX),
     );
+    const customerPool = [...demoCustomers, ...otherCustomers];
+
+    if (!customerPool.length) {
+      throw new Error("No customer account found. Seed the app first or pass --customers 1.");
+    }
+
+    const admin = users.find((user) => user.role === "admin") ?? users[0];
+    const employee = users.find((user) => user.role === "employee") ?? admin;
+    if (!admin) throw new Error("No admin user found; run migrations/import first.");
+    const staff = random() < 0.7 ? admin : employee;
+
+    const todayCount = Math.min(count, Math.max(24, Math.round(count * 0.05)));
+    const pastCount = count - todayCount;
+    const pastDays = Math.max(1, days - 1);
+    const coveredDays = Math.min(pastDays, pastCount);
+
+    const dayOffsets = [];
+    for (let offset = 1; offset <= coveredDays; offset += 1) dayOffsets.push(offset);
+    for (let index = coveredDays; index < pastCount; index += 1) {
+      dayOffsets.push(1 + Math.floor(Math.pow(random(), 1.65) * pastDays));
+    }
+
+    const orders = [];
+    const todayStart = addisDate(0, 0, 0);
+    const todayElapsed = Math.max(
+      0,
+      now.getTime() - todayStart.getTime() - 60 * 1000,
+    );
+
+    for (let index = 0; index < todayCount; index += 1) {
+      const createdAt = new Date(
+        todayStart.getTime() + Math.floor(random() * Math.max(1, todayElapsed)),
+      );
+      const roll = random();
+      const status =
+        roll < 0.62
+          ? pick(ACTIVE_STATUSES)
+          : roll < 0.88
+            ? "completed"
+            : "cancelled";
+      orders.push(
+        makeOrder({ createdAt, status, customer: pick(customerPool), staff }),
+      );
+    }
+
+    for (const dayOffset of dayOffsets) {
+      const createdAt = addisDate(-dayOffset, randomInt(10, 22), randomInt(0, 59));
+      const status = random() < 0.91 ? "completed" : "cancelled";
+      orders.push(
+        makeOrder({ createdAt, status, customer: pick(customerPool), staff }),
+      );
+    }
+
+    if (!dryRun) {
+      await withTransaction(pool, (tx) =>
+        insertSeed(tx, orders, { replace: !keepOrders }),
+      );
+    }
+
+    const active = orders.filter(
+      (order) => !["completed", "cancelled"].includes(order.status),
+    ).length;
+
+    console.log(
+      `${dryRun ? "Would seed" : "Seeded"} ${orders.length} orders across ${days} days.`,
+    );
+    console.log(`Today: ${todayCount} orders, ${active} active in the kitchen queue.`);
+    console.log(
+      `Demo accounts: ${demoCustomers.length} total` +
+        (createdCustomers.length
+          ? `, ${createdCustomers.length} created.`
+          : "."),
+    );
+    if (demoCustomers.length) {
+      console.log(
+        `Demo login: ${demoCustomers[0].email} / ${DEMO_PASSWORD} ` +
+          `(diner01–diner${String(demoCustomers.length).padStart(2, "0")}).`,
+      );
+    }
+  } finally {
+    client.release();
   }
 }
 
@@ -519,10 +640,5 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
-    if (!pool) return;
-    try {
-      await pool.end();
-    } catch {
-      // The process is already exiting; nothing useful to do here.
-    }
+    await pool.end().catch(() => {});
   });

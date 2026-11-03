@@ -1,0 +1,214 @@
+Database: 127.0.0.1:55432/mesob_house_before (local)
+EXPLAIN ANALYZE — before
+Database: 127.0.0.1/mesob_house_before
+
+### kitchen live queue
+Limit  (cost=132.03..132.12 rows=32 width=72) (actual time=0.642..0.658 rows=100.00 loops=1)
+  Buffers: shared hit=116
+  ->  Sort  (cost=132.03..132.12 rows=32 width=72) (actual time=0.641..0.649 rows=100.00 loops=1)
+        Sort Key: created_at
+        Sort Method: quicksort  Memory: 32kB
+        Buffers: shared hit=116
+        ->  Seq Scan on orders  (cost=0.00..131.23 rows=32 width=72) (actual time=0.042..0.602 rows=103.00 loops=1)
+              Filter: (status = ANY ('{received,preparing,ready,out_for_delivery}'::order_status[]))
+              Rows Removed by Filter: 2897
+              Buffers: shared hit=116
+Planning:
+  Buffers: shared hit=38
+Planning Time: 0.175 ms
+Execution Time: 0.678 ms
+
+### kitchen queue counts
+GroupAggregate  (cost=131.88..132.64 rows=30 width=40) (actual time=0.627..0.638 rows=4.00 loops=1)
+  Group Key: status
+  Buffers: shared hit=112
+  ->  Sort  (cost=131.88..131.96 rows=32 width=4) (actual time=0.614..0.620 rows=103.00 loops=1)
+        Sort Key: status
+        Sort Method: quicksort  Memory: 25kB
+        Buffers: shared hit=112
+        ->  Seq Scan on orders  (cost=0.00..131.07 rows=32 width=4) (actual time=0.010..0.578 rows=103.00 loops=1)
+              Filter: (status = ANY ('{received,preparing,ready,out_for_delivery}'::order_status[]))
+              Rows Removed by Filter: 2897
+              Buffers: shared hit=107
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.095 ms
+Execution Time: 0.660 ms
+
+### admin recent orders
+Limit  (cost=184.39..184.52 rows=50 width=76) (actual time=1.911..1.920 rows=50.00 loops=1)
+  Buffers: shared hit=111
+  ->  Sort  (cost=184.39..188.40 rows=1605 width=76) (actual time=1.910..1.915 rows=50.00 loops=1)
+        Sort Key: created_at DESC
+        Sort Method: top-N heapsort  Memory: 30kB
+        Buffers: shared hit=111
+        ->  Seq Scan on orders  (cost=0.00..131.07 rows=1605 width=76) (actual time=0.025..1.185 rows=3000.00 loops=1)
+              Buffers: shared hit=111
+Planning Time: 0.038 ms
+Execution Time: 1.932 ms
+
+### admin completed filter
+Limit  (cost=127.22..127.24 rows=8 width=76) (actual time=1.799..1.806 rows=50.00 loops=1)
+  Buffers: shared hit=107
+  ->  Sort  (cost=127.22..127.24 rows=8 width=76) (actual time=1.798..1.801 rows=50.00 loops=1)
+        Sort Key: created_at DESC
+        Sort Method: top-N heapsort  Memory: 28kB
+        Buffers: shared hit=107
+        ->  Seq Scan on orders  (cost=0.00..127.10 rows=8 width=76) (actual time=0.007..1.145 rows=2636.00 loops=1)
+              Filter: (status = 'completed'::order_status)
+              Rows Removed by Filter: 364
+              Buffers: shared hit=107
+Planning Time: 0.042 ms
+Execution Time: 1.819 ms
+
+### analytics revenue by area
+Sort  (cost=127.52..127.54 rows=8 width=44) (actual time=2.265..2.266 rows=6.00 loops=1)
+  Sort Key: (sum(total_cents)) DESC
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=113
+  ->  GroupAggregate  (cost=127.20..127.40 rows=8 width=44) (actual time=1.786..2.255 rows=6.00 loops=1)
+        Group Key: (CASE WHEN (fulfillment = 'pickup'::order_fulfillment) THEN 'Pickup (Bole)'::text ELSE delivery_sub_city END)
+        Buffers: shared hit=110
+        ->  Sort  (cost=127.20..127.22 rows=8 width=36) (actual time=1.704..1.855 rows=2636.00 loops=1)
+              Sort Key: (CASE WHEN (fulfillment = 'pickup'::order_fulfillment) THEN 'Pickup (Bole)'::text ELSE delivery_sub_city END)
+              Sort Method: quicksort  Memory: 191kB
+              Buffers: shared hit=110
+              ->  Seq Scan on orders  (cost=0.00..127.08 rows=8 width=36) (actual time=0.009..0.883 rows=2636.00 loops=1)
+                    Filter: (status = 'completed'::order_status)
+                    Rows Removed by Filter: 364
+                    Buffers: shared hit=107
+Planning:
+  Buffers: shared hit=20
+Planning Time: 0.122 ms
+Execution Time: 2.324 ms
+
+### analytics best-selling items
+Limit  (cost=283.15..283.17 rows=8 width=76) (actual time=9.453..9.457 rows=8.00 loops=1)
+  Buffers: shared hit=201
+  ->  Sort  (cost=283.15..283.21 rows=25 width=76) (actual time=9.451..9.454 rows=8.00 loops=1)
+        Sort Key: ((sum(oi.quantity))::integer) DESC, (sum((oi.unit_price_cents * oi.quantity))) DESC
+        Sort Method: quicksort  Memory: 25kB
+        Buffers: shared hit=201
+        ->  GroupAggregate  (cost=281.96..282.65 rows=25 width=76) (actual time=7.970..9.419 rows=8.00 loops=1)
+              Group Key: oi.menu_item_id, oi.item_name
+              Buffers: shared hit=198
+              ->  Sort  (cost=281.96..282.03 rows=25 width=72) (actual time=7.750..8.153 rows=6491.00 loops=1)
+                    Sort Key: oi.menu_item_id, oi.item_name
+                    Sort Method: quicksort  Memory: 573kB
+                    Buffers: shared hit=198
+                    ->  Hash Join  (cost=127.16..281.38 rows=25 width=72) (actual time=1.351..4.617 rows=6491.00 loops=1)
+                          Hash Cond: (oi.order_id = o.id)
+                          Buffers: shared hit=198
+                          ->  Seq Scan on order_items oi  (cost=0.00..141.05 rows=5005 width=104) (actual time=0.011..1.017 rows=7387.00 loops=1)
+                                Buffers: shared hit=91
+                          ->  Hash  (cost=127.06..127.06 rows=8 width=32) (actual time=1.320..1.320 rows=2636.00 loops=1)
+                                Buckets: 4096 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 146kB
+                                Buffers: shared hit=107
+                                ->  Seq Scan on orders o  (cost=0.00..127.06 rows=8 width=32) (actual time=0.005..0.636 rows=2636.00 loops=1)
+                                      Filter: (status = 'completed'::order_status)
+                                      Rows Removed by Filter: 364
+                                      Buffers: shared hit=107
+Planning:
+  Buffers: shared hit=91
+Planning Time: 0.421 ms
+Execution Time: 9.530 ms
+
+### analytics top customers
+Limit  (cost=127.48..127.50 rows=8 width=28) (actual time=2.462..2.465 rows=10.00 loops=1)
+  Buffers: shared hit=110
+  ->  Sort  (cost=127.48..127.50 rows=8 width=28) (actual time=2.461..2.462 rows=10.00 loops=1)
+        Sort Key: (sum(total_cents)) DESC
+        Sort Method: top-N heapsort  Memory: 26kB
+        Buffers: shared hit=110
+        ->  GroupAggregate  (cost=127.18..127.36 rows=8 width=28) (actual time=1.950..2.446 rows=53.00 loops=1)
+              Group Key: user_id
+              Buffers: shared hit=110
+              ->  Sort  (cost=127.18..127.20 rows=8 width=20) (actual time=1.935..2.087 rows=2636.00 loops=1)
+                    Sort Key: user_id
+                    Sort Method: quicksort  Memory: 199kB
+                    Buffers: shared hit=110
+                    ->  Seq Scan on orders  (cost=0.00..127.06 rows=8 width=20) (actual time=0.009..1.176 rows=2636.00 loops=1)
+                          Filter: (status = 'completed'::order_status)
+                          Rows Removed by Filter: 364
+                          Buffers: shared hit=107
+Planning:
+  Buffers: shared hit=11
+Planning Time: 0.115 ms
+Execution Time: 2.497 ms
+
+### customer order history
+Limit  (cost=127.22..127.24 rows=8 width=76) (actual time=0.414..0.418 rows=20.00 loops=1)
+  Buffers: shared hit=107
+  ->  Sort  (cost=127.22..127.24 rows=8 width=76) (actual time=0.413..0.415 rows=20.00 loops=1)
+        Sort Key: created_at DESC
+        Sort Method: top-N heapsort  Memory: 27kB
+        Buffers: shared hit=107
+        ->  Seq Scan on orders  (cost=0.00..127.10 rows=8 width=76) (actual time=0.011..0.391 rows=57.00 loops=1)
+              Filter: (user_id = '95d83c66-f454-4b54-a532-7326ab7877c8'::uuid)
+              Rows Removed by Filter: 2943
+              Buffers: shared hit=107
+Planning Time: 0.054 ms
+Execution Time: 0.431 ms
+
+### session lookup
+Nested Loop  (cost=0.29..16.38 rows=1 width=16) (actual time=0.028..0.031 rows=1.00 loops=1)
+  Buffers: shared hit=4
+  ->  Index Scan using sessions_active_expiry_idx on sessions s  (cost=0.15..8.17 rows=1 width=16) (actual time=0.008..0.011 rows=1.00 loops=1)
+        Index Cond: (expires_at > now())
+        Filter: (token_hash = 'ca9f885e5f2fad253ff0020525bd749aa884bab45f2a85e74259eff84170209e'::text)
+        Rows Removed by Filter: 5
+        Index Searches: 1
+        Buffers: shared hit=2
+  ->  Index Only Scan using users_pkey on users u  (cost=0.15..8.17 rows=1 width=16) (actual time=0.018..0.018 rows=1.00 loops=1)
+        Index Cond: (id = s.user_id)
+        Heap Fetches: 1
+        Index Searches: 1
+        Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=107
+Planning Time: 0.522 ms
+Execution Time: 0.050 ms
+
+### order detail items and history
+Nested Loop Left Join  (cost=140.46..327.75 rows=1125 width=100) (actual time=1.555..1.569 rows=20.00 loops=1)
+  Buffers: shared hit=116
+  InitPlan 1
+    ->  Limit  (cost=131.07..131.08 rows=1 width=40) (actual time=1.463..1.464 rows=1.00 loops=1)
+          Buffers: shared hit=107
+          ->  Sort  (cost=131.07..135.09 rows=1605 width=40) (actual time=1.462..1.462 rows=1.00 loops=1)
+                Sort Key: orders.created_at DESC
+                Sort Method: top-N heapsort  Memory: 25kB
+                Buffers: shared hit=107
+                ->  Seq Scan on orders  (cost=0.00..123.05 rows=1605 width=40) (actual time=0.008..0.864 rows=3000.00 loops=1)
+                      Buffers: shared hit=107
+  ->  Nested Loop Left Join  (cost=4.75..68.88 rows=25 width=68) (actual time=1.504..1.506 rows=4.00 loops=1)
+        Buffers: shared hit=113
+        ->  Index Only Scan using orders_pkey on orders o  (cost=0.28..8.29 rows=1 width=32) (actual time=1.489..1.490 rows=1.00 loops=1)
+              Index Cond: (id = (InitPlan 1).col1)
+              Heap Fetches: 1
+              Index Searches: 1
+              Buffers: shared hit=110
+        ->  Bitmap Heap Scan on order_items oi  (cost=4.48..60.34 rows=25 width=68) (actual time=0.012..0.013 rows=4.00 loops=1)
+              Recheck Cond: (order_id = (InitPlan 1).col1)
+              Heap Blocks: exact=1
+              Buffers: shared hit=3
+              ->  Bitmap Index Scan on order_items_order_id_line_no_key  (cost=0.00..4.47 rows=25 width=0) (actual time=0.007..0.007 rows=4.00 loops=1)
+                    Index Cond: (order_id = (InitPlan 1).col1)
+                    Index Searches: 1
+                    Buffers: shared hit=2
+  ->  Materialize  (cost=4.63..108.21 rows=45 width=36) (actual time=0.012..0.013 rows=5.00 loops=4)
+        Storage: Memory  Maximum Storage: 17kB
+        Buffers: shared hit=3
+        ->  Bitmap Heap Scan on order_status_history h  (cost=4.63..107.99 rows=45 width=36) (actual time=0.044..0.045 rows=5.00 loops=1)
+              Recheck Cond: (order_id = (InitPlan 1).col1)
+              Heap Blocks: exact=1
+              Buffers: shared hit=3
+              ->  Bitmap Index Scan on order_status_history_order_idx  (cost=0.00..4.62 rows=45 width=0) (actual time=0.039..0.039 rows=5.00 loops=1)
+                    Index Cond: (order_id = (InitPlan 1).col1)
+                    Index Searches: 1
+                    Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=66
+Planning Time: 0.338 ms
+Execution Time: 1.600 ms
+
