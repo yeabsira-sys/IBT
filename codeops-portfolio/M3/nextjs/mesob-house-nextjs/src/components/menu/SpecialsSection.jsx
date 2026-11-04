@@ -8,6 +8,7 @@ import Link from "next/link";
 import Button from "../ui/Button";
 import ChipGroup from "../ui/ChipGroup";
 import { PriceTag, SectionHeading, Tag } from "../ui/Primitives";
+import Stars from "../reviews/Stars";
 
 /**
  * DishCard — photo, labels, price, description and the add-to-cart row.
@@ -59,6 +60,9 @@ export function DishCard({ dish, onAdd }) {
           </h3>
           <PriceTag currency={currency} amount={price} />
         </div>
+        {dish.rating?.count > 0 && (
+          <Stars value={dish.rating.average} count={dish.rating.count} />
+        )}
         <p className="dish__text">{description}</p>
       </div>
 

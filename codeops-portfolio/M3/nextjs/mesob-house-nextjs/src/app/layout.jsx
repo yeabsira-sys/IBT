@@ -11,12 +11,14 @@ import "@/styles/components.css";
 import "@/styles/home.css";
 import "@/styles/menu.css";
 import "@/styles/dish.css";
+import "@/styles/reviews.css";
 import "@/styles/basket.css";
 import "@/styles/auth.css";
 import "@/styles/checkout.css";
 import "@/styles/notfound.css";
 import "@/styles/account.css";
 import "@/styles/portal.css";
+import "@/styles/admin.css";
 import "@/styles/app.css";
 import { url } from "zod/v4";
 

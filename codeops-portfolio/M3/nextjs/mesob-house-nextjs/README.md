@@ -16,6 +16,8 @@ DEPLOYED ON ONRENDER [mesob-house / addis-eats](https://addis-eats-9f08.onrender
 - **Real authentication** — opaque session tokens in an `httpOnly` cookie, scrypt password hashes, 7-day sessions (30 days with “keep signed in”).
 - **Three layers of protection** — role-aware `proxy.js` routing gate, server-side page guards, and action/API guards. Ownership is part of every customer order query.
 - **Three roles** — `customer`, `employee`, `admin`. Kitchen and admin routes are never public, and staff accounts are kept inside their portal: public shop and customer-only pages redirect them to `/admin` or `/kitchen`, while public menu and customer order APIs return `403`. `/account` stays available so staff can sign out.
+- **Backend-owned menu** — categories, dishes, complimentary sides, add-ons, pairings and per-dish option groups are stored in Postgres and edited from `/admin/menu`; there is no external menu API or client-side fallback catalogue.
+- **Verified reviews** — a customer can rate a dish 1–5 stars only after a completed order containing it. Reviews are unique per customer/dish, moderated at `/admin/reviews`, and enforced by both the Server Action and a database trigger.
 - **Live order flow** — `received → preparing → ready → out_for_delivery → completed`, with pickup skipping delivery and customer cancellation only while `received`.
 - **Server-authoritative pricing** — dish ids and prices are resolved against the live menu inside the order action; a forged client price is ignored.
 - **Live data + SWR and SSE** — session navbar, debounced menu search, order-history polling, kitchen queue polling, admin metrics/orders/users polling, and an authenticated SSE stream for the active order detail.
@@ -64,7 +66,7 @@ UPDATE users SET role = 'admin' WHERE lower(email) = lower('you@example.com');
 
 See [`DATA.md`](./DATA.md) and [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md).
 
-The menu is fetched from `API_BASE_URL` on the server with a 5-minute ISR cache. If the remote menu is unavailable, curated fallback dishes are used and the UI shows a “fallback” notice. The site remains usable offline.
+The menu catalogue is read from Postgres through Prisma. `/menu` and the home specials keep a 5-minute ISR cache; dish pages are dynamic because they carry the signed-in customer's review state. Admin edits call `revalidatePath`, so a saved dish or moderated review is visible immediately.
 
 ### Demo accounts
 
@@ -86,7 +88,7 @@ Sign in with either the email (Email tab) or the nine digits after `+251` (Mobil
 | ----------------------- | ------------------ | --------------------------------------------------------------------------------- |
 | `/`                     | Static + ISR 5 min | Home, specials, gallery                                                           |
 | `/menu`                 | Static + ISR 5 min | Server-rendered dish grid; search/category filters are client-side and SWR-backed |
-| `/dish/[slug]`          | SSG + ISR 5 min    | 20 dish pages pre-rendered; unknown slugs return 404                              |
+| `/dish/[slug]`          | Dynamic            | DB dish, options and reviews; unknown or retired slugs return a real 404          |
 | `/cart`                 | Static             | Cart is local-only; `noindex`                                                     |
 | `/terms`, `/privacy`    | Static             | Public legal pages                                                                |
 | `/sign-in`, `/register` | Dynamic            | Signed-in users are redirected away                                               |
@@ -107,6 +109,8 @@ Sign in with either the email (Email tab) or the nine digits after `+251` (Mobil
 | `/kitchen`      | `employee`, `admin`                 |
 | `/admin`        | `admin`                             |
 | `/admin/orders` | `admin`; all orders with CSV export |
+| `/admin/menu`   | `admin`; create, edit and retire dishes, options and pairings |
+| `/admin/reviews`| `admin`; approve, hide, return to pending or delete reviews   |
 | `/admin/users`  | `admin`                             |
 
 Staff sessions are redirected away from the public shop (`/`, `/menu`, `/dish/*`, `/cart`, `/terms`, `/privacy`) and customer-only pages (`/orders`, `/checkout`) to their portal. `/account` stays available to staff so they can review their profile and sign out.
@@ -129,6 +133,10 @@ Staff sessions are redirected away from the public shop (`/`, `/menu`, `/dish/*`
 | PATCH  | `/api/admin/orders/[id]`          | admin; advance or cancel                                               |
 | GET    | `/api/admin/users`                | admin                                                                  |
 | PATCH  | `/api/admin/users/[id]`           | admin; cannot demote self                                              |
+| GET/POST | `/api/admin/menu`               | admin; list, create and validate dishes                                |
+| PATCH/DELETE | `/api/admin/menu/[id]`      | admin; edit or soft-retire a dish                                      |
+| GET    | `/api/admin/reviews`              | admin; moderation queue filtered by status                            |
+| PATCH/DELETE | `/api/admin/reviews/[id]`   | admin; approve, hide, return to pending or delete                     |
 | GET    | `/api/health`                     | public liveness probe                                                  |
 | POST   | `/api/revalidate`                 | `x-revalidate-secret` header                                           |
 
@@ -142,7 +150,7 @@ src/
     (auth)/         sign-in, register, account, orders, kitchen, admin
     api/            route handlers
   components/       UI, including SWR live views, the SSE order detail and the Leaflet map card
-  data/             curated menu/content fallbacks
+  data/             static page copy and marketing content
   hooks/            useSession, useDebouncedValue, useNavbarState
   lib/              db, auth, orders, menu, pricing, schemas, format, csv, deliveryMap
   proxy.js          Next.js 16 proxy (middleware equivalent)
@@ -218,7 +226,6 @@ See `.env.example` for the full list.
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `NEXT_PUBLIC_SITE_URL`            | Canonical origin for metadata, sitemap and OG URLs                                                                       |
 | `APP_ORIGIN`                      | Public origin used by the same-origin check on mutations                                                                 |
-| `API_BASE_URL`                    | Menu backend, read on the server only                                                                                    |
 | `REVALIDATE_SECRET`               | Shared secret for on-demand ISR                                                                                          |
 | `DATABASE_URL`                    | Postgres connection string. Also accepts `POSTGRES_URL` / `POSTGRES_PRISMA_URL`; required for all persistence |
 | `PG_POOL_MAX`                     | Maximum app connection pool size (default `10`)                                                              |

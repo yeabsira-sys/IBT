@@ -14,7 +14,7 @@ export async function GET(request) {
     const inCategory = category === "all" || dish.category === category;
     if (!inCategory) return false;
     if (!query) return true;
-    return [dish.name, dish.nativeName, dish.description, dish.category]
+    return [dish.name, dish.nativeName, dish.description, dish.categoryLabel, dish.category, dish.tagline, ...(dish.ingredients ?? [])]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(query));
   });

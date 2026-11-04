@@ -121,32 +121,6 @@ export const pairing = {
   eyebrow: "Gursha Pairings",
   title: "Pairs Wonderfully With Royal Doro Wat",
   lede: "Harmonize rich, spicy berbere with the cooling sweetness of golden honey wine, refreshing salads, and ceremonial jebena buna.",
-  items: [
-    {
-      id: "house-tej-carafe",
-      name: "House Traditional Tej",
-      price: "350",
-      description: "Pure golden fermented highland honey wine infused with gesho leaves. Served in a traditional round-bottom flask.",
-      image: photo("1514362545857-3bc16c4c7d1b", 500),
-      label: { text: "Signature Sip", tone: "gold" },
-    },
-    {
-      id: "fresh-timatim-fitfit",
-      name: "Fresh Timatim Fitfit",
-      price: "180",
-      description: "Crisp ripe heirloom tomatoes, minced red shallots, and sliced green peppers tossed with torn cold injera.",
-      image: photo("1591814468924-caf88d1232e1", 500),
-      label: { text: "Vegan / Tsom", tone: "green" },
-    },
-    {
-      id: "jebena-spiced-coffee",
-      name: "Jebena Spiced Coffee",
-      price: "70",
-      description: "Addis-style freshly pan-roasted Yirgacheffe arabica beans boiled in clay jebena with a hint of tenadam rue.",
-      image: photo("1447933601403-0c6688de566e", 500),
-      label: { text: "Fresh Roast", tone: "dark" },
-    },
-  ],
 };
 
 export const closingBand = {

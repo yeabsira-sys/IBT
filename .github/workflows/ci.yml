@@ -46,10 +46,9 @@ jobs:
       PGSSLMODE: disable
       APP_ORIGIN: http://localhost:3101
       NEXT_PUBLIC_SITE_URL: http://localhost:3101
-      NEXT_TELEMETRY_DISABLED:
-        "1"
+      NEXT_TELEMETRY_DISABLED: "1"
 
-        # CI-only accounts created by the bootstrap step below.
+      # CI-only accounts created by the bootstrap step below.
       LOAD_TEST_EMAIL: guest@mesob.test
       SEED_GUEST_EMAIL: guest@mesob.test
       SEED_GUEST_PASSWORD: Guest123!
@@ -69,7 +68,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
@@ -148,7 +147,7 @@ jobs:
         run: npm run db:load-test -- --base http://127.0.0.1:3101 --count 50 --cleanup
 
       - name: Run security matrix
-        run: node scripts/security-matrix.mjs --base http://127.0.0.1:3101
+        run: node scripts/security-matrix.mjs --base http://127.0.0.1:3101 --allow-write
 
       - name: Show app log on failure
         if: failure()

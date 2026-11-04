@@ -7,8 +7,39 @@ import { checkoutSchema } from "@/lib/schemas";
 import { getCartTotals } from "@/lib/pricing";
 import { cancelOrderForUser, createOrder } from "@/lib/orders";
 
-const priceNumber = (value) =>
-  Number(String(value ?? 0).replace(/,/g, "")) || 0;
+function chosenOptions(dish, selections) {
+  const chosen = {};
+  const labels = [];
+  let deltaCents = 0;
+
+  for (const group of dish.optionGroups ?? []) {
+    const raw = selections?.[group.key];
+    let values = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    values = [...new Set(values.map(String).filter(Boolean))];
+
+    if (!values.length) {
+      const fallback = dish.optionDefaults?.[group.key];
+      values = Array.isArray(fallback) ? fallback : fallback ? [fallback] : [];
+    }
+    if (!group.multi) values = values.slice(0, 1);
+    else values = values.slice(0, group.max);
+
+    for (const value of values) {
+      const option = group.options.find((item) => item.value === value);
+      if (!option) {
+        return {
+          error: `The ${group.title} choice is no longer available. Please reopen the dish and choose again.`,
+        };
+      }
+      deltaCents += option.priceDeltaCents ?? 0;
+      labels.push(`${group.title}: ${option.title}`);
+    }
+
+    chosen[group.key] = group.multi ? values : values[0] ?? "";
+  }
+
+  return { chosen, labels, deltaCents };
+}
 
 export async function submitOrder(payload) {
   const user = await getSession();
@@ -43,11 +74,26 @@ export async function submitOrder(payload) {
         message: `"${line.name}" is no longer on today's menu. Remove it and try again.`,
       };
     }
+
+    const selection = chosenOptions(dish, line.options);
+    if (selection.error) {
+      return {
+        ok: false,
+        code: "OPTION_UNAVAILABLE",
+        message: selection.error,
+      };
+    }
+
+    const unitPriceCents = dish.priceCents + selection.deltaCents;
     items.push({
       id: String(dish.id),
-      name: dish.name,
-      price: priceNumber(dish.price),
+      name: selection.labels.length
+        ? `${dish.name} (${selection.labels.join(", ")})`
+        : dish.name,
+      price: unitPriceCents / 100,
       quantity: line.quantity,
+      options: selection.chosen,
+      optionLabels: selection.labels,
     });
   }
 

@@ -648,6 +648,8 @@ async function main() {
     { path: "/api/admin/orders", expect: { guest: 401, customerA: 403, customerB: 403, employee: 403, admin: 200 } },
     { path: "/api/admin/stats", expect: { guest: 401, customerA: 403, customerB: 403, employee: 403, admin: 200 } },
     { path: "/api/admin/users", expect: { guest: 401, customerA: 403, customerB: 403, employee: 403, admin: 200 } },
+    { path: "/api/admin/menu", expect: { guest: 401, customerA: 403, customerB: 403, employee: 403, admin: 200 } },
+    { path: "/api/admin/reviews", expect: { guest: 401, customerA: 403, customerB: 403, employee: 403, admin: 200 } },
   ];
 
   for (const apiCase of apiCases) {
@@ -797,6 +799,8 @@ async function main() {
   await csrfCheck("cross-origin kitchen PATCH is refused", "PATCH", `/api/kitchen/orders/${dummyOrder}`, sessions.employee, { status: "preparing" });
   await csrfCheck("cross-origin admin order PATCH is refused", "PATCH", `/api/admin/orders/${dummyOrder}`, sessions.admin, { status: "preparing" });
   await csrfCheck("cross-origin admin user PATCH is refused", "PATCH", `/api/admin/users/${dummyUser}`, sessions.admin, { role: "customer" });
+  await csrfCheck("cross-origin admin menu POST is refused", "POST", "/api/admin/menu", sessions.admin, { id: "csrf-test", name: "CSRF" });
+  await csrfCheck("cross-origin review moderation is refused", "PATCH", `/api/admin/reviews/${dummyUser}`, sessions.admin, { status: "approved" });
   await csrfCheck("Origin: null is refused", "POST", `/api/orders/${dummyOrder}/cancel`, sessions.customerA, undefined, {}, "null");
   await csrfCheck("origin lookalike is refused", "POST", `/api/orders/${dummyOrder}/cancel`, sessions.customerA, undefined, {}, `${base}.evil.example`);
 
@@ -926,7 +930,9 @@ async function main() {
   const cacheChecks = [
     { path: "/", cookie: null, kind: "public-page", maxAge: 300 },
     { path: "/menu", cookie: null, kind: "public-page", maxAge: 300 },
-    { path: "/dish/doro-wat", cookie: null, kind: "public-page", maxAge: 300 },
+    // The dish page carries personalised review state, so it is deliberately
+    // dynamic even for guests and must never be served from a shared cache.
+    { path: "/dish/doro-wat", cookie: null, kind: "private-page" },
     { path: "/api/menu", cookie: null, kind: "public-api", maxAge: 300 },
     { path: "/api/menu/specials", cookie: null, kind: "public-api", maxAge: 300 },
     { path: "/api/menu/search?q=doro", cookie: null, kind: "public-api", maxAge: 60 },

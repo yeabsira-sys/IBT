@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Button from "../ui/Button";
 import { PriceTag, Tag } from "../ui/Primitives";
+import Stars from "../reviews/Stars";
 
 /** MenuDishCard — photo with corner label, name, description, price + Add. */
 export default function MenuDishCard({ dish, onAdd }) {
@@ -25,6 +26,9 @@ export default function MenuDishCard({ dish, onAdd }) {
             {name}
           </Link>
         </h3>
+        {dish.rating?.count > 0 && (
+          <Stars value={dish.rating.average} count={dish.rating.count} />
+        )}
         <p>{description}</p>
       </div>
       <div className="menu-card__foot">

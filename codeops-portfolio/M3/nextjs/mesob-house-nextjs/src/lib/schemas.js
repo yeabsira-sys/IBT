@@ -74,6 +74,14 @@ export const checkoutSchema = z
           name: z.string().min(1),
           price: z.union([z.string(), z.number()]),
           quantity: z.number().int().min(1).max(50),
+          options: z
+            .record(
+              z.union([
+                z.string().max(80),
+                z.array(z.string().max(80)).max(10),
+              ]),
+            )
+            .optional(),
         }),
       )
       .min(1, "Your basket is empty. Add dishes before confirming an order."),

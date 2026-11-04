@@ -47,7 +47,7 @@ deliberately **part storefront and part operations dashboard**:
 | Public shop | `/`, `/menu`, `/dish/[slug]`, `/cart`, `/terms`, `/privacy` | Anyone | Browse dishes, search, build a basket, start checkout |
 | Customer portal | `/checkout`, `/account`, `/orders`, `/orders/[id]` | `customer` | Place an order, see its live status, cancel before preparation, export CSV |
 | Kitchen portal | `/kitchen` | `employee`, `admin` | See the live queue, advance tickets |
-| Admin portal | `/admin`, `/admin/orders`, `/admin/users` | `admin` | Metrics, all orders, user roles |
+| Admin portal | `/admin`, `/admin/orders`, `/admin/menu`, `/admin/reviews`, `/admin/users` | `admin` | Metrics, orders, menu, reviews, user roles |
 
 There are three roles:
 
@@ -60,7 +60,7 @@ There are three roles:
 ```text
 Guest browses
   /menu (static/ISR)
-    -> src/lib/menu.js fetches the remote menu on the server
+    -> src/lib/menu.js reads the Postgres catalogue on the server
     -> MenuBrowser (client) adds search, filters and cart interaction
 
 Customer checks out
@@ -159,14 +159,15 @@ Two consequences matter more than anything else in this guide:
 
 | Mode | How this app gets it | Example |
 | --- | --- | --- |
-| Static / prerendered | A page with no request-specific data, often with `generateStaticParams` | `/`, `/menu`, `/dish/[slug]` |
-| ISR (incremental static regeneration) | `export const revalidate = 300` and/or cached `fetch` | Home, menu, dish pages, `/api/menu` |
-| Dynamic | `cookies()`, request data, or explicit `dynamic = "force-dynamic"` | `/account`, `/orders`, `/admin`, `/api/orders` |
+| Static / prerendered | A page with no request-specific data | `/cart`, `/privacy`, `/terms` |
+| ISR (incremental static regeneration) | `export const revalidate = 300` and admin `revalidatePath` | Home, menu, `/api/menu` |
+| Dynamic | `cookies()`, request data, or explicit `dynamic = "force-dynamic"` | Dish pages, `/account`, `/orders`, `/admin`, `/api/orders` |
 
 > **Why not make everything dynamic?** The public catalogue is the same for
-> every visitor. Serving it from a cache is faster, cheaper and more resilient
-> than hitting the menu backend on every request. Private pages, by contrast,
-> must never be shared between users, so they stay dynamic.
+> every visitor. Serving it from a cache is faster and cheaper than querying
+> Postgres on every request. Dish pages and private pages, by contrast, include
+> per-user review/session state and must never be shared between visitors, so
+> they stay dynamic.
 
 ### 3.3 Server-first, client where interaction lives
 
@@ -192,7 +193,6 @@ is a Client Component.
 src/
   app/
     layout.jsx                     root layout: fonts, metadata, providers, CSS
-    loading.jsx                    global loading fallback
     error.jsx                      route-level error boundary
     global-error.jsx               last-resort root error boundary
     not-found.jsx                  custom 404
@@ -207,7 +207,6 @@ src/
       menu/page.jsx                /menu
       menu/loading.jsx             menu skeleton
       dish/[slug]/page.jsx         /dish/:slug
-      dish/[slug]/loading.jsx      dish skeleton
       cart/page.jsx                /cart
       checkout/page.jsx            /checkout (customer-only)
       terms/page.jsx               /terms
@@ -225,6 +224,8 @@ src/
       admin/page.jsx               /admin
       admin/loading.jsx            admin skeleton
       admin/orders/page.jsx        /admin/orders
+      admin/menu/page.jsx          /admin/menu
+      admin/reviews/page.jsx       /admin/reviews
       admin/users/page.jsx         /admin/users
 
     api/
@@ -547,91 +548,94 @@ does with `submitOrder`) or uses a Route Handler.
 
 ## 8. Data fetching
 
-### 8.1 Public catalogue: server-side fetch + fallback
+### 8.1 Public catalogue: Prisma -> PostgreSQL
 
-`src/lib/menu.js` is the public data layer:
+`src/lib/menu.js` is the public data layer. The browser never talks to a menu
+API or to the database; the server reads the backend-owned catalogue and passes
+plain objects to the UI:
 
 ```js
 import "server-only";
 import { cache } from "react";
-
-async function load(url, tags) {
-  const response = await fetch(url, {
-    next: { revalidate: REVALIDATE_SECONDS, tags },
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`${url} responded ${response.status}`);
-  const body = await response.json();
-  if (!Array.isArray(body?.data)) throw new Error(`${url} returned an unexpected payload`);
-  return body.data.map(mapApiDishToCard);
-}
+import { getPrisma } from "./prisma";
 
 export const getMenu = cache(async () => {
-  try {
-    return { dishes: await load(API_ENDPOINTS.menu, ["menu"]), source: "live" };
-  } catch (error) {
-    return { dishes: demoMenu, source: "fallback" };
-  }
+  const prisma = getPrisma();
+  const [categoryRows, rows, ratings] = await Promise.all([
+    prisma.menuCategory.findMany({ where: { isActive: true }, orderBy: ... }),
+    prisma.menuItem.findMany({
+      where: { isActive: true },
+      include: dishInclude, // option groups, options and active pairings
+    }),
+    ratingMap(prisma), // approved reviews only
+  ]);
+  const categoryMap = new Map(categoryRows.map((row) => [row.slug, row]));
+  const dishes = rows.map((row) => mapDish(row, categoryMap, ratings));
+  return { dishes, categories: categoryList(categoryRows, dishes), source: "database" };
 });
 ```
 
 What is happening:
 
-1. The browser never calls the menu backend directly. The server does.
-2. `next: { revalidate: 300, tags: ["menu"] }` opts this fetch into Next's
-   data cache for 5 minutes and labels it for on-demand invalidation.
-3. `AbortSignal.timeout(10_000)` prevents a slow backend from hanging a page.
-4. If the backend fails, the app uses curated demo dishes and returns
-   `source: "fallback"`. The UI can show `FallbackNotice`.
-5. `cache()` from React deduplicates the call **within one render pass**. If
-   three components ask for the menu while rendering the same request, the
-   backend is hit once.
+1. The catalogue, categories, options, pairings and rating aggregates are read
+   directly from Postgres through Prisma; there is no external menu host.
+2. `cache()` deduplicates the read **within one render pass**. If the home page,
+   header and metadata ask for menu data during the same request, Prisma is
+   called once.
+3. Public reads only return active dishes, active option groups/options and
+   pairings whose target is still active.
+4. There is deliberately **no demo fallback**. If the database is unavailable,
+   the page fails loudly and `/api/health` reports the problem instead of
+   quietly serving stale dishes.
+5. Menu pages and the public menu APIs use ISR (`revalidate = 300`); admin
+   mutations call `revalidatePath()` so changes appear immediately.
 
-> **Why fallback data?** A portfolio/demo app should not show an empty page
-> because a third-party API is asleep. The fallback is explicit, visibly
-> labelled, and does not hide the failure.
-
-### 8.2 Composition: `getAllDishes`
+### 8.2 Composition: canonical list, dish pages and admin reads
 
 ```js
 export const getAllDishes = cache(async () => {
-  const [menu, specials] = await Promise.all([getMenu(), getSpecials()]);
-  const bySlug = new Map();
-  for (const dish of [...specials.dishes, ...menu.dishes]) {
-    if (!bySlug.has(dish.id)) bySlug.set(dish.id, dish);
-  }
-  return {
-    dishes: [...bySlug.values()],
-    source: menu.source === "live" && specials.source === "live" ? "live" : "fallback",
-  };
+  const menu = await getMenu();
+  return { dishes: menu.dishes, categories: menu.categories, source: "database" };
 });
 ```
 
-- `Promise.all` runs the two independent fetches in parallel.
-- The `Map` de-duplicates by dish id, with specials taking precedence.
-- The final `source` is only `"live"` if both sources were live.
+- `getSpecials()` filters the same active catalogue by `isSpecial`.
+- `getAllDishes()` is the canonical checkout list: `submitOrder` validates every
+  submitted dish and option against this data, so client prices/names cannot
+  authorise a cheaper order.
+- `getDish(slug)` reuses `getMenu()` and attaches the six newest approved
+  reviews plus the aggregate rating.
+- `getMenuForAdmin()` includes inactive dishes, option groups and pairing ids
+  for `/admin/menu`.
 
-### 8.3 Static generation of dish pages
+### 8.3 Dynamic dish pages
 
 ```jsx
 // src/app/(shop)/dish/[slug]/page.jsx
-export const revalidate = 300;
-export const dynamicParams = true;
+export const dynamic = "force-dynamic";
 
-export async function generateStaticParams() {
-  const { dishes } = await getAllDishes();
-  return dishes.map((dish) => ({ slug: dish.id }));
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const dish = await getDish(slug);
+  if (!dish) notFound();
+  return { title: dish.name, description: `${dish.description} ETB ${dish.price}.` };
 }
 ```
 
-- `generateStaticParams` asks Next to pre-render one page per dish at build
-  time.
-- `dynamicParams = true` means a dish added after the build can still render
-  on first request, then be cached.
-- Unknown slugs fall through to `notFound()`.
+- Dish pages are dynamic because the review form and "your review" state are
+  personalised. A shared static page must not leak one customer's review state
+  to another.
+- The active dish is still read through the per-request `getMenu()` cache, so
+  metadata and the page body share one database read.
+- Unknown or retired slugs return a real `404` from both metadata and the page
+  body; neither `/app/loading.jsx` nor a dish `loading.jsx` pre-commits a 200
+  response.
+- The page emits JSON-LD `MenuItem` data with the verified aggregate rating
+  when reviews exist.
 
-> **Why pre-render?** Dish pages are the SEO surface. Static HTML with ISR is
-> fast and crawlable, while `dynamicParams` keeps the catalogue editable.
+> **Why not pre-render dish pages?** The public catalogue is cacheable, but the
+> review section is not. Making the route dynamic keeps per-user state safe
+> while the underlying menu read is still deduplicated within each request.
 
 ### 8.4 Private data: direct server calls
 
@@ -662,7 +666,7 @@ the user is looking at it:
 - `/api/auth/session` — navbar session.
 - `/api/orders` — customer order list.
 - `/api/admin/stats` — admin metrics.
-- `/api/admin/orders`, `/api/admin/users` — admin lists.
+- `/api/admin/orders`, `/api/admin/menu`, `/api/admin/reviews`, `/api/admin/users` — admin lists and mutations.
 - `/api/kitchen/orders` — kitchen queue.
 - `/api/menu/search` — debounced menu search.
 
@@ -672,8 +676,8 @@ Read more in [Section 14](#14-live-data-swr-and-server-sent-events).
 
 | Data | Fetched where | Cache / freshness |
 | --- | --- | --- |
-| Menu + specials | Server (`src/lib/menu.js`) | ISR 300s, tagged `menu`, React `cache` |
-| Dish page | Server, from menu | SSG + ISR 300s |
+| Menu + specials | Server (`src/lib/menu.js`) via Prisma | ISR 300s + admin `revalidatePath`, React `cache` |
+| Dish page | Server, from menu + approved reviews | Dynamic per request; real 404 for retired slugs |
 | Session | Server (`cookies()` + DB) | Per request, never shared |
 | Orders | Server + client SWR | Private, `no-store`, poll while active |
 | Admin stats | Server + client SWR | Private, `no-store`, poll 30s |
@@ -705,36 +709,32 @@ export const dynamic = "force-dynamic";
 
 | Export | Meaning | Used by |
 | --- | --- | --- |
-| `revalidate = 300` | Rebuild this segment at most every 5 minutes | Home, menu, dish, menu APIs |
-| `dynamic = "force-dynamic"` | Never prerender/cache; render per request | Private APIs, session, SSE |
-| `dynamicParams = true` | Allow paths not returned by `generateStaticParams` | Dish pages |
+| `revalidate = 300` | Rebuild this segment at most every 5 minutes | Home, menu, public menu APIs |
+| `dynamic = "force-dynamic"` | Never prerender/cache; render per request | Dish pages, private APIs, session, SSE |
+| `dynamicParams = true` | Allow paths not returned by `generateStaticParams` | Any pre-rendered dynamic segment that opts in |
 | `runtime = "nodejs"` | Use the Node.js runtime | SSE route (needs Node APIs) |
 
-### 9.2 The `fetch` cache and tags
+### 9.2 Prisma reads and ISR
 
-The menu fetch carries two pieces of metadata:
+The catalogue is not fetched over HTTP, so there is no `fetch` cache or
+`next.tags` entry to manage. The shared menu/home route segments use
+`export const revalidate = 300`, while `cache()` from React deduplicates Prisma
+reads inside one request:
 
 ```js
-fetch(url, {
-  next: {
-    revalidate: 300,   // time-based freshness
-    tags: ["menu"],    // on-demand invalidation handle
-  },
-});
+export const revalidate = 300; // src/app/(shop)/menu/page.jsx
 ```
 
-`getSpecials` tags its fetch with both `["menu", "specials"]`, so invalidating
-`menu` also refreshes specials.
+Dish pages opt out with `dynamic = "force-dynamic"` because the review form is
+personalised; the underlying Prisma read is still deduplicated per request.
 
 ### 9.3 On-demand revalidation
 
-There are three revalidation tools in this codebase:
+Admin mutations and order actions invalidate route paths explicitly:
 
 | API | Where used | Behavior | Why |
 | --- | --- | --- | --- |
-| `revalidatePath(path)` | `src/actions/order.js` | Invalidates a route path | A new/cancelled order changes `/orders`, `/kitchen`, `/admin` |
-| `revalidateTag(tag, "max")` | `src/app/api/revalidate/route.js` | Stale-while-revalidate by tag | A trusted webhook can refresh the menu without blocking |
-| `updateTag(tag)` | `src/actions/menu.js` | Immediate expiry, Server Actions only | "Retry menu" should show fresh data right away |
+| `revalidatePath(path)` | order actions, admin menu/review APIs, `/api/revalidate` | Invalidates a route path | A new order or catalogue/review change must be visible immediately |
 
 ```js
 // src/actions/order.js
@@ -746,26 +746,23 @@ revalidatePath("/admin/orders");
 ```
 
 ```js
-// src/app/api/revalidate/route.js
-revalidateTag("menu", "max");
+// src/app/api/admin/menu/route.js
+revalidatePath("/");
+revalidatePath("/menu");
+revalidatePath("/admin/menu");
+revalidatePath(`/dish/${item.id}`);
 ```
 
 ```js
-// src/actions/menu.js
-"use server";
-import { updateTag } from "next/cache";
-
-export async function refreshMenu() {
-  updateTag("menu");
-  return { ok: true };
+// src/app/api/revalidate/route.js
+for (const path of ["/", "/menu", "/api/menu", "/api/menu/specials"]) {
+  revalidatePath(path);
 }
 ```
 
-> **Why both `revalidateTag` and `updateTag`?** `updateTag` is for
-> read-your-own-writes inside a Server Action: the user clicks Retry and
-> should see fresh data immediately. `revalidateTag` is for a background
-> refresh where serving slightly stale content while the new version loads is
-> acceptable.
+> **Why not `revalidateTag`?** Tags only work with tagged `fetch` cache
+> entries. The catalogue is backend-owned in Postgres, so path revalidation is
+> the correct invalidation mechanism.
 
 ### 9.4 Why private pages are dynamic
 
@@ -789,8 +786,9 @@ return NextResponse.json(
 
 ```text
 Public menu data
-  -> Next data cache (fetch + tag "menu", 300s)
-  -> full route cache for static/ISR pages
+  -> Prisma -> Postgres (active rows, option groups, pairings, approved ratings)
+  -> React cache() per request
+  -> full route cache for / and /menu (revalidate 300)
   -> CDN/browser cache for /api/menu (s-maxage=300, stale-while-revalidate=600)
 
 Private session/orders/admin data
@@ -816,7 +814,7 @@ call like a normal async function. Next.js creates the HTTP endpoint for you.
 | --- | --- | --- |
 | `src/actions/auth.js` | `signInAction`, `registerAction`, `socialSignInAction`, `signOutAction` | Create/destroy sessions |
 | `src/actions/order.js` | `submitOrder`, `cancelOrder` | Place/cancel an order |
-| `src/actions/menu.js` | `refreshMenu` | Expire the menu tag immediately |
+| `src/actions/reviews.js` | `submitReview` | Upsert a verified review |
 
 Example:
 
@@ -891,8 +889,8 @@ export async function submitOrder(payload) {
 4. The server action:
    - checks the session,
    - validates again with the same schema,
-   - re-fetches the real menu,
-   - rebuilds the line items from server data,
+   - re-reads the canonical menu and option groups from Prisma,
+   - rebuilds the line items and unit prices from server data,
    - recomputes totals with `getCartTotals`,
    - writes the order,
    - invalidates the affected paths.
@@ -1837,20 +1835,22 @@ CSS variables. The browser does not make a request to Google, and
 />
 ```
 
-`next.config.mjs` allow-lists remote hosts:
+`next.config.mjs` permits HTTPS catalogue images:
 
 ```js
 images: {
   unoptimized: process.env.IMAGES_UNOPTIMIZED === "true",
   remotePatterns: [
-    { protocol: "https", hostname: "images.unsplash.com" },
-    { protocol: "https", hostname: "addis-eats-backend.onrender.com" },
+    { protocol: "https", hostname: "**" },
   ],
 },
 ```
 
-- `remotePatterns` is a security allow-list; arbitrary remote URLs cannot be
-  optimized through the app.
+- Catalogue images are backend-owned and only admins can write the URL; the
+  admin validator requires `https://`. If the restaurant moves to a single
+  asset CDN, narrow `hostname` to that CDN.
+- Never let untrusted users write image URLs: the optimizer fetches them from
+  the server, so an allow-list of trusted writers is the security boundary.
 - `priority` is used for above-the-fold hero/gallery images.
 - `sizes` tells the browser which image width it needs.
 - `IMAGES_UNOPTIMIZED=true` is an escape hatch for offline/static hosting.
@@ -1943,8 +1943,11 @@ export default function AdminLoading() {
 }
 ```
 
-The root `src/app/loading.jsx` renders a centered spinner for any route without
-its own loading file.
+There is deliberately no root `src/app/loading.jsx` and no dish loading file.
+A root loading boundary can commit a 200 response before a deep `notFound()` is
+known, which would turn a missing or retired dish into a soft 404. Dish pages
+resolve metadata and the dish lookup before rendering; the shared
+`not-found.jsx` supplies the 404 UI.
 
 ### 17.2 `Suspense`
 
@@ -2034,9 +2037,10 @@ The project is small, but the performance choices are deliberate:
 
 | Choice | Where | Benefit |
 | --- | --- | --- |
-| Static/ISR public pages | `/`, `/menu`, `/dish/[slug]` | Fast HTML, less backend load |
-| `React.cache` around menu functions | `src/lib/menu.js` | Deduplicates fetches within one render |
-| `Promise.all` for menu + specials | `getAllDishes` | Parallel, not sequential, fetching |
+| Static/ISR public pages | `/`, `/menu` | Fast shared HTML, less database load |
+| Dynamic dish pages | `/dish/[slug]` | Correct per-customer review state; no shared-cache leakage |
+| `React.cache` around menu functions | `src/lib/menu.js` | Deduplicates Prisma reads within one render |
+| `Promise.all` for menu reads | `getMenu` | Categories, rows and rating aggregates load in parallel |
 | `next/font` | root layout | No Google request, no layout shift |
 | `next/image` | cards/hero/gallery | Responsive sizes, lazy loading, format optimization |
 | `next/dynamic` for Leaflet | `DeliveryMapPanel` | Keeps browser-only code out of the server bundle and initial chunk |
@@ -2121,7 +2125,6 @@ Change these before any real deployment.
 | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | Public origin for metadata, sitemap, Open Graph, canonical URLs |
 | `APP_ORIGIN` | Additional allowed origin for same-origin mutation checks |
-| `API_BASE_URL` | Menu backend base URL (server-side only) |
 | `REVALIDATE_SECRET` | Shared secret for `POST /api/revalidate` |
 | `DATABASE_URL` (or `POSTGRES_URL`, `POSTGRES_PRISMA_URL`) | Required Postgres connection string |
 | `PG_POOL_MAX` | App connection pool size (default `10`) |
@@ -2221,15 +2224,14 @@ local source uses `MenuItemSalesChart`.
 
 ## 21. Debugging guide
 
-### "The menu page shows example dishes"
+### "The menu page will not load"
 
-That is the fallback path. Check:
+The menu is backend-owned; there is no client fallback catalogue. Check:
 
-- `API_BASE_URL` is reachable from the server.
-- The backend responds within 10 seconds.
-- The response has a `data` array.
+- Postgres is reachable and all migrations are applied.
+- `menu_items` has active rows and the category FKs resolve.
 - The browser console/network is not the place to debug this; check the
-  Next.js server logs for `[menu] using fallback dishes`.
+  Next.js server logs and `/api/health` for database errors.
 
 ### "The admin pie chart is empty"
 
@@ -2286,9 +2288,10 @@ to `roleHome(role)` (`/kitchen` or `/admin`). Staff can still open
 
 ### "I changed an order but `/admin` is stale"
 
-Server Actions call `revalidatePath` for `/orders`, `/kitchen`, `/admin` and
-`/admin/orders`. If you add a new affected route, add it there too. If the
-data is cached by a tag, use `revalidateTag`/`updateTag`.
+Server Actions and admin APIs call `revalidatePath` for the affected routes
+(`/orders`, `/kitchen`, `/admin`, `/menu`, dish pages and the public menu APIs).
+If you add a new affected route, add it there too. The catalogue is read through
+Prisma, not tagged `fetch`, so path revalidation is the correct mechanism.
 
 ### "The build passes but the page is blank"
 
@@ -2353,7 +2356,7 @@ still renders.
 | `app/layout.jsx` | root layout | Persistent HTML shell, fonts, metadata, providers |
 | `app/**/layout.jsx` | `(shop)`, `(auth)` | Route-group shells |
 | `app/**/page.jsx` | many | Route UI; Server Component by default |
-| `app/**/loading.jsx` | root, menu, dish, admin, kitchen | Suspense fallback |
+| `app/**/loading.jsx` | menu, admin, kitchen | Suspense fallback; deliberately absent on dish routes so `notFound()` returns a real 404 |
 | `app/**/error.jsx` | root | Route error boundary |
 | `app/global-error.jsx` | root | Root-layout error boundary |
 | `app/not-found.jsx` | root | Custom 404 + `notFound()` target |
@@ -2369,10 +2372,8 @@ still renders.
 | `cookies()` | `src/lib/auth.js` | Async cookie access |
 | `redirect()` | `src/lib/auth.js`, sign-in, register | Navigation from server code |
 | `notFound()` | dish, order detail | 404 from server code |
-| `revalidatePath` | order actions | Invalidate route output |
-| `revalidateTag` | `/api/revalidate` | Tag-based background refresh |
-| `updateTag` | `actions/menu.js` | Immediate tag expiry in an action |
-| `generateStaticParams` | dish page | Build one page per dish |
+| `revalidatePath` | order actions, admin menu/review APIs | Invalidate route output |
+| `generateStaticParams` | other dynamic segments | Opt in to pre-rendering known paths |
 | `generateMetadata` | dish page | Per-dish SEO |
 | `metadata` | layouts/pages | Static SEO |
 | `viewport` | root layout | Theme color and scale |
@@ -2385,7 +2386,7 @@ still renders.
 | `usePathname` | Navbar, Footer, MenuBrowser | Current route |
 | `useSearchParams` | MenuBrowser | URL query state |
 | `useRouter` | forms, checkout | Push/refresh |
-| `useTransition` | `FallbackNotice` | Non-blocking action refresh |
+| `useTransition` | `DishReviews` | Non-blocking review submission |
 | `useDeferredValue` | `useOrderBrowser` | Deferred filtering |
 | `Suspense` | home, menu | Streaming/boundary |
 
@@ -2394,9 +2395,9 @@ still renders.
 1. **Add a new public page.** Create `src/app/(shop)/about/page.jsx`, give it
    static metadata and add it to `sitemap.js`. Notice that it inherits the shop
    layout without any extra wiring.
-2. **Add a new dish field.** Extend `mapApiDishToCard` and the dish card, then
-   check whether `generateStaticParams` still builds. Ask: does the change need
-   a new cache tag?
+2. **Add a new dish field.** Extend the Prisma model/migration, `mapDishCard`,
+   the admin editor and the dish card. Ask: does the change need a new index or
+   an explicit `revalidatePath` call?
 3. **Add a Server Action.** Create `src/actions/reviews.js` with
    `"use server"`, validate with Zod, check `getSession()`, and call
    `revalidatePath`. Then call it from a Client Component.
@@ -2440,9 +2441,10 @@ still renders.
 If you remember only one thing, remember this:
 
 > **Mesob House uses Next.js to put each concern on the side that can do it
-> safely and cheaply.** Public menu data is fetched and cached on the server;
-> private orders are guarded on the server and polled from the client; forms
-> validate on both sides; live status uses SSE; the dashboard uses SWR; and
-> every server boundary re-checks who is allowed to do what.
+> safely and cheaply.** The public menu is read from Postgres on the server and
+> cached as ISR; private orders and reviews are guarded on the server and
+> refreshed from the client; forms validate on both sides; live status uses SSE;
+> the dashboard uses SWR; and every server boundary re-checks who is allowed to
+> do what.
 
 That is the architecture. The rest of the files are details.

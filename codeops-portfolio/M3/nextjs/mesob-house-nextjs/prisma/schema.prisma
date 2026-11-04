@@ -33,6 +33,14 @@ enum OrderFulfillment {
   @@map("order_fulfillment")
 }
 
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+
+  @@map("review_status")
+}
+
 model User {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fullName     String   @map("full_name")
@@ -47,6 +55,7 @@ model User {
 
   sessions           Session[]
   orders             Order[]
+  reviews            Review[]
   orderStatusHistory OrderStatusHistory[] @relation("StatusActor")
   auditLogs          AuditLog[]           @relation("AuditActor")
 
@@ -71,22 +80,135 @@ model Session {
   @@map("sessions")
 }
 
-model MenuItem {
-  id          String   @id
-  name        String
+model MenuCategory {
+  slug        String   @id
+  label       String
   description String   @default("")
-  category    String   @default("menu")
-  priceCents  Int      @map("price_cents")
-  imageUrl    String   @default("") @map("image_url")
-  isSpecial   Boolean  @default(false) @map("is_special")
+  sortOrder   Int      @default(0) @map("sort_order")
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  orderItems OrderItem[]
+  @@index([isActive, sortOrder], map: "menu_categories_active_idx")
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id               String   @id
+  name             String
+  nativeName       String   @default("") @map("native_name")
+  tagline          String   @default("")
+  description      String   @default("")
+  longDescription  String   @default("") @map("long_description")
+  category         String   @default("menu")
+  priceCents       Int      @map("price_cents")
+  imageUrl         String   @default("") @map("image_url")
+  spiceLevel       String   @default("") @map("spice_level")
+  servings         String   @default("")
+  ingredients      String[] @default([])
+  allergens        String[] @default([])
+  tags             String[] @default([])
+  badgeText        String   @default("") @map("badge_text")
+  badgeTone        String   @default("brand") @map("badge_tone")
+  isSpecial        Boolean  @default(false) @map("is_special")
+  isActive         Boolean  @default(true) @map("is_active")
+  isFasting        Boolean  @default(false) @map("is_fasting")
+  isComplimentary  Boolean  @default(false) @map("is_complimentary")
+  isSide           Boolean  @default(false) @map("is_side")
+  sortOrder        Int      @default(0) @map("sort_order")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  orderItems   OrderItem[]
+  optionGroups MenuOptionGroup[]
+  pairings     MenuPairing[]     @relation("MenuPairings")
+  pairedBy     MenuPairing[]     @relation("PairedBy")
+  reviews      Review[]
 
   @@index([category, isActive], map: "menu_items_category_idx")
+  @@index([category, isActive, sortOrder], map: "menu_items_category_order_idx")
+  @@index([isActive, isSpecial, sortOrder], map: "menu_items_active_special_idx")
   @@map("menu_items")
+}
+
+model MenuOptionGroup {
+  id            String   @id
+  menuItemId    String   @map("menu_item_id")
+  key           String
+  title         String
+  icon          String   @default("")
+  badge         String   @default("")
+  columns       Int      @default(1)
+  isMulti       Boolean  @default(false) @map("is_multi")
+  maxSelections Int      @default(1) @map("max_selections")
+  sortOrder     Int      @default(0) @map("sort_order")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  menuItem MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  options  MenuOption[]
+
+  @@unique([menuItemId, key], map: "menu_option_groups_menu_item_id_key_key")
+  @@index([menuItemId, isActive, sortOrder], map: "menu_option_groups_item_idx")
+  @@map("menu_option_groups")
+}
+
+model MenuOption {
+  id              String   @id
+  groupId         String   @map("group_id")
+  value           String
+  title           String
+  description     String   @default("")
+  note            String   @default("")
+  priceDeltaCents Int      @default(0) @map("price_delta_cents")
+  isDefault       Boolean  @default(false) @map("is_default")
+  isActive        Boolean  @default(true) @map("is_active")
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  group MenuOptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, value], map: "menu_options_group_id_value_key")
+  @@index([groupId, isActive, sortOrder], map: "menu_options_group_idx")
+  @@map("menu_options")
+}
+
+model MenuPairing {
+  menuItemId       String @map("menu_item_id")
+  pairedMenuItemId String @map("paired_menu_item_id")
+  sortOrder        Int    @default(0) @map("sort_order")
+
+  menuItem   MenuItem @relation("MenuPairings", fields: [menuItemId], references: [id], onDelete: Cascade)
+  pairedItem MenuItem @relation("PairedBy", fields: [pairedMenuItemId], references: [id], onDelete: Cascade)
+
+  @@id([menuItemId, pairedMenuItemId])
+  @@index([menuItemId, sortOrder], map: "menu_pairings_item_idx")
+  @@map("menu_pairings")
+}
+
+model Review {
+  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  menuItemId String       @map("menu_item_id")
+  userId     String       @map("user_id") @db.Uuid
+  orderId    String?      @map("order_id")
+  rating     Int          @db.SmallInt
+  message    String       @default("")
+  status     ReviewStatus @default(approved)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order    Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([menuItemId, userId], map: "reviews_menu_item_id_user_id_key")
+  @@index([menuItemId, status, createdAt(sort: Desc)], map: "reviews_menu_status_idx")
+  @@index([status, createdAt(sort: Desc)], map: "reviews_status_idx")
+  @@index([userId, createdAt(sort: Desc)], map: "reviews_user_idx")
+  @@index([orderId], map: "reviews_order_idx")
+  @@map("reviews")
 }
 
 model Order {
@@ -119,6 +241,7 @@ model Order {
   user          User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
   items         OrderItem[]
   statusHistory OrderStatusHistory[]
+  reviews       Review[]
 
   @@index([createdAt(sort: Desc)], map: "orders_created_at_idx")
   @@index([status, createdAt(sort: Desc)], map: "orders_status_created_at_idx")

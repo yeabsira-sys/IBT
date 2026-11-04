@@ -5,7 +5,6 @@ import GurshaSection from "@/components/marketing/GurshaSection";
 import ReflectionsSection from "@/components/marketing/ReflectionsSection";
 import CtaBanner from "@/components/marketing/CtaBanner";
 import SpecialsSection from "@/components/menu/SpecialsSection";
-import FallbackNotice from "@/components/menu/FallbackNotice";
 import {
   announcement,
   closingCta,
@@ -52,13 +51,8 @@ function SpecialsSkeleton() {
 
 /** Server Component that does its own data fetching, so it can stream in behind a Suspense fallback. */
 async function LiveSpecials() {
-  const { dishes, source } = await getSpecials();
-  return (
-    <>
-      {source === "fallback" && <FallbackNotice what="today's live specials" />}
-      <SpecialsSection {...specials} dishes={dishes} />
-    </>
-  );
+  const { dishes } = await getSpecials();
+  return <SpecialsSection {...specials} dishes={dishes} />;
 }
 
 export default function HomePage() {

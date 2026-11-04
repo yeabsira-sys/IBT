@@ -190,6 +190,98 @@ async function triggerChecks() {
   }
 }
 
+async function catalogueAndReviewChecks() {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const menu = await client.query(
+      `SELECT
+         (SELECT count(*)::int FROM menu_items WHERE is_active) AS active_dishes,
+         (SELECT count(*)::int FROM menu_categories WHERE is_active) AS active_categories,
+         (SELECT count(*)::int FROM menu_option_groups g
+            JOIN menu_items i ON i.id = g.menu_item_id
+          WHERE i.is_active AND g.is_active) AS active_groups,
+         (SELECT count(*)::int FROM menu_items i
+           WHERE i.is_active
+             AND i.category NOT IN ('drinks', 'sides')
+             AND NOT EXISTS (
+               SELECT 1 FROM menu_option_groups g
+               WHERE g.menu_item_id = i.id AND g.is_active
+             )) AS food_without_groups`,
+    );
+    const counts = menu.rows[0];
+    if (counts.active_dishes > 0 && counts.active_categories > 0) {
+      pass(
+        "active menu catalogue exists",
+        `${counts.active_dishes} dishes, ${counts.active_categories} categories, ${counts.active_groups} option groups`,
+      );
+    } else {
+      fail("active menu catalogue exists", JSON.stringify(counts));
+    }
+
+    if (counts.food_without_groups === 0) {
+      pass("every active food dish exposes option groups");
+    } else {
+      fail("every active food dish exposes option groups", JSON.stringify(counts));
+    }
+
+    const invalid = await client.query(
+      `SELECT count(*)::int AS invalid
+       FROM reviews r
+       WHERE r.order_id IS NULL
+          OR NOT EXISTS (
+            SELECT 1
+            FROM orders o
+            JOIN order_items oi ON oi.order_id = o.id
+            WHERE o.id = r.order_id
+              AND o.user_id = r.user_id
+              AND o.status = 'completed'
+              AND oi.menu_item_id = r.menu_item_id
+          )`,
+    );
+    if (invalid.rows[0]?.invalid === 0) {
+      pass("every review has a verified completed order");
+    } else {
+      fail("every review has a verified completed order", JSON.stringify(invalid.rows[0]));
+    }
+
+    const sample = await client.query(
+      `SELECT o.id AS order_id, o.user_id, oi.menu_item_id
+       FROM orders o
+       JOIN order_items oi ON oi.order_id = o.id
+       WHERE o.status = 'completed'
+       LIMIT 1`,
+    );
+    const otherUser = await client.query(
+      "SELECT id FROM users WHERE id <> $1 LIMIT 1",
+      [sample.rows[0]?.user_id ?? "00000000-0000-0000-0000-000000000000"],
+    );
+
+    if (sample.rows[0] && otherUser.rows[0]) {
+      const rejected = await expectFailure(
+        client,
+        "customer",
+        `INSERT INTO reviews (menu_item_id, user_id, order_id, rating, message)
+         VALUES ($1, $2, $3, 5, 'invariant test')`,
+        [sample.rows[0].menu_item_id, otherUser.rows[0].id, sample.rows[0].order_id],
+        "23514",
+      );
+      if (rejected.ok && rejected.code === "23514") {
+        pass("unverified review insert is rejected", "SQLSTATE 23514");
+      } else {
+        fail("unverified review insert is rejected", JSON.stringify(rejected));
+      }
+    } else {
+      fail("unverified review insert is rejected", "no completed order/user sample available");
+    }
+
+    await client.query("ROLLBACK");
+  } finally {
+    client.release();
+  }
+}
+
 async function http(method, requestPath, options = {}) {
   return fetch(new URL(requestPath, base), {
     method,
@@ -282,6 +374,7 @@ async function revocationCheck() {
 }
 
 await triggerChecks();
+await catalogueAndReviewChecks();
 await revocationCheck();
 
 const failures = results.filter((result) => !result.ok);

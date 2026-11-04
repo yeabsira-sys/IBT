@@ -181,7 +181,7 @@ const DISHES = [
   { id: "prime-beef-kitfo", name: "Prime Beef Kitfo", price: 720, category: "kitfo" },
   { id: "full-vegan-beyaynetu", name: "Full Vegan Beyaynetu", price: 480, category: "fasting" },
   { id: "house-tej-carafe", name: "House Tej (Carafe)", price: 350, category: "drinks" },
-  { id: "clay-pot-shiro-bozena", name: "Clay-pot Shiro Bozena", price: 450, category: "stews" },
+  { id: "shiro-bozena", name: "Shiro Bozena (Beef Enriched Shiro)", price: 490, category: "stews" },
   { id: "awaze-lamb-tibs", name: "Awaze Lamb Tibs", price: 680, category: "grills" },
   { id: "gored-gored", name: "Gored Gored", price: 750, category: "kitfo" },
 ];
@@ -412,10 +412,7 @@ async function insertSeed(client, orders, { replace }) {
     await client.query(
       `INSERT INTO menu_items (id, name, price_cents, category)
        VALUES ($1, $2, $3, $4)
-       ON CONFLICT (id) DO UPDATE SET
-         name = EXCLUDED.name,
-         price_cents = EXCLUDED.price_cents,
-         category = EXCLUDED.category`,
+       ON CONFLICT (id) DO NOTHING`,
       [dish.id, dish.name, dish.price * 100, dish.category],
     );
   }

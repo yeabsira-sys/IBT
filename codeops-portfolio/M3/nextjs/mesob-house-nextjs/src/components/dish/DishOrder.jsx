@@ -8,9 +8,10 @@ import useAddToCart from "@/hooks/useAddToCart";
 import { useStore } from "@/store/appStore";
 import { useToast } from "@/store/toastStore";
 
-/** Reads a "+ETB 40" style note and returns the numeric add-on, or 0. */
-function priceDelta(note) {
-  const match = /\+ETB\s?(\d+)/.exec(note ?? "");
+/** Fallback for option rows created before priceDeltaCents existed. */
+function priceDelta(option) {
+  if (Number.isFinite(option.priceDeltaCents)) return option.priceDeltaCents / 100;
+  const match = /\+ETB\s?(\d+)/.exec(option.note ?? "");
   return match ? Number(match[1]) : 0;
 }
 
@@ -29,22 +30,27 @@ export default function DishOrder({ dish, config, galleryProps }) {
   const [values, setValues] = useState(config.defaults);
   const [quantity, setQuantity] = useState(1);
 
-  // Readable titles of the chosen options + the sum of any "+ETB NN" add-ons.
-  const { selectionTitles, optionDelta } = config.groups.reduce(
+  // Readable titles of the chosen options + the sum of any add-on prices.
+  const { selectionTitles, selectionValues, optionDelta } = config.groups.reduce(
     (acc, group) => {
       const selected = values[group.key];
       const chosen = Array.isArray(selected) ? selected : [selected];
       const titles = [];
+      const selectedValues = [];
       for (const value of chosen) {
         const option = group.options.find((o) => o.value === value);
         if (!option) continue;
         titles.push(option.title);
-        acc.optionDelta += priceDelta(option.note);
+        selectedValues.push(option.value);
+        acc.optionDelta += priceDelta(option);
       }
       acc.selectionTitles[group.key] = Array.isArray(selected) ? titles : titles[0];
+      acc.selectionValues[group.key] = Array.isArray(selected)
+        ? selectedValues
+        : selectedValues[0] ?? "";
       return acc;
     },
-    { selectionTitles: {}, optionDelta: 0 },
+    { selectionTitles: {}, selectionValues: {}, optionDelta: 0 },
   );
 
   const unitPrice = Number(dish.price) + optionDelta;
@@ -64,7 +70,7 @@ export default function DishOrder({ dish, config, galleryProps }) {
       <OrderPanel
         name={dish.name}
         note={dishForCart.note}
-        price={String(dish.price)}
+        price={String(unitPrice)}
         description={dish.description}
         info={config.info}
         groups={config.groups}
@@ -72,14 +78,19 @@ export default function DishOrder({ dish, config, galleryProps }) {
         onGroupChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
         quantity={quantity}
         onQuantityChange={setQuantity}
-        onAddToOrder={() => addToCart(dishForCart, quantity, selectionTitles)}
+        onAddToOrder={() => addToCart(dishForCart, quantity, selectionValues, selectionTitles)}
         onSaveFavorite={() => {
           toggleFavorite({ id: dish.id, name: dish.name });
           toast(isFavorite ? "Removed from favorites" : "Saved to favorites");
         }}
         isFavorite={isFavorite}
         onOrderAsGroup={() => {
-          addToCart(dishForCart, quantity, { ...selectionTitles, presentation: "Group Mesob Feast" });
+          addToCart(
+            dishForCart,
+            quantity,
+            selectionValues,
+            { ...selectionTitles, presentation: "Group Mesob Feast" },
+          );
           router.push("/cart");
         }}
       />

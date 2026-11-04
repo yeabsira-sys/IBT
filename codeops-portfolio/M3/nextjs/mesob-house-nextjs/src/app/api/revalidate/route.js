@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 
 export async function POST(request) {
   const secret = request.headers.get("x-revalidate-secret");
@@ -12,7 +12,13 @@ export async function POST(request) {
       { status: 401 },
     );
   }
-  revalidateTag("menu", "max");
+
+  // The catalogue lives in Postgres, so there is no fetch tag to invalidate.
+  // Clear the ISR pages and public API routes that cache the menu instead.
+  for (const path of ["/", "/menu", "/api/menu", "/api/menu/specials"]) {
+    revalidatePath(path);
+  }
+
   return NextResponse.json({
     ok: true,
     revalidated: "menu",

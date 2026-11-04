@@ -3,15 +3,18 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  // The repository root also has a package-lock.json, so pin Turbopack to this
+  // app instead of letting Next infer the parent workspace.
+  turbopack: { root: import.meta.dirname },
+
   // next/image only optimises hosts listed here.
   images: {
     // Set IMAGES_UNOPTIMIZED=true to serve images straight from their source
     // (e.g. static hosting without an image optimiser, or offline testing).
     unoptimized: process.env.IMAGES_UNOPTIMIZED === "true",
-    remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "addis-eats-backend.onrender.com" },
-    ],
+    // Catalogue images are admin-owned. Allow HTTPS URLs so an editor can
+    // paste a CDN URL, not only the Unsplash images used by the seed data.
+    remotePatterns: [{ protocol: "https", hostname: "**" }],
   },
 
   async redirects() {

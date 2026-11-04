@@ -70,11 +70,12 @@ export default function CheckoutView({ user }) {
       method: checkout.method,
       couponCode,
       note: cartNote,
-      items: cartItems.map(({ id, name, price, quantity }) => ({
+      items: cartItems.map(({ id, name, price, quantity, options }) => ({
         id: String(id),
         name,
         price,
         quantity,
+        options,
       })),
     };
 

@@ -8,7 +8,7 @@ export const announcement = {
   message:
     "Tsom / Fasting Observance: 12-item Royal Beyaynetu vegan platter simmered fresh all day.",
   note: "100% pure teff injera available",
-  action: { label: "See fasting specialties", href: "/menu?category=Fasting%20%26%20Vegan%20%2F%20Tsom" },
+  action: { label: "See fasting specialties", href: "/menu?category=fasting" },
 };
 
 export const guest = { name: "Genet Alemu", greeting: "Welcome" };
@@ -165,9 +165,9 @@ export const closingCta = {
 export const dietaryColumn = {
   heading: "Dietary Traditions",
   items: [
-    { label: "Vegan Fasting (Beyaynetu / Tsom)", href: "/menu?category=Fasting%20%26%20Vegan%20%2F%20Tsom" },
-    { label: "Traditional Prime Meat Feasts", href: "/menu?category=Traditional%20Stews%20%26%20Wat" },
-    { label: "House Tej (Pure Honey Wine)", href: "/menu?category=Beverages%20%26%20Tej" },
+    { label: "Vegan Fasting (Beyaynetu / Tsom)", href: "/menu?category=fasting" },
+    { label: "Traditional Prime Meat Feasts", href: "/menu?category=stews" },
+    { label: "House Tej (Pure Honey Wine)", href: "/menu?category=drinks" },
     { label: "Jebena Buna Roasting Ceremony", href: "/menu" },
   ],
 };

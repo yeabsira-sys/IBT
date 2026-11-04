@@ -6,10 +6,10 @@ This document explains where data lives, how it is fetched, which SWR keys are l
 
 | Kind | Source | Rendering / cache | Examples |
 | --- | --- | --- | --- |
-| Public catalogue | Remote menu API (`API_BASE_URL`) with curated fallback | Server Components + ISR (5 min) + React `cache` per render | dishes, specials, dish pages, sitemap |
+| Public catalogue | Prisma ORM -> Postgres (`menu_categories`, `menu_items`, option groups, pairings, reviews) | Server Components; menu/home ISR 5 min; dish pages dynamic for review state; React `cache` per request | dishes, specials, dish pages, sitemap |
 | Private operational data | Prisma ORM -> Postgres normalized tables | Dynamic server rendering + SWR polling + SSE order stream | users, sessions, orders, kitchen queue, admin stats |
 
-The browser never calls the menu backend directly. `src/lib/api.js` builds the URLs and `src/lib/menu.js` fetches them on the server, so missing CORS headers on the backend are irrelevant and the API host is not exposed as a client dependency.
+`src/lib/menu.js` reads the catalogue on the server through Prisma, so the browser never calls a separate menu backend. Admin menu writes live in `src/lib/adminMenu.js`; public review reads and admin moderation live in `src/lib/reviews.js`.
 
 ## 2. Postgres schema
 
@@ -28,7 +28,11 @@ tables for the client; `scripts/db-migrate.mjs` owns their creation.
 | --- | --- | --- |
 | `users` | accounts and roles | case-insensitive unique email, unique non-empty phone, `user_role` enum |
 | `sessions` | opaque login sessions | unique SHA-256 token hash, FK to users, `revoked_at`, expiry |
-| `menu_items` | menu catalogue | text id, integer cents, active flag |
+| `menu_items` | menu catalogue | text id, integer cents, active flag, category slug, search/filter arrays |
+| `menu_categories` | category labels and ordering | text slug PK, active flag |
+| `menu_option_groups` / `menu_options` | per-dish choices and add-on prices | unique `(menu_item_id, key)` / `(group_id, value)`, non-negative price delta |
+| `menu_pairings` | suggested companion dishes | composite PK, no self-pairing |
+| `reviews` | verified 1–5 star reviews | unique `(menu_item_id, user_id)`, status enum, completed-order trigger |
 | `orders` | order header and customer/contact/delivery snapshot | FK to users, status/fulfillment enums, generated total |
 | `order_items` | line items | FK to orders and menu, unique `(order_id, line_no)` |
 | `order_status_history` | per-order timeline | FK to orders/users, unique `(order_id, status, changed_at)` |
@@ -80,8 +84,11 @@ npm run prisma:generate               # regenerate Prisma Client after schema ed
 `001_core.sql` creates the enums, tables, foreign keys, checks, generated
 totals and triggers. `002_indexes.sql` adds the query indexes.
 `003_covering_indexes.sql` replaces the area-revenue index with a covering
-index and adds the top-customer covering index. The migration runner records
-checksums in `schema_migrations`.
+index and adds the top-customer covering index. `004_menu_and_reviews.sql`
+expands the catalogue (categories, option groups, pairings, reviews) and seeds
+the canonical dishes. `005_review_purchase_integrity.sql` adds the trigger that
+only accepts reviews backed by a completed order containing the dish. The
+migration runner records checksums in `schema_migrations`.
 
 `prisma/schema.prisma` is the Prisma Client model, not the migration source.
 When a migration changes a table, update the schema to match and run
@@ -108,20 +115,15 @@ The detailed results are in
 
 ## 3. Menu data and ISR
 
-`src/lib/menu.js`:
+`src/lib/menu.js` reads the catalogue from Postgres through Prisma:
 
-```js
-const response = await fetch(url, {
-  next: { revalidate: 300, tags },
-  signal: AbortSignal.timeout(10_000),
-});
-```
-
-- `getMenu()` and `getSpecials()` are wrapped in React `cache`, so a single render pass does not fetch the same list twice.
-- Each has a curated fallback. If the remote API is down or slow, the page still renders and `source === "fallback"` shows a notice.
-- `getAllDishes()` merges specials and menu, de-duplicates by slug, and is used by dish pages, the sitemap and the order action.
-- `revalidate = 300` on `/`, `/menu` and `/dish/[slug]` gives a 5-minute ISR window.
-- `POST /api/revalidate` calls `revalidateTag("menu", "max")` for an on-demand refresh from the menu backend's webhook.
+- `getMenu()` returns active dishes, active categories, option groups/defaults, pairings and approved review aggregates.
+- `getSpecials()` filters the same catalogue by `is_special`.
+- `getAllDishes()` is the canonical checkout list; the order action resolves every id and price from it.
+- The functions use React `cache`, so one request pass does not repeat the same query.
+- `/` and `/menu` keep a 5-minute ISR window. `/dish/[slug]` is `force-dynamic` because it renders the signed-in customer's review state.
+- Admin menu writes and review moderation call `revalidatePath`, so changed dishes and ratings appear immediately instead of waiting for ISR.
+- `POST /api/revalidate` remains available for an external scheduler; it calls `revalidatePath` for `/`, `/menu` and the public menu APIs.
 
 The order action calls `getAllDishes()` as well. That is deliberate: the same cached menu that renders a dish page is the authority for the price stored in an order.
 
@@ -131,7 +133,7 @@ The order action calls `getAllDishes()` as well. That is deliberate: the same ca
 | --- | --- | --- |
 | `/` | Server Component; specials from `getSpecials()` | none (ISR) |
 | `/menu` | Server Component; full dish list from `getMenu()` | debounced SWR search after typing |
-| `/dish/[slug]` | SSG/ISR with `generateStaticParams` | none |
+| `/dish/[slug]` | Dynamic Server Component; DB dish, options, pairings and approved reviews | review submit refreshes the route; guest/customer state is never shared |
 | Navbar session | `useSession()` SWR, seeded by `/api/auth/session` | revalidate on focus; mutated after sign-in/out |
 | `/account` | Server page guard + user prop | `mutate(SESSION_KEY)` after sign-out |
 | `/orders` | Server page guard + `getOrdersForUser` | SWR `/api/orders`, 10 s while active |

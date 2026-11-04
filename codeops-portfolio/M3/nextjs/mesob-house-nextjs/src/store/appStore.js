@@ -11,11 +11,13 @@ const DEFAULT_IMAGE =
 const itemKey = (item, options) =>
   `${item.id ?? item.slug ?? item.name}-${JSON.stringify(options ?? {})}`;
 
-function cartItemFrom(source, quantity = 1, options) {
+function cartItemFrom(source, quantity = 1, options, optionLabels) {
   const label = source.label ?? source.tag;
-  const optionText = options
-    ? Object.values(options).flat().filter(Boolean).join(" · ")
-    : "";
+  const optionText = optionLabels
+    ? Object.values(optionLabels).flat().filter(Boolean).join(" · ")
+    : options
+      ? Object.values(options).flat().filter(Boolean).join(" · ")
+      : "";
   const sourceTags = source.tags?.map((tag) =>
     typeof tag === "string"
       ? { text: tag === "popular" ? "Popular Choice" : tag, tone: "brand" }
@@ -38,6 +40,7 @@ function cartItemFrom(source, quantity = 1, options) {
     image: source.image ?? DEFAULT_IMAGE,
     tags: sourceTags ?? (label ? [label] : []),
     options,
+    optionLabels,
   };
 }
 
@@ -154,8 +157,8 @@ export const useStore = create(
       checkout: defaultCheckout,
       totals: getCartTotals([], "GURSHA2025"),
 
-      addToCart: (source, quantity = 1, options) => {
-        const next = cartItemFrom(source, quantity, options);
+      addToCart: (source, quantity = 1, options, optionLabels) => {
+        const next = cartItemFrom(source, quantity, options, optionLabels);
         set((state) => {
           const existing = state.cartItems.find(
             (item) =>

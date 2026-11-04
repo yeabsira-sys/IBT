@@ -60,13 +60,13 @@ new Promise((resolve) => {
 
 Route shape:
 
-- 44 routes total.
-- `/`, `/menu`, `/cart`, `/terms`, `/privacy`, `/robots.txt`, `/sitemap.xml` and `/manifest.webmanifest` are static/ISR.
-- 20 dish pages are pre-rendered with `generateStaticParams` and revalidate every 5 minutes.
+- 44 routes total; 24 pages are generated statically.
+- `/`, `/menu`, `/cart`, `/terms`, `/privacy`, `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`, `/icon.svg` and `/opengraph-image` are static/ISR.
+- `/dish/[slug]` is `force-dynamic` because the review form and "your review" state are personalised; the underlying menu read is deduplicated per request.
 - `/account`, `/checkout`, `/orders`, `/orders/[id]`, `/kitchen` and `/admin/**` are dynamic because they read the session.
-- `/api/menu` and `/api/menu/specials` are ISR-cached; the private APIs are `force-dynamic`.
+- `/api/menu` and `/api/menu/specials` are ISR-cached; `/api/menu/search` and the private APIs are `force-dynamic`.
 
-The public catalogue stays on the server-rendered/ISR path. Adding auth did not turn `/`, `/menu` or dish pages into client-fetched pages.
+The public catalogue still has no client-side fetch for first paint: `/` and `/menu` are ISR server renders, and dish HTML is server-rendered from Prisma on request.
 
 ## 3. After measurements
 
@@ -103,9 +103,10 @@ catalogue's JS is unchanged.
 
 Recharts accounts for roughly 126 KB of the private dashboard JS. That is a
 real cost, but it is isolated to routes that already require a staff session.
-The public `/`, `/menu` and dish pages remain at their previous static/ISR
-budget. The chart cards reserve a fixed 280 px height and render tables
-underneath, so CLS stays at 0.
+The public `/` and `/menu` pages remain at their previous static/ISR budget.
+Dish pages are now intentionally dynamic for per-user review state, while the
+chart cards reserve a fixed 280 px height and render tables underneath, so CLS
+stays at 0.
 
 Chart payloads are deliberately small:
 
@@ -120,17 +121,21 @@ server and cap the rows before they cross the boundary.
 
 A strict before/after on the same route set is not possible: before this phase the app had no `/orders`, `/kitchen`, `/admin`, `/checkout` auth guard or SWR layer. The repository also does not contain a pre-phase production build, so there is no honest “before” LCP number to quote.
 
-What can be compared is the **public catalogue path**, which was already static/ISR and remains so:
+What can be compared is the **public catalogue path**:
 
-| Area                     | Before Day 45                               | After Day 45                                                              |
-| ------------------------ | ------------------------------------------- | ------------------------------------------------------------------------- |
-| `/`, `/menu`, dish pages | Static/ISR; no client fetch for first paint | Same; no regression in rendering strategy                                 |
-| Menu search              | Client filter over the server-seeded list   | 300 ms debounced SWR request, previous data kept while loading            |
-| Navbar session           | Client-only store/localStorage              | SWR-cached `/api/auth/session`; no extra page dynamic render              |
-| Private pages            | Did not exist                               | Dynamic server guard + seeded SWR; measured above                         |
-| Checkout JS              | Form bundle                                 | Same form + lazy payment/delivery cards; ~194 KB compressed in the sample |
+| Area                     | Before Day 45                               | Now                                                                        |
+| ------------------------ | ------------------------------------------- | -------------------------------------------------------------------------- |
+| `/` and `/menu`          | Static/ISR; no client fetch for first paint | Same; Prisma-backed 5-minute ISR, admin `revalidatePath`                   |
+| Dish pages               | Static/ISR                                  | Dynamic server render for personalised review state; no client menu fetch  |
+| Menu search              | Client filter over the server-seeded list   | 300 ms debounced `/api/menu/search` request, previous data kept while loading |
+| Navbar session           | Client-only store/localStorage              | SWR-cached `/api/auth/session`; no extra page dynamic render               |
+| Private pages            | Did not exist                               | Dynamic server guard + seeded SWR; measured above                          |
+| Checkout JS              | Form bundle                                 | Same form + lazy payment/delivery cards; ~194 KB compressed in the sample  |
 
-The important architectural result is that the new private features did **not** force the public catalogue into dynamic rendering. The 5-minute ISR window and static dish pages are intact.
+The important architectural result is that the catalogue remains server-rendered
+and never needs a client-side menu fetch. Home/menu keep the 5-minute ISR window;
+dish pages trade static HTML for correct per-user review state and a real 404
+for retired slugs.
 
 For a deployment, capture a true before/after with the same commit pair and throttling:
 
@@ -154,9 +159,9 @@ Compare `audits.largest-contentful-paint.numericValue`, `audits.cumulative-layou
 
 ### Rendering
 
-- **ISR for the catalogue.** `/`, `/menu` and each dish page use `revalidate = 300`. The menu API is fetched with `next: { revalidate: 300, tags: ["menu"] }`.
-- **Static dish params.** `generateStaticParams()` pre-renders all known dishes; unknown slugs still render on demand and then cache.
-- **No client fetch for first paint.** Menu and dish HTML arrive from the server. Search is the only client fetch, and only after the user types.
+- **ISR for the shared catalogue.** `/` and `/menu` use `revalidate = 300`; admin writes call `revalidatePath()` for the menu, home and affected dish route.
+- **Dynamic dish pages.** `/dish/[slug]` uses `dynamic = "force-dynamic"` so review state is never shared. The page still reuses a per-request React `cache()` around the Prisma menu read.
+- **No client fetch for first paint.** Menu and dish HTML arrive from the server. Search is the only public client fetch, and only after the user types.
 - **Server Components by default.** Client components are limited to interactive pieces (navbar, cart, forms, SWR views).
 - **`next/font` self-hosting.** Inter and Source Serif 4 are downloaded at build time, not from Google at runtime, which removes a third-party connection and reduces font layout shift.
 
@@ -177,7 +182,7 @@ Compare `audits.largest-contentful-paint.numericValue`, `audits.cumulative-layou
 ### Images and layout
 
 - `next/image` with explicit dimensions and `sizes`.
-- Remote hosts allow-listed in `next.config.mjs` (`images.unsplash.com`, the menu backend).
+- `next.config.mjs` accepts HTTPS catalogue images because the image URL is an\n  admin-owned field; a production deployment can narrow it to one asset CDN.
 - `IMAGES_UNOPTIMIZED=true` is available for static/offline hosting.
 - Skeleton blocks reserve the same height as the content they replace.
 
@@ -204,7 +209,7 @@ These are the budgets for the next change, not claims about Lighthouse field dat
 
 Before merging a performance-sensitive change:
 
-1. `npm run build` must keep the public catalogue static/ISR (check the route table).
+1. `npm run build` must keep `/` and `/menu` on ISR and `/dish/[slug]` dynamic for review personalisation (check the route table).
 2. Open the production build, run the console snippet above on `/`, `/menu` and `/checkout`.
 3. Confirm the menu search burst still sends one request (DevTools Network filter `/api/menu/search`).
 4. Confirm `/orders` polling stops after the order reaches `completed` or `cancelled`.
@@ -214,6 +219,6 @@ Before merging a performance-sensitive change:
 
 - **No Lighthouse score yet.** The environment has no Chrome/Lighthouse binary. The local API timings above are real, but the assessment still needs a deployed Lighthouse run with mobile and desktop presets.
 - **No throttled mobile measurement.** A 4G/CPU-throttled run will be slower than these warm local numbers.
-- **Warm server.** The first request after a cold start may pay the menu API fetch; ISR hides it after the first render.
+- **Warm server.** The first request after a cold start may pay the initial Prisma/Postgres query; ISR hides it for the shared menu after the first render.
 - **Postgres.** Queries use the indexes documented in [`docs/DB_PERFORMANCE.md`](./docs/DB_PERFORMANCE.md); the measured plans are local and warm, not production capacity numbers.
 - **No RUM.** There is no real-user monitoring; field LCP/CLS/INP would require a deployment with analytics. -->

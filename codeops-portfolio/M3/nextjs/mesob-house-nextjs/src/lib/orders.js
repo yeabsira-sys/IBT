@@ -144,49 +144,12 @@ export async function createOrder({
     ? String(couponCode).trim().toUpperCase()
     : null;
 
-  // Sort by id so simultaneous checkouts touch menu rows in a stable order.
-  // The createMany/updateMany pair behaves like a conditional upsert: a row is
-  // only rewritten when its menu snapshot actually changed.
-  const menuById = new Map();
-  for (const item of normalizedItems) menuById.set(item.id, item);
-  const menuRows = [...menuById.values()].sort((a, b) =>
-    a.id.localeCompare(b.id),
-  );
-
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const orderId = `MH-${randomUUID().slice(0, 8).toUpperCase()}`;
 
     try {
       return await withTransaction(async (tx) => {
         await setDbActor(tx, user);
-
-        if (menuRows.length) {
-          await tx.menuItem.createMany({
-            data: menuRows.map((item) => ({
-              id: item.id,
-              name: item.name,
-              priceCents: item.priceCents,
-              category: "menu",
-            })),
-            skipDuplicates: true,
-          });
-
-          for (const item of menuRows) {
-            await tx.menuItem.updateMany({
-              where: {
-                id: item.id,
-                OR: [
-                  { name: { not: item.name } },
-                  { priceCents: { not: item.priceCents } },
-                ],
-              },
-              data: {
-                name: item.name,
-                priceCents: item.priceCents,
-              },
-            });
-          }
-        }
 
         await tx.order.create({
           data: {

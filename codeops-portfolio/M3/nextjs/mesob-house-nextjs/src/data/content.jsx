@@ -88,8 +88,8 @@ export const footer = {
       items: [
         { label: "Sign In to Mesob Rewards", href: "/sign-in" },
         { label: "Create Member Profile", href: "/register" },
-        { label: "Vegan Fasting (Beyaynetu / Tsom)", href: "/menu?category=Fasting%20%26%20Vegan%20%2F%20Tsom" },
-        { label: "House Tej (Pure Honey Wine)", href: "/menu?category=Beverages%20%26%20Tej" },
+        { label: "Vegan Fasting (Beyaynetu / Tsom)", href: "/menu?category=fasting" },
+        { label: "House Tej (Pure Honey Wine)", href: "/menu?category=drinks" },
       ],
     },
   ],

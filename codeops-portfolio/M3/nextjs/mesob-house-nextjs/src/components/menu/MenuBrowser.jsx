@@ -6,7 +6,6 @@ import useSWR from "swr";
 import { Chip } from "../ui/ChipGroup";
 import MenuHero from "./MenuHero";
 import MenuDishCard from "./MenuDishCard";
-import FallbackNotice from "./FallbackNotice";
 import { StickyCartBar } from "./CommunalBanner";
 import useAddToCart from "@/hooks/useAddToCart";
 import useDebouncedValue from "@/hooks/useDebouncedValue";
@@ -18,7 +17,7 @@ import { menuHero, stickyNote } from "@/data/menu";
 /**
  * MenuBrowser — search + category tabs over the dish list the server fetched.
  */
-export default function MenuBrowser({ dishes, source }) {
+export default function MenuBrowser({ dishes, categories = [] }) {
   const params = useSearchParams();
   const pathname = usePathname();
   const addToCart = useAddToCart();
@@ -54,19 +53,13 @@ export default function MenuBrowser({ dishes, source }) {
     );
   };
 
-  const categories = useMemo(() => {
-    const counts = new Map();
-    for (const dish of dishes)
-      counts.set(dish.category, (counts.get(dish.category) ?? 0) + 1);
-    return [
+  const categoryChips = useMemo(
+    () => [
       { value: "all", label: "All Dishes", count: dishes.length },
-      ...Array.from(counts, ([value, count]) => ({
-        value,
-        label: value,
-        count,
-      })),
-    ];
-  }, [dishes]);
+      ...categories,
+    ],
+    [categories, dishes.length],
+  );
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -98,10 +91,8 @@ export default function MenuBrowser({ dishes, source }) {
         }}
       />
 
-      {source === "fallback" && <FallbackNotice what="the live menu" />}
-
       <div className="menu-tabs" role="group" aria-label="Filter by category">
-        {categories.map((cat) => (
+        {categoryChips.map((cat) => (
           <Chip
             key={cat.value}
             selected={category === cat.value}
@@ -114,7 +105,7 @@ export default function MenuBrowser({ dishes, source }) {
 
       {debouncedSearch && isValidating && (
         <p className="menu-searching" role="status">
-          Searching the live menu…
+          Searching the menu…
         </p>
       )}
 

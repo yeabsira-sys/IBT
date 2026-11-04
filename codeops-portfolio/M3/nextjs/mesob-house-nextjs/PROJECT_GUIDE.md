@@ -75,9 +75,8 @@ Think of the app in three layers:
 ┌──────────────────────────────▼──────────────────────────────┐
 │ 3. Data                                                     │
 │    • Prisma Client -> Postgres: users, sessions, menu,      │
-│      orders, history, audit                                 │
-│    • Remote menu API with ISR cache                         │
-│    • Curated fallback menu if the API is unavailable        │
+│      options, pairings, reviews, orders, history, audit     │
+│    • Public menu/home ISR; dish pages dynamic for reviews   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -101,8 +100,8 @@ Think of the app in three layers:
 Browser
   → Server Component: src/app/(shop)/menu/page.jsx
   → getMenu() in src/lib/menu.js
-  → remote API with 5-minute ISR cache
-  → fallback dishes if the API fails
+  → Prisma/Postgres catalogue + approved review aggregates
+  → 5-minute ISR cache for the public menu
   → MenuBrowser (client component) for search + category tabs
 ```
 
@@ -266,7 +265,7 @@ Files:
 
 ---
 
-### F. Admin area — `/admin`, `/admin/orders`, `/admin/users`
+### F. Admin area — `/admin`, `/admin/orders`, `/admin/menu`, `/admin/reviews`, `/admin/users`
 
 ```text
 /admin
@@ -284,6 +283,16 @@ Files:
   → listUsers()
   → SWR /api/admin/users every 30 seconds
   → role changes through PATCH /api/admin/users/[id]
+
+/admin/menu
+  → getMenuForAdmin()
+  → create/update/retire dishes, option groups and pairings
+  → POST/PATCH/DELETE /api/admin/menu
+
+/admin/reviews
+  → listReviews()
+  → approve, hide, return to pending or delete
+  → PATCH/DELETE /api/admin/reviews/[id]
 ```
 
 Rules:
@@ -298,6 +307,8 @@ Files:
 - [`src/app/(auth)/admin/page.jsx`](./src/app/%28auth%29/admin/page.jsx)
 - [`src/app/(auth)/admin/orders/page.jsx`](./src/app/%28auth%29/admin/orders/page.jsx)
 - [`src/app/(auth)/admin/users/page.jsx`](./src/app/%28auth%29/admin/users/page.jsx)
+- [`src/app/(auth)/admin/menu/page.jsx`](./src/app/%28auth%29/admin/menu/page.jsx)
+- [`src/app/(auth)/admin/reviews/page.jsx`](./src/app/%28auth%29/admin/reviews/page.jsx)
 - [`src/components/admin/AdminOverview.jsx`](./src/components/admin/AdminOverview.jsx)
 - [`src/components/admin/AdminOrders.jsx`](./src/components/admin/AdminOrders.jsx)
 - [`src/components/admin/AdminUsers.jsx`](./src/components/admin/AdminUsers.jsx)
@@ -323,7 +334,7 @@ The proxy is a routing layer, not the security boundary. It verifies the session
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `customer` | Public site, account, checkout, own orders                                                                                             |
 | `employee` | `/account` (sign out), `/kitchen`; public shop and customer-only pages redirect to `/kitchen`                                          |
-| `admin`    | `/account` (sign out), `/kitchen`, `/admin`, `/admin/orders`, `/admin/users`; public shop and customer-only pages redirect to `/admin` |
+| `admin`    | `/account` (sign out), `/kitchen`, `/admin`, `/admin/orders`, `/admin/menu`, `/admin/reviews`, `/admin/users`; public shop and customer-only pages redirect to `/admin` |
 
 Staff accounts are intentionally not customer accounts. The public menu APIs (`/api/menu*`) and customer order APIs (`/api/orders*`) return `403` for staff sessions. `/api/auth/session`, `/api/health` and `/api/revalidate` remain reachable.
 
@@ -463,7 +474,7 @@ src/
   actions/            Server Actions
     auth.js           sign-in, register, social demo sign-in, sign-out
     order.js          submitOrder, cancelOrder
-    menu.js           refreshMenu (read-your-writes cache refresh)
+    reviews.js        submitReview (verified upsert)
 
   app/                Next.js App Router
     (shop)/           Public shop route group (URLs unchanged)
@@ -605,12 +616,13 @@ Shared, client-safe modules include:
 
 | File                                                                                   | Purpose                                   |
 | -------------------------------------------------------------------------------------- | ----------------------------------------- |
-| [`src/lib/menu.js`](./src/lib/menu.js)                                                 | Server-side menu fetch + fallback + cache |
-| [`src/lib/api.js`](./src/lib/api.js)                                                   | API base URL and site URL                 |
-| [`src/lib/dishAdapters.js`](./src/lib/dishAdapters.js)                                 | Normalises raw API dishes                 |
+| [`src/lib/menu.js`](./src/lib/menu.js)                                                 | DB-backed public/admin catalogue + rating aggregates |
+| [`src/lib/adminMenu.js`](./src/lib/adminMenu.js)                                       | Admin validation, create/update/retire and audit logging |
+| [`src/lib/reviews.js`](./src/lib/reviews.js)                                           | Verified review reads, summaries and moderation |
+| [`src/lib/api.js`](./src/lib/api.js)                                                   | Public site URL                           |
 | [`src/components/menu/MenuBrowser.jsx`](./src/components/menu/MenuBrowser.jsx)         | Search and category UI                    |
 | [`src/components/dish/DishOrder.jsx`](./src/components/dish/DishOrder.jsx)             | Dish options, quantity, add to cart       |
-| [`src/app/(shop)/dish/[slug]/page.jsx`](./src/app/%28shop%29/dish/%5Bslug%5D/page.jsx) | SSG/ISR dish page + JSON-LD               |
+| [`src/app/(shop)/dish/[slug]/page.jsx`](./src/app/%28shop%29/dish/%5Bslug%5D/page.jsx) | Dynamic dish page, options and JSON-LD    |
 
 ### Cart and checkout
 
@@ -666,6 +678,10 @@ Shared, client-safe modules include:
 | `PATCH` | `/api/admin/orders/[id]`        | Admin                   | Advance/cancel any order    |
 | `GET`   | `/api/admin/users`              | Admin                   | User list polling           |
 | `PATCH` | `/api/admin/users/[id]`         | Admin                   | Change a role               |
+| `GET`/`POST` | `/api/admin/menu`         | Admin                   | List/create dishes          |
+| `PATCH`/`DELETE` | `/api/admin/menu/[id]` | Admin                   | Edit/retire a dish          |
+| `GET`   | `/api/admin/reviews`            | Admin                   | Moderation queue            |
+| `PATCH`/`DELETE` | `/api/admin/reviews/[id]` | Admin                 | Moderate/delete a review    |
 | `GET`   | `/api/health`                   | Public                  | Liveness probe              |
 | `POST`  | `/api/revalidate`               | Secret header           | On-demand ISR               |
 
@@ -712,8 +728,8 @@ a prop and renders that before the stream's first event.
 | Change order statuses or transitions   | `src/lib/orderStatus.js` + `src/lib/orders.js`                                                      |
 | Change prices, VAT or coupon rules     | `src/lib/pricing.js`                                                                                |
 | Change checkout validation             | `src/lib/schemas.js`                                                                                |
-| Change menu fallback data              | `src/data/menu.jsx` + `src/data/home.jsx`                                                           |
-| Change menu API URL                    | `src/lib/api.js` + `.env.local`                                                                     |
+| Change menu data or options            | `/admin/menu`, `src/lib/adminMenu.js` and the menu tables                                           |
+| Moderate customer reviews              | `/admin/reviews` + `src/lib/reviews.js`                                                             |
 | Change polling intervals               | The SWR config in the relevant component, or `POLL_MS` in `src/app/api/orders/[id]/stream/route.js` |
 | Change money/time formatting           | `src/lib/format.js`                                                                                 |
 | Change CSV columns or escaping         | `src/lib/csv.js`                                                                                    |
@@ -866,7 +882,7 @@ reconciliation and the build.
 | Another user's order returns `404`        | Correct: ownership is part of `getOrderForUser`                                                                                         |
 | Order total differs from the cart         | `src/lib/pricing.js` and `submitOrder`                                                                                                  |
 | Cart disappears after refresh             | `StoreHydrator`, `skipHydration`, localStorage                                                                                          |
-| Menu is stale                             | ISR `revalidate`, `/api/revalidate`, `revalidateTag("menu")`                                                                            |
+| Menu is stale                             | ISR `revalidate`, `/api/revalidate`, admin `revalidatePath("/menu")`                                                                     |
 | Menu search fires too often               | `useDebouncedValue` and the SWR key                                                                                                     |
 | Kitchen queue does not update             | SWR interval, `/api/kitchen/orders`, `mutate()` after PATCH                                                                             |
 | Order detail stays on “Reconnecting…”     | Session cookie, `/api/orders/[id]/stream`, `proxy.js`, server logs                                                                      |
@@ -923,7 +939,7 @@ For a real deployment, replace the database, add a payment provider, add notific
 | **Zod**              | Schema validation used on forms and on the server                        |
 | **scrypt**           | Password hashing function used by `src/lib/db.js`                        |
 | **httpOnly**         | Cookie flag that hides the cookie from JavaScript                        |
-| **Fallback data**    | Curated menu used when the remote menu API is unavailable                |
+| **Verified review**  | A 1–5 star review backed by a completed order containing the dish         |
 
 ---
 

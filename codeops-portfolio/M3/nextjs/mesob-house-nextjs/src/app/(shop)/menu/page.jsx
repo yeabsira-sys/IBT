@@ -14,13 +14,13 @@ export const metadata = {
 };
 
 export default async function MenuPage() {
-  const { dishes, source } = await getMenu();
+  const { dishes, categories } = await getMenu();
 
   return (
     <div className="container menu-page">
       {/* useSearchParams() inside MenuBrowser requires a Suspense boundary on statically rendered pages. */}
       <Suspense fallback={<div className="skeleton-grid" aria-busy="true">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton skeleton--card" />)}</div>}>
-        <MenuBrowser dishes={dishes} source={source} />
+        <MenuBrowser dishes={dishes} categories={categories} />
       </Suspense>
       <CommunalBanner {...communal} />
     </div>

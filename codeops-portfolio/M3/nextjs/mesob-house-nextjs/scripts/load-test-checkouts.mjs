@@ -186,6 +186,13 @@ async function main() {
     ?? menu.json?.data?.[0];
   if (!dish) throw new Error("Could not read a dish from /api/menu.");
 
+  const menuBefore = (
+    await pool.query(
+      "SELECT name, price_cents FROM menu_items WHERE id = $1",
+      [dish.id],
+    )
+  ).rows[0];
+
   const basePayload = {
     fulfillment: "pickup",
     contact: {
@@ -254,6 +261,15 @@ async function main() {
   const apiMatches = (api.json?.data ?? []).filter((order) =>
     String(order.note ?? "").startsWith(`${notePrefix}-`),
   );
+  const menuAfter = (
+    await pool.query(
+      "SELECT name, price_cents FROM menu_items WHERE id = $1",
+      [dish.id],
+    )
+  ).rows[0];
+  const menuUnchanged =
+    menuBefore?.name === menuAfter?.name &&
+    menuBefore?.price_cents === menuAfter?.price_cents;
 
   console.log(`HTTP requests: ${ok.length} fulfilled, ${failed.length} rejected`);
   console.log(
@@ -267,6 +283,9 @@ async function main() {
       `${(Number(db.revenue_cents) / 100).toLocaleString("en-US")} ETB`,
   );
   console.log(`API list rows with prefix: ${apiMatches.length}`);
+  console.log(
+    `Menu row unchanged: ${menuUnchanged ? "yes" : "NO — checkout mutated the catalogue"}`,
+  );
   console.log(
     `Duration: ${durationMs.toFixed(0)} ms (${(count / (durationMs / 1000)).toFixed(1)} checkouts/s)`,
   );
@@ -283,6 +302,7 @@ async function main() {
     db.distinct_notes === count &&
     db.item_rows === count &&
     apiMatches.length === count &&
+    menuUnchanged &&
     failed.length === 0;
   console.log("");
   console.log(
