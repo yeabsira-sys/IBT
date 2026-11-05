@@ -234,9 +234,21 @@ export default function OrderDetailLive({ initialOrder }) {
               <dd>{etb.format(Number(order.totals?.subtotal) || 0)}</dd>
             </div>
             <div>
-              <dt>VAT &amp; tourism levy</dt>
+              <dt>VAT {order.totals?.taxInclusive === false ? "& tourism levy" : "included"}</dt>
               <dd>{etb.format(Number(order.totals?.vat) || 0)}</dd>
             </div>
+            {order.totals?.serviceCharge > 0 && (
+              <div>
+                <dt>Service charge</dt>
+                <dd>{etb.format(Number(order.totals.serviceCharge) || 0)}</dd>
+              </div>
+            )}
+            {order.totals?.delivery > 0 && (
+              <div>
+                <dt>Delivery fee</dt>
+                <dd>{etb.format(Number(order.totals.delivery) || 0)}</dd>
+              </div>
+            )}
             {order.totals?.discount > 0 && (
               <div>
                 <dt>Coupon {order.couponCode}</dt>

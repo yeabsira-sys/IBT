@@ -1,0 +1,3896 @@
+{
+  "source": "legacy migration 004 (menu_items, menu_categories, menu_option_groups, menu_options, menu_pairings)",
+  "categories": [
+    {
+      "slug": "stews",
+      "name": "Traditional Stews & Wat",
+      "description": "Slow-simmered clay-pot wats and berbere-rich stews.",
+      "sortOrder": 1
+    },
+    {
+      "slug": "grills",
+      "name": "Tibs & Grills",
+      "description": "Pan-seared and fire-kissed meats and fish.",
+      "sortOrder": 2
+    },
+    {
+      "slug": "fasting",
+      "name": "Fasting & Vegan / Tsom",
+      "description": "Plant-based fasting dishes and vegan platters.",
+      "sortOrder": 3
+    },
+    {
+      "slug": "kitfo",
+      "name": "Raw & Cured Delicacies / Kitfo",
+      "description": "Hand-cut kitfo, gored gored and dulet.",
+      "sortOrder": 4
+    },
+    {
+      "slug": "drinks",
+      "name": "Beverages & Tej",
+      "description": "House-fermented tej, jebena coffee and spiced shai.",
+      "sortOrder": 5
+    },
+    {
+      "slug": "sides",
+      "name": "Sides & Add-ons",
+      "description": "Complimentary side accents, extra injera and add-ons.",
+      "sortOrder": 6
+    }
+  ],
+  "optionGroups": [
+    {
+      "key": "heat",
+      "title": "Heat & Spice Level",
+      "description": "Choose how much berbere warmth you would like.",
+      "isRequired": true,
+      "selectionType": "SINGLE",
+      "minSelections": 1,
+      "maxSelections": 1,
+      "displayType": "RADIO",
+      "sortOrder": 1,
+      "options": [
+        {
+          "value": "mild",
+          "title": "Mild",
+          "description": "Alicha touch, fragrant cardamoms",
+          "priceDeltaMinor": 0,
+          "isDefault": false,
+          "maxQuantity": 1,
+          "sortOrder": 1
+        },
+        {
+          "value": "traditional",
+          "title": "Traditional",
+          "description": "Berbere warmth (recommended)",
+          "priceDeltaMinor": 0,
+          "isDefault": true,
+          "maxQuantity": 1,
+          "sortOrder": 2
+        },
+        {
+          "value": "fiery",
+          "title": "Fiery Awaze",
+          "description": "Served with awaze & mitmita dip",
+          "priceDeltaMinor": 0,
+          "isDefault": false,
+          "maxQuantity": 1,
+          "sortOrder": 3
+        }
+      ]
+    },
+    {
+      "key": "injera",
+      "title": "Traditional Injera Base",
+      "description": "Choose the injera served with your dish.",
+      "isRequired": true,
+      "selectionType": "SINGLE",
+      "minSelections": 1,
+      "maxSelections": 1,
+      "displayType": "RADIO",
+      "sortOrder": 2,
+      "options": [
+        {
+          "value": "standard",
+          "title": "Standard Teff & Barley Blend",
+          "description": "Spongy, tart sourdough, naturally soft (traditional)",
+          "priceDeltaMinor": 0,
+          "isDefault": true,
+          "maxQuantity": 1,
+          "sortOrder": 1
+        },
+        {
+          "value": "pure-teff",
+          "title": "100% Pure Organic Brown Teff",
+          "description": "Naturally gluten-free, iron-rich nutty grain",
+          "priceDeltaMinor": 6000,
+          "isDefault": false,
+          "maxQuantity": 1,
+          "sortOrder": 2
+        }
+      ]
+    },
+    {
+      "key": "sides-meat",
+      "title": "Complimentary Side Accents",
+      "description": "Choose up to two side accents for meat dishes.",
+      "isRequired": false,
+      "selectionType": "MULTIPLE",
+      "minSelections": 0,
+      "maxSelections": 2,
+      "displayType": "CHECKBOX",
+      "sortOrder": 3,
+      "options": [
+        {
+          "value": "ayib",
+          "title": "Fresh Ayib",
+          "description": "Mild fresh cottage curd",
+          "priceDeltaMinor": 0,
+          "isDefault": true,
+          "maxQuantity": 1,
+          "sortOrder": 1
+        },
+        {
+          "value": "gomen",
+          "title": "Stewed Gomen",
+          "description": "Garlic-infused collard greens",
+          "priceDeltaMinor": 0,
+          "isDefault": false,
+          "maxQuantity": 1,
+          "sortOrder": 2
+        },
+        {
+          "value": "awaze",
+          "title": "House Awaze Paste",
+          "description": "Aged tej and berbere sauce",
+          "priceDeltaMinor": 0,
+          "isDefault": false,
+          "maxQuantity": 1,
+          "sortOrder": 3
+        },
+        {
+          "value": "extra-braised-egg",
+          "title": "Extra Braised Egg",
+          "description": "Slow-cooked in the wat broth",
+          "priceDeltaMinor": 4000,
+          "isDefault": false,
+          "maxQuantity": 1,
+          "sortOrder": 4
+        }
+      ]
+    },
+    {
+      "key": "sides-fasting",
+      "title": "Complimentary Side Accents",
+      "description": "Choose up to two side accents for fasting dishes.",
+      "isRequired": false,
+      "selectionType": "MULTIPLE",
+      "minSelections": 0,
+      "maxSelections": 2,
+      "displayType": "CHECKBOX",
+      "sortOrder": 3,
+      "options": [
+        {
+          "value": "gomen",
+          "title": "Stewed Gomen",
+          "description": "Garlic-infused collard greens",
+          "priceDeltaMinor": 0,
+          "isDefault": true,
+          "maxQuantity": 1,
+          "sortOrder": 1
+        },
+        {
+          "value": "awaze",
+          "title": "House Awaze Paste",
+          "description": "Aged tej and berbere sauce",
+          "priceDeltaMinor": 0,
+          "isDefault": false,
+          "maxQuantity": 1,
+          "sortOrder": 2
+        },
+        {
+          "value": "extra-teff-injera",
+          "title": "Extra Teff Injera",
+          "description": "A basket of three warm rolls",
+          "priceDeltaMinor": 9000,
+          "isDefault": false,
+          "maxQuantity": 1,
+          "sortOrder": 3
+        },
+        {
+          "value": "pure-teff-injera",
+          "title": "100% Pure Teff Injera",
+          "description": "Naturally gluten-free whole injera",
+          "priceDeltaMinor": 6000,
+          "isDefault": false,
+          "maxQuantity": 1,
+          "sortOrder": 4
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "slug": "house-tej-carafe",
+      "sku": null,
+      "name": "House Fermented Tej (500ml Carafe)",
+      "nativeName": "የማር ጠጅ",
+      "shortDescription": "Traditional golden mead naturally fermented for 21 days with pure highland wildflower honey and bitter gesho wood.",
+      "description": "Traditional golden mead naturally fermented for 21 days with pure highland wildflower honey and bitter gesho wood.",
+      "searchKeywords": [
+        "house fermented tej (500ml carafe)",
+        "house",
+        "fermented",
+        "tej",
+        "500ml",
+        "carafe",
+        "የማር ጠጅ",
+        "የማር",
+        "beverages & tej",
+        "beverages",
+        "pure sweet ferment",
+        "pure",
+        "sweet",
+        "ferment",
+        "500ml flask (11% abv)",
+        "flask",
+        "abv",
+        "special",
+        "popular",
+        "fasting",
+        "pure wild honey",
+        "wild",
+        "honey",
+        "gesho wood",
+        "gesho",
+        "wood",
+        "spring water",
+        "spring",
+        "water"
+      ],
+      "sortOrder": 18,
+      "spiceLevel": "NONE",
+      "spiceNotes": "Pure Sweet Ferment",
+      "isSpecial": true,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 500,
+      "servingUnit": "ML",
+      "servingTemperature": "COLD",
+      "servingNotes": "500ml Flask (11% ABV)",
+      "difficultyLevel": null,
+      "basePriceMinor": 35000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Chef's Special",
+      "badgeTone": "gold",
+      "categorySlug": "drinks",
+      "optionGroupKeys": [],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=900&q=70",
+          "altText": "House Fermented Tej (500ml Carafe)",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የማር ጠጅ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የማር ጠጅ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Pure Wild Honey",
+          "slug": "pure-wild-honey",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 0
+        },
+        {
+          "name": "Gesho Wood",
+          "slug": "gesho-wood",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 1
+        },
+        {
+          "name": "Spring Water",
+          "slug": "spring-water",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 2
+        }
+      ],
+      "allergens": [],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "drinks"
+    },
+    {
+      "slug": "jebena-spiced-coffee",
+      "sku": null,
+      "name": "Traditional Jebena Coffee",
+      "nativeName": "የጀበና ቡና",
+      "shortDescription": "Addis-style freshly roasted Yirgacheffe arabica beans boiled in clay Jebena with a hint of tenadam rue herb.",
+      "description": "Addis-style freshly roasted Yirgacheffe arabica beans boiled in clay Jebena with a hint of tenadam rue herb.",
+      "searchKeywords": [
+        "traditional jebena coffee",
+        "traditional",
+        "jebena",
+        "coffee",
+        "የጀበና ቡና",
+        "የጀበና",
+        "beverages & tej",
+        "beverages",
+        "tej",
+        "smoky & aromatic",
+        "smoky",
+        "aromatic",
+        "ceremonial sini cup",
+        "ceremonial",
+        "sini",
+        "cup",
+        "fasting",
+        "yirgacheffe coffee beans",
+        "yirgacheffe",
+        "beans",
+        "tenadam herb (optional)",
+        "tenadam",
+        "herb",
+        "optional",
+        "cardamom",
+        "cardamom"
+      ],
+      "sortOrder": 19,
+      "spiceLevel": "NONE",
+      "spiceNotes": "Smoky & Aromatic",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": null,
+      "servingUnit": null,
+      "servingTemperature": "HOT",
+      "servingNotes": "Ceremonial Sini Cup",
+      "difficultyLevel": null,
+      "basePriceMinor": 8000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Fasting / Vegan",
+      "badgeTone": "green",
+      "categorySlug": "drinks",
+      "optionGroupKeys": [],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=900&q=70",
+          "altText": "Traditional Jebena Coffee",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የጀበና ቡና",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የጀበና ቡና"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Yirgacheffe Coffee Beans",
+          "slug": "yirgacheffe-coffee-beans",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 0
+        },
+        {
+          "name": "Tenadam Herb (optional)",
+          "slug": "tenadam-herb-optional",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 1
+        },
+        {
+          "name": "Cardamom",
+          "slug": "cardamom",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        }
+      ],
+      "allergens": [],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "drinks"
+    },
+    {
+      "slug": "spiced-habesha-chai",
+      "sku": null,
+      "name": "Highland Spiced Shai",
+      "nativeName": "የቅመም ሻይ",
+      "shortDescription": "Slow-infused black highland tea leaves brewed with crushed cinnamon bark, fragrant cardamom pods, and cloves.",
+      "description": "Slow-infused black highland tea leaves brewed with crushed cinnamon bark, fragrant cardamom pods, and cloves.",
+      "searchKeywords": [
+        "highland spiced shai",
+        "highland",
+        "spiced",
+        "shai",
+        "የቅመም ሻይ",
+        "የቅመም",
+        "beverages & tej",
+        "beverages",
+        "tej",
+        "cardamom & cinnamon infusion",
+        "cardamom",
+        "cinnamon",
+        "infusion",
+        "served hot with raw cane sugar",
+        "served",
+        "hot",
+        "with",
+        "raw",
+        "cane",
+        "sugar",
+        "fasting",
+        "black tea leaves",
+        "black",
+        "tea",
+        "leaves",
+        "cinnamon",
+        "cardamom",
+        "cloves",
+        "cloves",
+        "ginger root",
+        "ginger",
+        "root"
+      ],
+      "sortOrder": 20,
+      "spiceLevel": "NONE",
+      "spiceNotes": "Cardamom & Cinnamon Infusion",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": null,
+      "servingUnit": null,
+      "servingTemperature": "HOT",
+      "servingNotes": "Served hot with raw cane sugar",
+      "difficultyLevel": null,
+      "basePriceMinor": 8000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Fasting / Vegan",
+      "badgeTone": "green",
+      "categorySlug": "drinks",
+      "optionGroupKeys": [],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=900&q=70",
+          "altText": "Highland Spiced Shai",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የቅመም ሻይ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የቅመም ሻይ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Black tea leaves",
+          "slug": "black-tea-leaves",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 0
+        },
+        {
+          "name": "Cinnamon",
+          "slug": "cinnamon",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Cardamom",
+          "slug": "cardamom",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Cloves",
+          "slug": "cloves",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        },
+        {
+          "name": "Ginger root",
+          "slug": "ginger-root",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "drinks"
+    },
+    {
+      "slug": "full-vegan-beyaynetu",
+      "sku": null,
+      "name": "Full Vegan Beyaynetu Platter",
+      "nativeName": "የጾም በያይነቱ ድልድል",
+      "shortDescription": "Grand rainbow tasting platter of Misir Wat, Kik Alicha, braised Gomen, sweet Fosolia with carrots, and Atakilt Wat.",
+      "description": "Grand rainbow tasting platter of Misir Wat, Kik Alicha, braised Gomen, sweet Fosolia with carrots, and Atakilt Wat.",
+      "searchKeywords": [
+        "full vegan beyaynetu platter",
+        "full",
+        "vegan",
+        "beyaynetu",
+        "platter",
+        "የጾም በያይነቱ ድልድል",
+        "የጾም",
+        "በያይነቱ",
+        "ድልድል",
+        "fasting & vegan / tsom",
+        "fasting",
+        "tsom",
+        "varied spices (1-2/3)",
+        "varied",
+        "spices",
+        "serves 1-2 generously",
+        "serves",
+        "generously",
+        "special",
+        "popular",
+        "lentils",
+        "lentils",
+        "split peas",
+        "split",
+        "peas",
+        "collard greens",
+        "collard",
+        "greens",
+        "carrots & green beans",
+        "carrots",
+        "green",
+        "beans",
+        "cabbage & potatoes",
+        "cabbage",
+        "potatoes"
+      ],
+      "sortOrder": 13,
+      "spiceLevel": "HOT",
+      "spiceNotes": "Varied Spices (1-2/3)",
+      "isSpecial": true,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": null,
+      "servingUnit": null,
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1-2 generously",
+      "difficultyLevel": null,
+      "basePriceMinor": 48000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Chef's Special",
+      "badgeTone": "gold",
+      "categorySlug": "fasting",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-fasting"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1591814468924-caf88d1232e1?auto=format&fit=crop&w=900&q=70",
+          "altText": "Full Vegan Beyaynetu Platter",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የጾም በያይነቱ ድልድል",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የጾም በያይነቱ ድልድል"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Lentils",
+          "slug": "lentils",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Split peas",
+          "slug": "split-peas",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Collard greens",
+          "slug": "collard-greens",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Carrots & Green beans",
+          "slug": "carrots-and-green-beans",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        },
+        {
+          "name": "Cabbage & Potatoes",
+          "slug": "cabbage-and-potatoes",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [
+        {
+          "code": "gluten",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "fasting"
+    },
+    {
+      "slug": "misir-wat",
+      "sku": null,
+      "name": "Highland Red Misir Wat",
+      "nativeName": "የምስር ወጥ",
+      "shortDescription": "Split red lentils simmered gently in rich spiced berbere sauce, caramelized red onions, and cold-pressed sunflower oil.",
+      "description": "Split red lentils simmered gently in rich spiced berbere sauce, caramelized red onions, and cold-pressed sunflower oil.",
+      "searchKeywords": [
+        "highland red misir wat",
+        "highland",
+        "red",
+        "misir",
+        "wat",
+        "የምስር ወጥ",
+        "የምስር",
+        "fasting & vegan / tsom",
+        "fasting",
+        "vegan",
+        "tsom",
+        "warm berbere (2/3)",
+        "warm",
+        "berbere",
+        "serves 1",
+        "serves",
+        "red lentils",
+        "lentils",
+        "berbere",
+        "shallots",
+        "shallots",
+        "garlic",
+        "garlic",
+        "sunflower oil",
+        "sunflower",
+        "oil"
+      ],
+      "sortOrder": 14,
+      "spiceLevel": "HOT",
+      "spiceNotes": "Warm Berbere (2/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 36000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Fasting / Vegan",
+      "badgeTone": "green",
+      "categorySlug": "fasting",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-fasting"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=900&q=70",
+          "altText": "Highland Red Misir Wat",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የምስር ወጥ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የምስር ወጥ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Red lentils",
+          "slug": "red-lentils",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Berbere",
+          "slug": "berbere",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Shallots",
+          "slug": "shallots",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 2
+        },
+        {
+          "name": "Garlic",
+          "slug": "garlic",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        },
+        {
+          "name": "Sunflower oil",
+          "slug": "sunflower-oil",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "fasting"
+    },
+    {
+      "slug": "kik-alicha-wat",
+      "sku": null,
+      "name": "Golden Kik Alicha",
+      "nativeName": "የክክ አልጫ ወጥ",
+      "shortDescription": "Yellow split peas slow-cooked to a buttery creaminess with garlic, ginger, and golden turmeric broth.",
+      "description": "Yellow split peas slow-cooked to a buttery creaminess with garlic, ginger, and golden turmeric broth.",
+      "searchKeywords": [
+        "golden kik alicha",
+        "golden",
+        "kik",
+        "alicha",
+        "የክክ አልጫ ወጥ",
+        "የክክ",
+        "አልጫ",
+        "fasting & vegan / tsom",
+        "fasting",
+        "vegan",
+        "tsom",
+        "mild herb fragrant (1/3)",
+        "mild",
+        "herb",
+        "fragrant",
+        "serves 1",
+        "serves",
+        "yellow split peas",
+        "yellow",
+        "split",
+        "peas",
+        "turmeric",
+        "turmeric",
+        "garlic",
+        "garlic",
+        "ginger",
+        "ginger",
+        "white onions",
+        "white",
+        "onions"
+      ],
+      "sortOrder": 15,
+      "spiceLevel": "MILD",
+      "spiceNotes": "Mild Herb Fragrant (1/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 34000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Fasting / Vegan",
+      "badgeTone": "green",
+      "categorySlug": "fasting",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-fasting"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=900&q=70",
+          "altText": "Golden Kik Alicha",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የክክ አልጫ ወጥ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የክክ አልጫ ወጥ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Yellow split peas",
+          "slug": "yellow-split-peas",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Turmeric",
+          "slug": "turmeric",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 1
+        },
+        {
+          "name": "Garlic",
+          "slug": "garlic",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Ginger",
+          "slug": "ginger",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        },
+        {
+          "name": "White onions",
+          "slug": "white-onions",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "fasting"
+    },
+    {
+      "slug": "gomen-collards",
+      "sku": null,
+      "name": "Braised Ye'abesha Gomen",
+      "nativeName": "የሀበሻ ጎመን",
+      "shortDescription": "Tender young collard greens braised with sweet garlic, sliced shallots, and fresh green jalapeños.",
+      "description": "Tender young collard greens braised with sweet garlic, sliced shallots, and fresh green jalapeños.",
+      "searchKeywords": [
+        "braised ye'abesha gomen",
+        "braised",
+        "abesha",
+        "gomen",
+        "የሀበሻ ጎመን",
+        "የሀበሻ",
+        "ጎመን",
+        "fasting & vegan / tsom",
+        "fasting",
+        "vegan",
+        "tsom",
+        "mild & savory (1/3)",
+        "mild",
+        "savory",
+        "serves 1",
+        "serves",
+        "collard greens",
+        "collard",
+        "greens",
+        "garlic cloves",
+        "garlic",
+        "cloves",
+        "green chilies",
+        "green",
+        "chilies",
+        "onions",
+        "onions",
+        "cold-pressed oil",
+        "cold",
+        "pressed",
+        "oil"
+      ],
+      "sortOrder": 16,
+      "spiceLevel": "MILD",
+      "spiceNotes": "Mild & Savory (1/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 32000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Fasting / Vegan",
+      "badgeTone": "green",
+      "categorySlug": "fasting",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-fasting"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1591814468924-caf88d1232e1?auto=format&fit=crop&w=900&q=70",
+          "altText": "Braised Ye'abesha Gomen",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የሀበሻ ጎመን",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የሀበሻ ጎመን"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Collard greens",
+          "slug": "collard-greens",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Garlic cloves",
+          "slug": "garlic-cloves",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Green chilies",
+          "slug": "green-chilies",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Onions",
+          "slug": "onions",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        },
+        {
+          "name": "Cold-pressed oil",
+          "slug": "cold-pressed-oil",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "fasting"
+    },
+    {
+      "slug": "fresh-timatim-fitfit",
+      "sku": null,
+      "name": "Fresh Timatim Fitfit",
+      "nativeName": "ቲማቲም ፍትፍት",
+      "shortDescription": "Crisp heirloom tomatoes, minced red shallots, and sliced green peppers tossed with torn cold injera and tangy mustard dressing.",
+      "description": "Crisp heirloom tomatoes, minced red shallots, and sliced green peppers tossed with torn cold injera and tangy mustard dressing.",
+      "searchKeywords": [
+        "fresh timatim fitfit",
+        "fresh",
+        "timatim",
+        "fitfit",
+        "ቲማቲም ፍትፍት",
+        "ቲማቲም",
+        "ፍትፍት",
+        "fasting & vegan / tsom",
+        "fasting",
+        "vegan",
+        "tsom",
+        "cooling & tangy (1/3)",
+        "cooling",
+        "tangy",
+        "serves 1 (great as side)",
+        "serves",
+        "great",
+        "side",
+        "fresh tomatoes",
+        "tomatoes",
+        "injera pieces",
+        "injera",
+        "pieces",
+        "shallots",
+        "shallots",
+        "mustard dressing",
+        "mustard",
+        "dressing",
+        "jalapeño",
+        "jalape"
+      ],
+      "sortOrder": 17,
+      "spiceLevel": "MILD",
+      "spiceNotes": "Cooling & Tangy (1/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1 (Great as side)",
+      "difficultyLevel": null,
+      "basePriceMinor": 28000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Fasting / Vegan",
+      "badgeTone": "green",
+      "categorySlug": "fasting",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-fasting"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1591814468924-caf88d1232e1?auto=format&fit=crop&w=900&q=70",
+          "altText": "Fresh Timatim Fitfit",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "ቲማቲም ፍትፍት",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "ቲማቲም ፍትፍት"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Fresh tomatoes",
+          "slug": "fresh-tomatoes",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Injera pieces",
+          "slug": "injera-pieces",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Shallots",
+          "slug": "shallots",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 2
+        },
+        {
+          "name": "Mustard dressing",
+          "slug": "mustard-dressing",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 3
+        },
+        {
+          "name": "Jalapeño",
+          "slug": "jalapeno",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [
+        {
+          "code": "gluten",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "fasting"
+    },
+    {
+      "slug": "siga-derek-tibs",
+      "sku": null,
+      "name": "Crisp Siga Derek Tibs",
+      "nativeName": "የደረቅ ስጋ ጥብስ",
+      "shortDescription": "Crispy pan-fried prime beef with Awaze",
+      "description": "Pan-charred pasture beef chunks seared with garden rosemary sprigs, seared jalapeño rounds, served with house Awaze dip.",
+      "searchKeywords": [
+        "crisp siga derek tibs",
+        "crisp",
+        "siga",
+        "derek",
+        "tibs",
+        "የደረቅ ስጋ ጥብስ",
+        "የደረቅ",
+        "ጥብስ",
+        "tibs & grills",
+        "grills",
+        "chef signature crisp",
+        "chef",
+        "signature",
+        "serves 1",
+        "serves",
+        "special",
+        "popular",
+        "prime tenderloin beef",
+        "prime",
+        "tenderloin",
+        "beef",
+        "rosemary",
+        "rosemary",
+        "jalapeño",
+        "jalape",
+        "garlic",
+        "garlic",
+        "awaze paste",
+        "awaze",
+        "paste"
+      ],
+      "sortOrder": 6,
+      "spiceLevel": "NONE",
+      "spiceNotes": "Chef Signature Crisp",
+      "isSpecial": true,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 62000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Chef's Special",
+      "badgeTone": "gold",
+      "categorySlug": "grills",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-meat"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1604909052743-94e838986d24?auto=format&fit=crop&w=900&q=70",
+          "altText": "Crisp Siga Derek Tibs",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የደረቅ ስጋ ጥብስ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የደረቅ ስጋ ጥብስ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Prime Tenderloin Beef",
+          "slug": "prime-tenderloin-beef",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Rosemary",
+          "slug": "rosemary",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 1
+        },
+        {
+          "name": "Jalapeño",
+          "slug": "jalapeno",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 2
+        },
+        {
+          "name": "Garlic",
+          "slug": "garlic",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        },
+        {
+          "name": "Awaze Paste",
+          "slug": "awaze-paste",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [],
+      "dietary": [],
+      "legacyCategory": "grills"
+    },
+    {
+      "slug": "awaze-lamb-tibs",
+      "sku": null,
+      "name": "Awaze Lamb Tibs",
+      "nativeName": "የበግ አዋዜ ጥብስ",
+      "shortDescription": "Succulent lamb tenderloin morsels wok-fried with our proprietary Awaze chili glaze, red shallots, and fresh thyme.",
+      "description": "Succulent lamb tenderloin morsels wok-fried with our proprietary Awaze chili glaze, red shallots, and fresh thyme.",
+      "searchKeywords": [
+        "awaze lamb tibs",
+        "awaze",
+        "lamb",
+        "tibs",
+        "የበግ አዋዜ ጥብስ",
+        "የበግ",
+        "አዋዜ",
+        "ጥብስ",
+        "tibs & grills",
+        "grills",
+        "fiery hot awaze (3/3)",
+        "fiery",
+        "hot",
+        "serves 1",
+        "serves",
+        "highland lamb",
+        "highland",
+        "house awaze",
+        "house",
+        "red onions",
+        "red",
+        "onions",
+        "rosemary",
+        "rosemary",
+        "butter",
+        "butter"
+      ],
+      "sortOrder": 7,
+      "spiceLevel": "EXTRA_HOT",
+      "spiceNotes": "Fiery Hot Awaze (3/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 68000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "House Classic",
+      "badgeTone": "brand",
+      "categorySlug": "grills",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-meat"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=70",
+          "altText": "Awaze Lamb Tibs",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የበግ አዋዜ ጥብስ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የበግ አዋዜ ጥብስ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Highland Lamb",
+          "slug": "highland-lamb",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "House Awaze",
+          "slug": "house-awaze",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Red Onions",
+          "slug": "red-onions",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Rosemary",
+          "slug": "rosemary",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 3
+        },
+        {
+          "name": "Butter",
+          "slug": "butter",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [],
+      "dietary": [],
+      "legacyCategory": "grills"
+    },
+    {
+      "slug": "quanta-firfir",
+      "sku": null,
+      "name": "Spicy Quanta Firfir",
+      "nativeName": "የቋንጣ ፍርፍር",
+      "shortDescription": "Sun-dried house-cured highland beef jerky shredded and sautéed in rich berbere butter gravy, laced with shredded teff injera.",
+      "description": "Sun-dried house-cured highland beef jerky shredded and sautéed in rich berbere butter gravy, laced with shredded teff injera.",
+      "searchKeywords": [
+        "spicy quanta firfir",
+        "spicy",
+        "quanta",
+        "firfir",
+        "የቋንጣ ፍርፍር",
+        "የቋንጣ",
+        "ፍርፍር",
+        "tibs & grills",
+        "tibs",
+        "grills",
+        "robust berbere (2/3)",
+        "robust",
+        "berbere",
+        "serves 1-2",
+        "serves",
+        "house quanta jerky",
+        "house",
+        "jerky",
+        "teff injera pieces",
+        "teff",
+        "injera",
+        "pieces",
+        "berbere",
+        "niter kibbeh",
+        "niter",
+        "kibbeh",
+        "shallots",
+        "shallots"
+      ],
+      "sortOrder": 8,
+      "spiceLevel": "EXTRA_HOT",
+      "spiceNotes": "Robust Berbere (2/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": null,
+      "servingUnit": null,
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1-2",
+      "difficultyLevel": null,
+      "basePriceMinor": 54000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "House Classic",
+      "badgeTone": "brand",
+      "categorySlug": "grills",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-meat"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1543353071-873f17a7a088?auto=format&fit=crop&w=900&q=70",
+          "altText": "Spicy Quanta Firfir",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የቋንጣ ፍርፍር",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የቋንጣ ፍርፍር"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "House Quanta Jerky",
+          "slug": "house-quanta-jerky",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 0
+        },
+        {
+          "name": "Teff Injera Pieces",
+          "slug": "teff-injera-pieces",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Berbere",
+          "slug": "berbere",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Niter Kibbeh",
+          "slug": "niter-kibbeh",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        },
+        {
+          "name": "Shallots",
+          "slug": "shallots",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [
+        {
+          "code": "gluten",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [],
+      "legacyCategory": "grills"
+    },
+    {
+      "slug": "chornake-fish-tibs",
+      "sku": null,
+      "name": "Lake Tana Crispy Fish Tibs",
+      "nativeName": "የዓሳ ጥብስ",
+      "shortDescription": "Fresh golden pan-crisped freshwater tilapia chunks dusted with korarima and served with spicy mitmita salt and lime.",
+      "description": "Fresh golden pan-crisped freshwater tilapia chunks dusted with korarima and served with spicy mitmita salt and lime.",
+      "searchKeywords": [
+        "lake tana crispy fish tibs",
+        "lake",
+        "tana",
+        "crispy",
+        "fish",
+        "tibs",
+        "የዓሳ ጥብስ",
+        "የዓሳ",
+        "ጥብስ",
+        "tibs & grills",
+        "grills",
+        "zesty lemon & chili (1/3)",
+        "zesty",
+        "lemon",
+        "chili",
+        "serves 1",
+        "serves",
+        "fasting",
+        "fresh tilapia fillet",
+        "fresh",
+        "tilapia",
+        "fillet",
+        "korarima",
+        "korarima",
+        "lime",
+        "lime",
+        "garlic oil",
+        "garlic",
+        "oil",
+        "mitmita",
+        "mitmita"
+      ],
+      "sortOrder": 9,
+      "spiceLevel": "MILD",
+      "spiceNotes": "Zesty Lemon & Chili (1/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 56000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Fasting / Vegan",
+      "badgeTone": "green",
+      "categorySlug": "grills",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-fasting"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=70",
+          "altText": "Lake Tana Crispy Fish Tibs",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የዓሳ ጥብስ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የዓሳ ጥብስ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Fresh Tilapia fillet",
+          "slug": "fresh-tilapia-fillet",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 0
+        },
+        {
+          "name": "Korarima",
+          "slug": "korarima",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 1
+        },
+        {
+          "name": "Lime",
+          "slug": "lime",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 2
+        },
+        {
+          "name": "Garlic oil",
+          "slug": "garlic-oil",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 3
+        },
+        {
+          "name": "Mitmita",
+          "slug": "mitmita",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [
+        {
+          "code": "fish",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "grills"
+    },
+    {
+      "slug": "prime-beef-kitfo",
+      "sku": null,
+      "name": "Prime Beef Kitfo",
+      "nativeName": "የከብት ስጋ ክትፎ",
+      "shortDescription": "Finely minced extra-lean tenderloin beef steeped in warm aromatic herbal butter and fiery orange mitmita spice blend.",
+      "description": "Finely minced extra-lean tenderloin beef steeped in warm aromatic herbal butter and fiery orange mitmita spice blend.",
+      "searchKeywords": [
+        "prime beef kitfo",
+        "prime",
+        "beef",
+        "kitfo",
+        "የከብት ስጋ ክትፎ",
+        "የከብት",
+        "ክትፎ",
+        "raw & cured delicacies / kitfo",
+        "raw",
+        "cured",
+        "delicacies",
+        "choice: leb-leb or raw",
+        "choice",
+        "leb",
+        "serves 1",
+        "serves",
+        "special",
+        "popular",
+        "top sirloin",
+        "top",
+        "sirloin",
+        "niter kibbeh",
+        "niter",
+        "kibbeh",
+        "mitmita",
+        "mitmita",
+        "cardamom seed powder",
+        "cardamom",
+        "seed",
+        "powder"
+      ],
+      "sortOrder": 10,
+      "spiceLevel": "NONE",
+      "spiceNotes": "Choice: Leb-Leb or Raw",
+      "isSpecial": true,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "ROOM_TEMPERATURE",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 72000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Chef's Special",
+      "badgeTone": "gold",
+      "categorySlug": "kitfo",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-meat"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1543353071-873f17a7a088?auto=format&fit=crop&w=900&q=70",
+          "altText": "Prime Beef Kitfo",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የከብት ስጋ ክትፎ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የከብት ስጋ ክትፎ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Top sirloin",
+          "slug": "top-sirloin",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 0
+        },
+        {
+          "name": "Niter Kibbeh",
+          "slug": "niter-kibbeh",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Mitmita",
+          "slug": "mitmita",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Cardamom seed powder",
+          "slug": "cardamom-seed-powder",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        }
+      ],
+      "allergens": [
+        {
+          "code": "milk",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [],
+      "legacyCategory": "kitfo"
+    },
+    {
+      "slug": "gored-gored",
+      "sku": null,
+      "name": "Highland Gored Gored",
+      "nativeName": "ጎረድ ጎረድ",
+      "shortDescription": "Succulent raw tenderloin beef cut into neat geometric bite-sized cubes, rolled in fiery mitmita chili and melted herbal butter.",
+      "description": "Succulent raw tenderloin beef cut into neat geometric bite-sized cubes, rolled in fiery mitmita chili and melted herbal butter.",
+      "searchKeywords": [
+        "highland gored gored",
+        "highland",
+        "gored",
+        "ጎረድ ጎረድ",
+        "ጎረድ",
+        "raw & cured delicacies / kitfo",
+        "raw",
+        "cured",
+        "delicacies",
+        "kitfo",
+        "extra hot mitmita (3/3)",
+        "extra",
+        "hot",
+        "mitmita",
+        "serves 1",
+        "serves",
+        "raw prime tenderloin",
+        "prime",
+        "tenderloin",
+        "melted ghee",
+        "melted",
+        "ghee",
+        "mitmita",
+        "awaze dip",
+        "awaze",
+        "dip"
+      ],
+      "sortOrder": 11,
+      "spiceLevel": "EXTRA_HOT",
+      "spiceNotes": "Extra Hot Mitmita (3/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "ROOM_TEMPERATURE",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 75000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "House Classic",
+      "badgeTone": "brand",
+      "categorySlug": "kitfo",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-meat"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1432139555190-58524dae6a55?auto=format&fit=crop&w=900&q=70",
+          "altText": "Highland Gored Gored",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "ጎረድ ጎረድ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "ጎረድ ጎረድ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Raw Prime Tenderloin",
+          "slug": "raw-prime-tenderloin",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 0
+        },
+        {
+          "name": "Melted Ghee",
+          "slug": "melted-ghee",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 1
+        },
+        {
+          "name": "Mitmita",
+          "slug": "mitmita",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Awaze dip",
+          "slug": "awaze-dip",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        }
+      ],
+      "allergens": [
+        {
+          "code": "milk",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [],
+      "legacyCategory": "kitfo"
+    },
+    {
+      "slug": "kitfo-dulet",
+      "sku": null,
+      "name": "Addis Style Dulet",
+      "nativeName": "ዱለት",
+      "shortDescription": "Traditional minced beef, tripe, and liver seasoned with finely chopped green peppers, shallots, and fragrant niter kibbeh.",
+      "description": "Traditional minced beef, tripe, and liver seasoned with finely chopped green peppers, shallots, and fragrant niter kibbeh.",
+      "searchKeywords": [
+        "addis style dulet",
+        "addis",
+        "style",
+        "dulet",
+        "ዱለት",
+        "raw & cured delicacies / kitfo",
+        "raw",
+        "cured",
+        "delicacies",
+        "kitfo",
+        "spicy & tangy (2/3)",
+        "spicy",
+        "tangy",
+        "serves 1",
+        "serves",
+        "minced beef & offal",
+        "minced",
+        "beef",
+        "offal",
+        "jalapeño",
+        "jalape",
+        "red onion",
+        "red",
+        "onion",
+        "mitmita",
+        "mitmita",
+        "niter kibbeh",
+        "niter",
+        "kibbeh"
+      ],
+      "sortOrder": 12,
+      "spiceLevel": "HOT",
+      "spiceNotes": "Spicy & Tangy (2/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "ROOM_TEMPERATURE",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 58000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "House Classic",
+      "badgeTone": "brand",
+      "categorySlug": "kitfo",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-meat"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1604909052743-94e838986d24?auto=format&fit=crop&w=900&q=70",
+          "altText": "Addis Style Dulet",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "ዱለት",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "ዱለት"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Minced Beef & Offal",
+          "slug": "minced-beef-and-offal",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Jalapeño",
+          "slug": "jalapeno",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 1
+        },
+        {
+          "name": "Red Onion",
+          "slug": "red-onion",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Mitmita",
+          "slug": "mitmita",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        },
+        {
+          "name": "Niter Kibbeh",
+          "slug": "niter-kibbeh",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [
+        {
+          "code": "milk",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [],
+      "legacyCategory": "kitfo"
+    },
+    {
+      "slug": "fresh-ayib",
+      "sku": null,
+      "name": "Fresh Ayib",
+      "nativeName": "አይብ",
+      "shortDescription": "Cooling house-made curd",
+      "description": "Mild fresh cottage curd, churned daily and served cool to balance berbere heat.",
+      "searchKeywords": [
+        "fresh ayib",
+        "fresh",
+        "ayib",
+        "አይብ",
+        "sides & add-ons",
+        "sides",
+        "add",
+        "ons",
+        "side portion",
+        "side",
+        "portion",
+        "complimentary",
+        "cottage cheese",
+        "cottage",
+        "cheese",
+        "sea salt",
+        "sea",
+        "salt"
+      ],
+      "sortOrder": 21,
+      "spiceLevel": null,
+      "spiceNotes": "",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": null,
+      "servingUnit": null,
+      "servingTemperature": "ROOM_TEMPERATURE",
+      "servingNotes": "Side portion",
+      "difficultyLevel": null,
+      "basePriceMinor": 0,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Complimentary",
+      "badgeTone": "gold",
+      "categorySlug": "sides",
+      "optionGroupKeys": [],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=70",
+          "altText": "Fresh Ayib",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "አይብ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "አይብ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Cottage cheese",
+          "slug": "cottage-cheese",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Sea salt",
+          "slug": "sea-salt",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        }
+      ],
+      "allergens": [
+        {
+          "code": "milk",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [],
+      "legacyCategory": "sides"
+    },
+    {
+      "slug": "stewed-gomen-side",
+      "sku": null,
+      "name": "Stewed Gomen (Side)",
+      "nativeName": "ጎመን",
+      "shortDescription": "Garlic-infused collard greens",
+      "description": "Slow-braised collard greens with garlic, ginger and a touch of niter kibbeh.",
+      "searchKeywords": [
+        "stewed gomen (side)",
+        "stewed",
+        "gomen",
+        "side",
+        "ጎመን",
+        "sides & add-ons",
+        "sides",
+        "add",
+        "ons",
+        "mild",
+        "mild",
+        "side portion",
+        "portion",
+        "complimentary",
+        "collard greens",
+        "collard",
+        "greens",
+        "garlic",
+        "garlic",
+        "ginger",
+        "ginger"
+      ],
+      "sortOrder": 22,
+      "spiceLevel": "MILD",
+      "spiceNotes": "Mild",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": null,
+      "servingUnit": null,
+      "servingTemperature": "ROOM_TEMPERATURE",
+      "servingNotes": "Side portion",
+      "difficultyLevel": null,
+      "basePriceMinor": 0,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Complimentary",
+      "badgeTone": "gold",
+      "categorySlug": "sides",
+      "optionGroupKeys": [],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=70",
+          "altText": "Stewed Gomen (Side)",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "ጎመን",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "ጎመን"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Collard greens",
+          "slug": "collard-greens",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Garlic",
+          "slug": "garlic",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Ginger",
+          "slug": "ginger",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        }
+      ],
+      "allergens": [
+        {
+          "code": "milk",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [],
+      "legacyCategory": "sides"
+    },
+    {
+      "slug": "house-awaze",
+      "sku": null,
+      "name": "House Awaze Paste",
+      "nativeName": "አዋዜ",
+      "shortDescription": "Aged berbere and tej sauce",
+      "description": "A fiery house condiment of aged berbere, tej and aromatic spices.",
+      "searchKeywords": [
+        "house awaze paste",
+        "house",
+        "awaze",
+        "paste",
+        "አዋዜ",
+        "sides & add-ons",
+        "sides",
+        "add",
+        "ons",
+        "fiery",
+        "fiery",
+        "side portion",
+        "side",
+        "portion",
+        "complimentary",
+        "fasting",
+        "berbere",
+        "berbere",
+        "tej",
+        "tej",
+        "garlic",
+        "garlic"
+      ],
+      "sortOrder": 23,
+      "spiceLevel": "EXTRA_HOT",
+      "spiceNotes": "Fiery",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": null,
+      "servingUnit": null,
+      "servingTemperature": "ROOM_TEMPERATURE",
+      "servingNotes": "Side portion",
+      "difficultyLevel": null,
+      "basePriceMinor": 0,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Complimentary",
+      "badgeTone": "gold",
+      "categorySlug": "sides",
+      "optionGroupKeys": [],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=70",
+          "altText": "House Awaze Paste",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "አዋዜ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "አዋዜ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Berbere",
+          "slug": "berbere",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Tej",
+          "slug": "tej",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 1
+        },
+        {
+          "name": "Garlic",
+          "slug": "garlic",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        }
+      ],
+      "allergens": [],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "sides"
+    },
+    {
+      "slug": "extra-braised-egg",
+      "sku": null,
+      "name": "Extra Braised Egg",
+      "nativeName": "እንቁላል",
+      "shortDescription": "Simmered in wat broth",
+      "description": "A whole farm egg slow-braised in the house wat broth.",
+      "searchKeywords": [
+        "extra braised egg",
+        "extra",
+        "braised",
+        "egg",
+        "እንቁላል",
+        "sides & add-ons",
+        "sides",
+        "add",
+        "ons",
+        "mild",
+        "mild",
+        "1 egg",
+        "side",
+        "farm egg",
+        "farm",
+        "wat broth",
+        "wat",
+        "broth"
+      ],
+      "sortOrder": 24,
+      "spiceLevel": "MILD",
+      "spiceNotes": "Mild",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PIECE",
+      "servingTemperature": "ROOM_TEMPERATURE",
+      "servingNotes": "1 egg",
+      "difficultyLevel": null,
+      "basePriceMinor": 40,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Side",
+      "badgeTone": "brand",
+      "categorySlug": "sides",
+      "optionGroupKeys": [],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=70",
+          "altText": "Extra Braised Egg",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "እንቁላል",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "እንቁላል"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Farm egg",
+          "slug": "farm-egg",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 0
+        },
+        {
+          "name": "Wat broth",
+          "slug": "wat-broth",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 1
+        }
+      ],
+      "allergens": [
+        {
+          "code": "eggs",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [],
+      "legacyCategory": "sides"
+    },
+    {
+      "slug": "extra-teff-injera",
+      "sku": null,
+      "name": "Extra Teff Injera (3 rolls)",
+      "nativeName": "እንጀራ",
+      "shortDescription": "Warm basket for the table",
+      "description": "Three extra rolls of our naturally fermented teff injera.",
+      "searchKeywords": [
+        "extra teff injera (3 rolls)",
+        "extra",
+        "teff",
+        "injera",
+        "rolls",
+        "እንጀራ",
+        "sides & add-ons",
+        "sides",
+        "add",
+        "ons",
+        "3 rolls",
+        "side",
+        "fasting",
+        "teff",
+        "spring water",
+        "spring",
+        "water"
+      ],
+      "sortOrder": 25,
+      "spiceLevel": null,
+      "spiceNotes": "",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 3,
+      "servingUnit": "PIECE",
+      "servingTemperature": "ROOM_TEMPERATURE",
+      "servingNotes": "3 rolls",
+      "difficultyLevel": null,
+      "basePriceMinor": 90,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Side",
+      "badgeTone": "brand",
+      "categorySlug": "sides",
+      "optionGroupKeys": [],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=70",
+          "altText": "Extra Teff Injera (3 rolls)",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "እንጀራ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "እንጀራ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Teff",
+          "slug": "teff",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Spring water",
+          "slug": "spring-water",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 1
+        }
+      ],
+      "allergens": [],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "sides"
+    },
+    {
+      "slug": "pure-teff-injera",
+      "sku": null,
+      "name": "100% Pure Teff Injera",
+      "nativeName": "ንጹህ ጤፍ እንጀራ",
+      "shortDescription": "Naturally gluten-free",
+      "description": "A whole injera made from 100% pure organic brown teff.",
+      "searchKeywords": [
+        "100% pure teff injera",
+        "100",
+        "pure",
+        "teff",
+        "injera",
+        "ንጹህ ጤፍ እንጀራ",
+        "ንጹህ",
+        "እንጀራ",
+        "sides & add-ons",
+        "sides",
+        "add",
+        "ons",
+        "1 large injera",
+        "large",
+        "side",
+        "fasting",
+        "pure teff",
+        "spring water",
+        "spring",
+        "water"
+      ],
+      "sortOrder": 26,
+      "spiceLevel": null,
+      "spiceNotes": "",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PIECE",
+      "servingTemperature": "ROOM_TEMPERATURE",
+      "servingNotes": "1 large injera",
+      "difficultyLevel": null,
+      "basePriceMinor": 60,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Side",
+      "badgeTone": "brand",
+      "categorySlug": "sides",
+      "optionGroupKeys": [],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=70",
+          "altText": "100% Pure Teff Injera",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "ንጹህ ጤፍ እንጀራ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "ንጹህ ጤፍ እንጀራ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Pure teff",
+          "slug": "pure-teff",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Spring water",
+          "slug": "spring-water",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 1
+        }
+      ],
+      "allergens": [],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "sides"
+    },
+    {
+      "slug": "doro-wat",
+      "sku": null,
+      "name": "Classic Doro Wat",
+      "nativeName": "የዶሮ ወጥ",
+      "shortDescription": "Slow-simmered highland chicken simmered in rich caramelized shallots, 12-spice berbere, and organic niter kibbeh with a hard-boiled egg.",
+      "description": "Slow-simmered highland chicken simmered in rich caramelized shallots, 12-spice berbere, and organic niter kibbeh with a hard-boiled egg.",
+      "searchKeywords": [
+        "classic doro wat",
+        "classic",
+        "doro",
+        "wat",
+        "የዶሮ ወጥ",
+        "የዶሮ",
+        "traditional stews & wat",
+        "traditional",
+        "stews",
+        "fiery berbere (3/3)",
+        "fiery",
+        "berbere",
+        "serves 1-2 generously",
+        "serves",
+        "generously",
+        "special",
+        "popular",
+        "free-range chicken",
+        "free",
+        "range",
+        "chicken",
+        "berbere",
+        "niter kibbeh",
+        "niter",
+        "kibbeh",
+        "farm egg",
+        "farm",
+        "egg",
+        "red onions",
+        "red",
+        "onions",
+        "garlic",
+        "garlic",
+        "ginger",
+        "ginger"
+      ],
+      "sortOrder": 1,
+      "spiceLevel": "EXTRA_HOT",
+      "spiceNotes": "Fiery Berbere (3/3)",
+      "isSpecial": true,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": null,
+      "servingUnit": null,
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1-2 generously",
+      "difficultyLevel": null,
+      "basePriceMinor": 65000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Chef's Special",
+      "badgeTone": "gold",
+      "categorySlug": "stews",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-meat"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1580651315530-69c8e0026377?auto=format&fit=crop&w=900&q=70",
+          "altText": "Classic Doro Wat",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የዶሮ ወጥ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የዶሮ ወጥ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Free-range chicken",
+          "slug": "free-range-chicken",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Berbere",
+          "slug": "berbere",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Niter Kibbeh",
+          "slug": "niter-kibbeh",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Farm Egg",
+          "slug": "farm-egg",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 3
+        },
+        {
+          "name": "Red Onions",
+          "slug": "red-onions",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 4
+        },
+        {
+          "name": "Garlic",
+          "slug": "garlic",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 5
+        },
+        {
+          "name": "Ginger",
+          "slug": "ginger",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 6
+        }
+      ],
+      "allergens": [
+        {
+          "code": "milk",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        },
+        {
+          "code": "eggs",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [],
+      "legacyCategory": "stews"
+    },
+    {
+      "slug": "siga-wat",
+      "sku": null,
+      "name": "Prime Siga Wat (Beef Stew)",
+      "nativeName": "የስጋ ወጥ",
+      "shortDescription": "Tender grass-fed beef chuck cubes slowly braised in deep berbere gravy until meltingly tender.",
+      "description": "Tender grass-fed beef chuck cubes slowly braised in deep berbere gravy until meltingly tender.",
+      "searchKeywords": [
+        "prime siga wat (beef stew)",
+        "prime",
+        "siga",
+        "wat",
+        "beef",
+        "stew",
+        "የስጋ ወጥ",
+        "የስጋ",
+        "traditional stews & wat",
+        "traditional",
+        "stews",
+        "medium-hot (2/3)",
+        "medium",
+        "hot",
+        "serves 1",
+        "serves",
+        "prime beef",
+        "highland berbere",
+        "highland",
+        "berbere",
+        "niter kibbeh",
+        "niter",
+        "kibbeh",
+        "cardamom",
+        "cardamom",
+        "garlic",
+        "garlic"
+      ],
+      "sortOrder": 2,
+      "spiceLevel": "HOT",
+      "spiceNotes": "Medium-Hot (2/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 58000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "House Classic",
+      "badgeTone": "brand",
+      "categorySlug": "stews",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-meat"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1604909052743-94e838986d24?auto=format&fit=crop&w=900&q=70",
+          "altText": "Prime Siga Wat (Beef Stew)",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የስጋ ወጥ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የስጋ ወጥ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Prime Beef",
+          "slug": "prime-beef",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Highland Berbere",
+          "slug": "highland-berbere",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Niter Kibbeh",
+          "slug": "niter-kibbeh",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Cardamom",
+          "slug": "cardamom",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        },
+        {
+          "name": "Garlic",
+          "slug": "garlic",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [
+        {
+          "code": "milk",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [],
+      "legacyCategory": "stews"
+    },
+    {
+      "slug": "beg-alicha-wat",
+      "sku": null,
+      "name": "Beg Alicha Wat (Mild Lamb Stew)",
+      "nativeName": "የበግ አልጫ ወጥ",
+      "shortDescription": "Fragrant, mild highland lamb stew slow-cooked with fresh ginger, turmeric roots, garlic, and wild rosemary.",
+      "description": "Fragrant, mild highland lamb stew slow-cooked with fresh ginger, turmeric roots, garlic, and wild rosemary.",
+      "searchKeywords": [
+        "beg alicha wat (mild lamb stew)",
+        "beg",
+        "alicha",
+        "wat",
+        "mild",
+        "lamb",
+        "stew",
+        "የበግ አልጫ ወጥ",
+        "የበግ",
+        "አልጫ",
+        "traditional stews & wat",
+        "traditional",
+        "stews",
+        "mild (turmeric & ginger)",
+        "turmeric",
+        "ginger",
+        "serves 1-2",
+        "serves",
+        "highland lamb",
+        "highland",
+        "fresh turmeric",
+        "fresh",
+        "ginger",
+        "clarified spiced butter",
+        "clarified",
+        "spiced",
+        "butter",
+        "garlic",
+        "garlic"
+      ],
+      "sortOrder": 3,
+      "spiceLevel": "MILD",
+      "spiceNotes": "Mild (Turmeric & Ginger)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": null,
+      "servingUnit": null,
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1-2",
+      "difficultyLevel": null,
+      "basePriceMinor": 62000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "House Classic",
+      "badgeTone": "brand",
+      "categorySlug": "stews",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-meat"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=70",
+          "altText": "Beg Alicha Wat (Mild Lamb Stew)",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "የበግ አልጫ ወጥ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "የበግ አልጫ ወጥ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Highland Lamb",
+          "slug": "highland-lamb",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Fresh Turmeric",
+          "slug": "fresh-turmeric",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 1
+        },
+        {
+          "name": "Ginger",
+          "slug": "ginger",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Clarified Spiced Butter",
+          "slug": "clarified-spiced-butter",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        },
+        {
+          "name": "Garlic",
+          "slug": "garlic",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [
+        {
+          "code": "milk",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [],
+      "legacyCategory": "stews"
+    },
+    {
+      "slug": "shiro-tegamino",
+      "sku": null,
+      "name": "Clay-Pot Shiro Tegamino",
+      "nativeName": "ሽሮ ተጋሚኖ",
+      "shortDescription": "Spiced chickpea and broad bean stew whipped with herbs and extra virgin seed oil, served boiling hot in earthenware.",
+      "description": "Spiced chickpea and broad bean stew whipped with herbs and extra virgin seed oil, served boiling hot in earthenware.",
+      "searchKeywords": [
+        "clay-pot shiro tegamino",
+        "clay",
+        "pot",
+        "shiro",
+        "tegamino",
+        "ሽሮ ተጋሚኖ",
+        "ተጋሚኖ",
+        "traditional stews & wat",
+        "traditional",
+        "stews",
+        "wat",
+        "medium (1/3)",
+        "medium",
+        "serves 1",
+        "serves",
+        "fasting",
+        "chickpea flour",
+        "chickpea",
+        "flour",
+        "cardamom",
+        "cardamom",
+        "garlic",
+        "garlic",
+        "shallots",
+        "shallots",
+        "seed oil",
+        "seed",
+        "oil",
+        "green chili",
+        "green",
+        "chili"
+      ],
+      "sortOrder": 4,
+      "spiceLevel": "MEDIUM",
+      "spiceNotes": "Medium (1/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 42000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "Fasting / Vegan",
+      "badgeTone": "green",
+      "categorySlug": "stews",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-fasting"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=900&q=70",
+          "altText": "Clay-Pot Shiro Tegamino",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "ሽሮ ተጋሚኖ",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "ሽሮ ተጋሚኖ"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Chickpea flour",
+          "slug": "chickpea-flour",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Cardamom",
+          "slug": "cardamom",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Garlic",
+          "slug": "garlic",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Shallots",
+          "slug": "shallots",
+          "defaultUnit": "PIECE",
+          "quantity": null,
+          "unit": "PIECE",
+          "sortOrder": 3
+        },
+        {
+          "name": "Seed Oil",
+          "slug": "seed-oil",
+          "defaultUnit": "ML",
+          "quantity": null,
+          "unit": "ML",
+          "sortOrder": 4
+        },
+        {
+          "name": "Green Chili",
+          "slug": "green-chili",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 5
+        }
+      ],
+      "allergens": [],
+      "dietary": [
+        {
+          "code": "FASTING",
+          "verificationStatus": "VERIFIED",
+          "verifiedAt": null,
+          "verifiedBy": null
+        }
+      ],
+      "legacyCategory": "stews"
+    },
+    {
+      "slug": "shiro-bozena",
+      "sku": null,
+      "name": "Shiro Bozena (Beef Enriched Shiro)",
+      "nativeName": "ሽሮ ቦዘና",
+      "shortDescription": "Traditional spiced chickpea puree enriched with savoury diced prime beef morsels and fragrant niter kibbeh.",
+      "description": "Traditional spiced chickpea puree enriched with savoury diced prime beef morsels and fragrant niter kibbeh.",
+      "searchKeywords": [
+        "shiro bozena (beef enriched shiro)",
+        "shiro",
+        "bozena",
+        "beef",
+        "enriched",
+        "ሽሮ ቦዘና",
+        "ቦዘና",
+        "traditional stews & wat",
+        "traditional",
+        "stews",
+        "wat",
+        "medium-hot (2/3)",
+        "medium",
+        "hot",
+        "serves 1",
+        "serves",
+        "chickpea flour",
+        "chickpea",
+        "flour",
+        "beef bites",
+        "bites",
+        "spiced butter",
+        "spiced",
+        "butter",
+        "berbere",
+        "berbere",
+        "garlic",
+        "garlic"
+      ],
+      "sortOrder": 5,
+      "spiceLevel": "HOT",
+      "spiceNotes": "Medium-Hot (2/3)",
+      "isSpecial": false,
+      "preparationTimeMinutes": null,
+      "cookingTimeMinutes": null,
+      "preparationMethods": [],
+      "preparationNotes": "",
+      "servingSize": 1,
+      "servingUnit": "PORTION",
+      "servingTemperature": "HOT",
+      "servingNotes": "Serves 1",
+      "difficultyLevel": null,
+      "basePriceMinor": 49000,
+      "currency": "ETB",
+      "compareAtPriceMinor": null,
+      "costPriceMinor": null,
+      "taxCategoryCode": "VAT",
+      "isTaxInclusive": true,
+      "serviceChargeApplicable": true,
+      "badgeText": "House Classic",
+      "badgeTone": "brand",
+      "categorySlug": "stews",
+      "optionGroupKeys": [
+        "heat",
+        "injera",
+        "sides-meat"
+      ],
+      "media": [
+        {
+          "url": "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=900&q=70",
+          "altText": "Shiro Bozena (Beef Enriched Shiro)",
+          "mediaType": "IMAGE",
+          "isPrimary": true,
+          "sortOrder": 1
+        }
+      ],
+      "translations": [
+        {
+          "locale": "am",
+          "name": "ሽሮ ቦዘና",
+          "shortDescription": "",
+          "description": "",
+          "nativeName": "ሽሮ ቦዘና"
+        }
+      ],
+      "ingredients": [
+        {
+          "name": "Chickpea Flour",
+          "slug": "chickpea-flour",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 0
+        },
+        {
+          "name": "Beef Bites",
+          "slug": "beef-bites",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 1
+        },
+        {
+          "name": "Spiced Butter",
+          "slug": "spiced-butter",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 2
+        },
+        {
+          "name": "Berbere",
+          "slug": "berbere",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 3
+        },
+        {
+          "name": "Garlic",
+          "slug": "garlic",
+          "defaultUnit": "G",
+          "quantity": null,
+          "unit": "G",
+          "sortOrder": 4
+        }
+      ],
+      "allergens": [
+        {
+          "code": "milk",
+          "source": "INGREDIENT",
+          "isConfirmed": false,
+          "notes": "Imported candidate from the legacy menu; requires admin confirmation."
+        }
+      ],
+      "dietary": [],
+      "legacyCategory": "stews"
+    }
+  ],
+  "pairings": [
+    {
+      "menuItemSlug": "awaze-lamb-tibs",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "awaze-lamb-tibs",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "awaze-lamb-tibs",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "beg-alicha-wat",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "beg-alicha-wat",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "beg-alicha-wat",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "chornake-fish-tibs",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "chornake-fish-tibs",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "chornake-fish-tibs",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "doro-wat",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "doro-wat",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "doro-wat",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "fresh-timatim-fitfit",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "fresh-timatim-fitfit",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "full-vegan-beyaynetu",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "full-vegan-beyaynetu",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "full-vegan-beyaynetu",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "gomen-collards",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "gomen-collards",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "gomen-collards",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "gored-gored",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "gored-gored",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "gored-gored",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "house-tej-carafe",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "house-tej-carafe",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "jebena-spiced-coffee",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "jebena-spiced-coffee",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "kik-alicha-wat",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "kik-alicha-wat",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "kik-alicha-wat",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "kitfo-dulet",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "kitfo-dulet",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "kitfo-dulet",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "misir-wat",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "misir-wat",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "misir-wat",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "prime-beef-kitfo",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "prime-beef-kitfo",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "prime-beef-kitfo",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "quanta-firfir",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "quanta-firfir",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "quanta-firfir",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "shiro-bozena",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "shiro-bozena",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "shiro-bozena",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "shiro-tegamino",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "shiro-tegamino",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "shiro-tegamino",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "siga-derek-tibs",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "siga-derek-tibs",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "siga-derek-tibs",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "siga-wat",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "siga-wat",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "siga-wat",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    },
+    {
+      "menuItemSlug": "spiced-habesha-chai",
+      "pairedMenuItemSlug": "house-tej-carafe",
+      "type": "DRINK",
+      "sortOrder": 1
+    },
+    {
+      "menuItemSlug": "spiced-habesha-chai",
+      "pairedMenuItemSlug": "fresh-timatim-fitfit",
+      "type": "RECOMMENDED",
+      "sortOrder": 2
+    },
+    {
+      "menuItemSlug": "spiced-habesha-chai",
+      "pairedMenuItemSlug": "jebena-spiced-coffee",
+      "type": "DRINK",
+      "sortOrder": 3
+    }
+  ]
+}

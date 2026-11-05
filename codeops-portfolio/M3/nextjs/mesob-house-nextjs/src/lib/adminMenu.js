@@ -164,81 +164,393 @@ function parseOrThrow(schema, input) {
   return parsed.data;
 }
 
-function normalizeGroups(groups = []) {
-  return groups.map((group, groupIndex) => {
-    const key = slugify(group.key);
-    if (!key) throw new AdminMenuError("Option group keys need letters or numbers.", 422);
-    const options = group.options.map((option, optionIndex) => {
-      const value = slugify(option.value);
-      if (!value) throw new AdminMenuError("Option values need letters or numbers.", 422);
-      return {
-        value,
-        title: option.title,
-        description: option.description,
-        note: option.note,
-        priceDeltaCents: option.priceDeltaCents,
-        isDefault: Boolean(option.isDefault),
-        isActive: option.isActive !== false,
-        sortOrder: option.sortOrder ?? optionIndex,
-      };
-    });
-    const defaultOptions = options.filter((option) => option.isDefault);
-    if (!defaultOptions.length) options[0].isDefault = true;
-    if (!group.isMulti && options.filter((option) => option.isDefault).length > 1) {
-      let used = false;
-      for (const option of options) {
-        if (!option.isDefault) continue;
-        if (!used) used = true;
-        else option.isDefault = false;
-      }
-    }
-    if (group.isMulti && options.filter((option) => option.isDefault).length > group.maxSelections) {
-      let remaining = group.maxSelections;
-      for (const option of options) {
-        if (!option.isDefault) continue;
-        if (remaining > 0) remaining -= 1;
-        else option.isDefault = false;
-      }
-    }
-    return {
-      id: `${key}`,
-      key,
-      title: group.title,
-      icon: group.icon,
-      badge: group.badge,
-      columns: group.columns,
-      isMulti: Boolean(group.isMulti),
-      maxSelections: group.maxSelections,
-      sortOrder: group.sortOrder ?? groupIndex,
-      isActive: group.isActive !== false,
-      options,
-    };
+function spiceFromText(value) {
+  const text = String(value ?? "").toLowerCase();
+  if (!text.trim()) return { spiceLevel: null, spiceNotes: "" };
+  if (text.includes("extra")) return { spiceLevel: "EXTRA_HOT", spiceNotes: value };
+  if (text.includes("hot") || text.includes("spicy")) {
+    return { spiceLevel: "HOT", spiceNotes: value };
+  }
+  if (text.includes("medium")) return { spiceLevel: "MEDIUM", spiceNotes: value };
+  if (text.includes("mild")) return { spiceLevel: "MILD", spiceNotes: value };
+  if (text.includes("none") || text.includes("no heat")) {
+    return { spiceLevel: "NONE", spiceNotes: value };
+  }
+  return { spiceLevel: null, spiceNotes: value };
+}
+
+const DIETARY_ATTRIBUTES = {
+  FASTING: ["Fasting", "Suitable for Ethiopian Orthodox fasting meals."],
+  VEGAN: ["Vegan", "No animal-derived ingredients."],
+  VEGETARIAN: ["Vegetarian", "No meat, poultry or fish."],
+  GLUTEN_FREE: ["Gluten free", "No gluten-containing ingredients."],
+  DAIRY_FREE: ["Dairy free", "No milk or dairy ingredients."],
+  NUT_FREE: ["Nut free", "No tree nuts or peanuts."],
+};
+
+const ALLERGEN_CODES = {
+  gluten: "gluten",
+  "cereals containing gluten": "gluten",
+  wheat: "gluten",
+  milk: "milk",
+  dairy: "milk",
+  egg: "eggs",
+  eggs: "eggs",
+  sesame: "sesame",
+  peanut: "peanuts",
+  peanuts: "peanuts",
+  "tree nuts": "tree-nuts",
+  nut: "tree-nuts",
+  nuts: "tree-nuts",
+  fish: "fish",
+  shellfish: "shellfish",
+  soy: "soy",
+  soya: "soy",
+};
+
+function allergenCode(name) {
+  return ALLERGEN_CODES[String(name ?? "").trim().toLowerCase()] ?? slugify(name);
+}
+
+async function defaultContext(client) {
+  const slug = process.env.MESOB_RESTAURANT_SLUG || "mesob-house";
+  const restaurant = await client.restaurant.findFirst({
+    where: { slug, status: "ACTIVE" },
+    select: { id: true, defaultCurrency: true },
   });
-}
-
-async function assertCategory(client, category) {
-  const row = await client.menuCategory.findUnique({ where: { slug: category } });
-  if (!row) throw new AdminMenuError("That menu category does not exist.", 422);
-}
-
-async function assertPairings(client, itemId, pairingIds) {
-  const ids = [...new Set(pairingIds.filter((id) => id && id !== itemId))];
-  if (!ids.length) return [];
-  const rows = await client.menuItem.findMany({
-    where: { id: { in: ids } },
+  if (!restaurant) {
+    throw new AdminMenuError("No active restaurant found. Run the seed.", 500);
+  }
+  const branch =
+    (await client.branch.findFirst({
+      where: {
+        restaurantId: restaurant.id,
+        isDefault: true,
+        status: "ACTIVE",
+      },
+      select: { id: true },
+    })) ??
+    (await client.branch.findFirst({
+      where: { restaurantId: restaurant.id, status: "ACTIVE" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    }));
+  if (!branch) {
+    throw new AdminMenuError("No active branch found. Run the seed.", 500);
+  }
+  const taxCategory = await client.taxCategory.findFirst({
+    where: { restaurantId: restaurant.id, code: "VAT" },
     select: { id: true },
   });
-  if (rows.length !== ids.length) {
-    throw new AdminMenuError("One of the selected pairings no longer exists.", 422);
-  }
-  return ids;
+  return {
+    restaurantId: restaurant.id,
+    branchId: branch.id,
+    currency: restaurant.defaultCurrency,
+    taxCategoryId: taxCategory?.id ?? null,
+  };
 }
 
-function audit(client, actor, action, entityId, beforeData, afterData) {
+async function resolveCategory(client, restaurantId, slug) {
+  const category = await client.menuCategory.findFirst({
+    where: {
+      slug,
+      isActive: true,
+      menu: { restaurantId, isActive: true },
+    },
+    select: { id: true, slug: true },
+  });
+  if (!category) {
+    throw new AdminMenuError("That menu category does not exist.", 422);
+  }
+  return category;
+}
+
+async function resolvePairings(client, restaurantId, slugs, currentSlug) {
+  const values = [...new Set(slugs.filter((slug) => slug && slug !== currentSlug))];
+  if (!values.length) return [];
+  const rows = await client.menuItem.findMany({
+    where: {
+      restaurantId,
+      slug: { in: values },
+      deletedAt: null,
+    },
+    select: { id: true, slug: true },
+  });
+  if (rows.length !== values.length) {
+    throw new AdminMenuError("One of the selected pairings no longer exists.", 422);
+  }
+  return rows;
+}
+
+async function syncCategories(client, restaurantId, menuItemId, categoryId, isSide) {
+  await client.menuItemCategory.deleteMany({ where: { menuItemId } });
+  await client.menuItemCategory.create({
+    data: { menuItemId, categoryId, sortOrder: 0 },
+  });
+  if (isSide) {
+    const sides = await client.menuCategory.findFirst({
+      where: {
+        slug: "sides",
+        isActive: true,
+        menu: { restaurantId, isActive: true },
+      },
+      select: { id: true },
+    });
+    if (sides && sides.id !== categoryId) {
+      await client.menuItemCategory.create({
+        data: { menuItemId, categoryId: sides.id, sortOrder: 1 },
+      });
+    }
+  }
+}
+
+async function syncMedia(client, menuItemId, imageUrl, name) {
+  await client.menuItemMedia.deleteMany({
+    where: { menuItemId, isPrimary: true },
+  });
+  if (!imageUrl) return;
+  await client.menuItemMedia.create({
+    data: {
+      menuItemId,
+      url: imageUrl,
+      altText: name,
+      mediaType: "IMAGE",
+      isPrimary: true,
+      sortOrder: 0,
+    },
+  });
+}
+
+async function syncPrice(client, context, menuItemId, priceMinor, actorId, force = false, previousPrice = null) {
+  if (!force && previousPrice === priceMinor) return;
+  await client.menuItemPrice.create({
+    data: {
+      menuItemId,
+      branchId: null,
+      priceMinor,
+      currency: context.currency,
+      validFrom: new Date(),
+      createdBy: actorId ?? null,
+    },
+  });
+}
+
+async function syncIngredients(client, context, menuItemId, names) {
+  await client.menuItemIngredient.deleteMany({ where: { menuItemId } });
+  let sortOrder = 0;
+  for (const name of names) {
+    const slug = slugify(name);
+    if (!slug) continue;
+    const ingredient = await client.ingredient.upsert({
+      where: {
+        restaurantId_slug: { restaurantId: context.restaurantId, slug },
+      },
+      update: { name },
+      create: {
+        restaurantId: context.restaurantId,
+        name,
+        slug,
+        defaultUnit: "PIECE",
+        description: "",
+      },
+      select: { id: true },
+    });
+    await client.menuItemIngredient.create({
+      data: {
+        menuItemId,
+        ingredientId: ingredient.id,
+        unit: "PIECE",
+        sortOrder,
+      },
+    });
+    sortOrder += 1;
+  }
+}
+
+async function syncAllergens(client, menuItemId, names) {
+  await client.menuItemAllergen.deleteMany({ where: { menuItemId } });
+  for (const name of names) {
+    const code = allergenCode(name);
+    if (!code) continue;
+    const allergen = await client.allergen.upsert({
+      where: { code },
+      update: { name },
+      create: { code, name, description: "" },
+      select: { id: true },
+    });
+    await client.menuItemAllergen.create({
+      data: {
+        menuItemId,
+        allergenId: allergen.id,
+        source: "INGREDIENT",
+        isConfirmed: true,
+      },
+    });
+  }
+}
+
+async function syncDietary(client, menuItemId, { isFasting, tags }, actorId) {
+  await client.menuItemDietaryAttribute.deleteMany({ where: { menuItemId } });
+  const codes = new Set();
+  if (isFasting) codes.add("FASTING");
+  for (const tag of tags) {
+    const normalized = String(tag).trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    if (normalized === "FASTING" || normalized === "VEGAN" || normalized === "VEGETARIAN" || normalized === "GLUTEN_FREE" || normalized === "DAIRY_FREE" || normalized === "NUT_FREE") {
+      codes.add(normalized);
+    }
+  }
+  for (const code of codes) {
+    const [name, description] = DIETARY_ATTRIBUTES[code];
+    const attribute = await client.dietaryAttribute.upsert({
+      where: { code },
+      update: { name, description },
+      create: { code, name, description },
+      select: { id: true },
+    });
+    await client.menuItemDietaryAttribute.create({
+      data: {
+        menuItemId,
+        dietaryAttributeId: attribute.id,
+        verificationStatus: "VERIFIED",
+        verifiedAt: new Date(),
+        verifiedBy: actorId ?? null,
+      },
+    });
+  }
+}
+
+async function syncOptionGroups(client, context, menuItemId, groups) {
+  await client.menuItemOptionGroup.deleteMany({ where: { menuItemId } });
+
+  const links = [];
+  for (const [index, group] of groups.entries()) {
+    const key = slugify(group.key);
+    if (!key) throw new AdminMenuError("Option group keys need letters or numbers.", 422);
+    const isRequired = String(group.badge ?? "").toLowerCase().includes("required");
+    const groupRow = await client.menuOptionGroup.upsert({
+      where: {
+        restaurantId_key: { restaurantId: context.restaurantId, key },
+      },
+      update: {
+        title: group.title,
+        description: "",
+        isRequired,
+        selectionType: group.isMulti ? "MULTIPLE" : "SINGLE",
+        minSelections: isRequired ? 1 : 0,
+        maxSelections: group.maxSelections,
+        displayType: group.isMulti ? "CHECKBOX" : "RADIO",
+        sortOrder: group.sortOrder ?? index,
+        isActive: group.isActive !== false,
+        deletedAt: null,
+      },
+      create: {
+        restaurantId: context.restaurantId,
+        key,
+        title: group.title,
+        description: "",
+        isRequired,
+        selectionType: group.isMulti ? "MULTIPLE" : "SINGLE",
+        minSelections: isRequired ? 1 : 0,
+        maxSelections: group.maxSelections,
+        displayType: group.isMulti ? "CHECKBOX" : "RADIO",
+        sortOrder: group.sortOrder ?? index,
+        isActive: group.isActive !== false,
+      },
+      select: { id: true },
+    });
+
+    const values = [];
+    for (const [optionIndex, option] of group.options.entries()) {
+      const value = slugify(option.value);
+      if (!value) continue;
+      values.push(value);
+      await client.menuOption.upsert({
+        where: { groupId_value: { groupId: groupRow.id, value } },
+        update: {
+          title: option.title,
+          description: option.description,
+          note: option.note,
+          priceDeltaMinor: option.priceDeltaCents,
+          isDefault: Boolean(option.isDefault),
+          isActive: option.isActive !== false,
+          maxQuantity: 1,
+          sortOrder: option.sortOrder ?? optionIndex,
+        },
+        create: {
+          groupId: groupRow.id,
+          value,
+          title: option.title,
+          description: option.description,
+          note: option.note,
+          priceDeltaMinor: option.priceDeltaCents,
+          isDefault: Boolean(option.isDefault),
+          isActive: option.isActive !== false,
+          maxQuantity: 1,
+          sortOrder: option.sortOrder ?? optionIndex,
+        },
+      });
+    }
+    if (values.length) {
+      await client.menuOption.updateMany({
+        where: { groupId: groupRow.id, value: { notIn: values } },
+        data: { isActive: false },
+      });
+    }
+    links.push({
+      menuItemId,
+      groupId: groupRow.id,
+      sortOrder: group.sortOrder ?? index,
+    });
+  }
+
+  if (links.length) {
+    await client.menuItemOptionGroup.createMany({
+      data: links,
+      skipDuplicates: true,
+    });
+  }
+}
+
+async function syncPairings(client, restaurantId, menuItemId, menuItemSlug, pairingIds) {
+  await client.menuPairing.deleteMany({ where: { menuItemId } });
+  const pairings = await resolvePairings(client, restaurantId, pairingIds, menuItemSlug);
+  if (pairings.length) {
+    await client.menuPairing.createMany({
+      data: pairings.map((pairing, index) => ({
+        menuItemId,
+        pairedMenuItemId: pairing.id,
+        type: "RECOMMENDED",
+        sortOrder: index,
+      })),
+      skipDuplicates: true,
+    });
+  }
+}
+
+async function syncBranchItem(client, context, menuItemId, isEnabled) {
+  await client.branchMenuItem.upsert({
+    where: {
+      branchId_menuItemId: {
+        branchId: context.branchId,
+        menuItemId,
+      },
+    },
+    update: { isEnabled },
+    create: {
+      branchId: context.branchId,
+      menuItemId,
+      isEnabled,
+      availabilityStatus: "AVAILABLE",
+    },
+  });
+}
+
+function audit(client, context, actor, action, menuItem, beforeData, afterData) {
   return client.auditLog.create({
     data: {
+      restaurantId: context.restaurantId,
       entityType: "menu_item",
-      entityId,
+      entityId: menuItem.id,
       action,
       actorId: actor?.id ?? null,
       actorRole: actor?.role ?? null,
@@ -248,177 +560,174 @@ function audit(client, actor, action, entityId, beforeData, afterData) {
   });
 }
 
-function itemWritableData(data) {
+function publicAdminItem(row) {
   return {
-    name: data.name,
-    nativeName: data.nativeName,
-    tagline: data.tagline,
-    description: data.description,
-    longDescription: data.longDescription,
-    category: data.category,
-    priceCents: data.priceCents,
-    imageUrl: data.imageUrl,
-    spiceLevel: data.spiceLevel,
-    servings: data.servings,
-    ingredients: data.ingredients,
-    allergens: data.allergens,
-    tags: data.tags,
-    badgeText: data.badgeText,
-    badgeTone: data.badgeTone,
-    isSpecial: data.isSpecial,
-    isActive: data.isActive,
-    isFasting: data.isFasting,
-    isComplimentary: data.isComplimentary,
-    isSide: data.isSide,
-    sortOrder: data.sortOrder,
+    id: row.slug,
+    name: row.name,
+    slug: row.slug,
+    isActive: !row.deletedAt,
   };
 }
 
 export async function createMenuItem(input, actor) {
   const data = parseOrThrow(createSchema, input);
-  const id = data.id || slugify(data.name);
-  if (!id) throw new AdminMenuError("Add a slug for this dish.", 422);
+  const slug = data.id || slugify(data.name);
+  if (!slug) throw new AdminMenuError("Add a slug for this dish.", 422);
 
   return withTransaction(async (tx) => {
-    await assertCategory(tx, data.category);
-    const exists = await tx.menuItem.findUnique({ where: { id }, select: { id: true } });
-    if (exists) throw new AdminMenuError("A dish with that slug already exists.", 409, "CONFLICT");
+    const context = await defaultContext(tx);
+    const category = await resolveCategory(tx, context.restaurantId, data.category);
+    const exists = await tx.menuItem.findFirst({
+      where: { restaurantId: context.restaurantId, slug },
+      select: { id: true },
+    });
+    if (exists) {
+      throw new AdminMenuError("A dish with that slug already exists.", 409, "CONFLICT");
+    }
 
-    const pairingIds = await assertPairings(tx, id, data.pairingIds);
-    const groups = normalizeGroups(data.optionGroups);
+    const spice = spiceFromText(data.spiceLevel);
+    const priceMinor = data.isComplimentary ? 0 : data.priceCents;
     const row = await tx.menuItem.create({
       data: {
-        id,
-        ...itemWritableData(data),
-        optionGroups: {
-          create: groups.map((group) => ({
-            id: `${id}:${group.key}`,
-            key: group.key,
-            title: group.title,
-            icon: group.icon,
-            badge: group.badge,
-            columns: group.columns,
-            isMulti: group.isMulti,
-            maxSelections: group.maxSelections,
-            sortOrder: group.sortOrder,
-            isActive: group.isActive,
-            options: {
-              create: group.options.map((option) => ({
-                id: `${id}:${group.key}:${option.value}`,
-                ...option,
-              })),
-            },
-          })),
-        },
-        ...(pairingIds.length
-          ? {
-              pairings: {
-                create: pairingIds.map((pairedMenuItemId, index) => ({
-                  pairedMenuItemId,
-                  sortOrder: index,
-                })),
-              },
-            }
-          : {}),
+        restaurantId: context.restaurantId,
+        slug,
+        name: data.name,
+        nativeName: data.nativeName,
+        shortDescription: data.tagline || data.description,
+        description: data.longDescription || data.description,
+        spiceLevel: spice.spiceLevel,
+        spiceNotes: spice.spiceNotes,
+        servingNotes: data.servings,
+        basePriceMinor: priceMinor,
+        currency: context.currency,
+        taxCategoryId: context.taxCategoryId,
+        isSpecial: data.isSpecial,
+        badgeText: data.badgeText,
+        badgeTone: data.badgeTone,
+        sortOrder: data.sortOrder,
+        deletedAt: data.isActive ? null : new Date(),
       },
-      include: { optionGroups: { include: { options: true } }, pairings: true },
+      select: { id: true, slug: true, name: true, deletedAt: true },
     });
-    await audit(tx, actor, "created", id, null, {
+
+    await syncCategories(tx, row.id, category.id, data.isSide);
+    await syncMedia(tx, row.id, data.imageUrl, data.name);
+    await syncPrice(tx, context, row.id, priceMinor, actor?.id, true);
+    await syncIngredients(tx, context, row.id, data.ingredients);
+    await syncAllergens(tx, row.id, data.allergens);
+    await syncDietary(tx, row.id, data, actor?.id);
+    await syncOptionGroups(tx, context, row.id, data.optionGroups);
+    await syncPairings(tx, context.restaurantId, row.id, slug, data.pairingIds);
+    await syncBranchItem(tx, context, row.id, data.isActive);
+    await audit(tx, context, actor, "created", row, null, {
       name: data.name,
       category: data.category,
-      priceCents: data.priceCents,
+      priceMinor,
     });
-    return row;
+
+    return publicAdminItem(row);
   });
 }
 
-export async function updateMenuItem(id, input, actor) {
+export async function updateMenuItem(slug, input, actor) {
   const data = parseOrThrow(createSchema, input);
-  if (data.id && data.id !== id) {
+  if (data.id && data.id !== slug) {
     throw new AdminMenuError("The dish slug cannot be changed.", 422);
   }
 
   return withTransaction(async (tx) => {
-    const before = await tx.menuItem.findUnique({
-      where: { id },
-      include: { optionGroups: { include: { options: true } }, pairings: true },
+    const context = await defaultContext(tx);
+    const before = await tx.menuItem.findFirst({
+      where: { restaurantId: context.restaurantId, slug, deletedAt: null },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        basePriceMinor: true,
+        deletedAt: true,
+      },
     });
     if (!before) throw new AdminMenuError("Dish not found.", 404, "NOT_FOUND");
-    await assertCategory(tx, data.category);
-    const pairings = await assertPairings(tx, id, data.pairingIds);
+    const category = await resolveCategory(tx, context.restaurantId, data.category);
 
-    await tx.menuItem.update({
-      where: { id },
-      data: itemWritableData(data),
+    const spice = spiceFromText(data.spiceLevel);
+    const priceMinor = data.isComplimentary ? 0 : data.priceCents;
+    const row = await tx.menuItem.update({
+      where: { id: before.id },
+      data: {
+        name: data.name,
+        nativeName: data.nativeName,
+        shortDescription: data.tagline || data.description,
+        description: data.longDescription || data.description,
+        spiceLevel: spice.spiceLevel,
+        spiceNotes: spice.spiceNotes,
+        servingNotes: data.servings,
+        basePriceMinor: priceMinor,
+        currency: context.currency,
+        taxCategoryId: context.taxCategoryId,
+        isSpecial: data.isSpecial,
+        badgeText: data.badgeText,
+        badgeTone: data.badgeTone,
+        sortOrder: data.sortOrder,
+        deletedAt: data.isActive ? null : new Date(),
+      },
+      select: { id: true, slug: true, name: true, deletedAt: true },
     });
 
-    const groups = normalizeGroups(data.optionGroups);
-    await tx.menuOptionGroup.deleteMany({ where: { menuItemId: id } });
-    for (const group of groups) {
-      await tx.menuOptionGroup.create({
-        data: {
-          id: `${id}:${group.key}`,
-          menuItemId: id,
-          key: group.key,
-          title: group.title,
-          icon: group.icon,
-          badge: group.badge,
-          columns: group.columns,
-          isMulti: group.isMulti,
-          maxSelections: group.maxSelections,
-          sortOrder: group.sortOrder,
-          isActive: group.isActive,
-          options: {
-            create: group.options.map((option) => ({
-              id: `${id}:${group.key}:${option.value}`,
-              ...option,
-            })),
-          },
-        },
-      });
-    }
-
-    await tx.menuPairing.deleteMany({ where: { menuItemId: id } });
-    if (pairings.length) {
-      await tx.menuPairing.createMany({
-        data: pairings.map((pairedMenuItemId, index) => ({
-          menuItemId: id,
-          pairedMenuItemId,
-          sortOrder: index,
-        })),
-      });
-    }
-
-    const after = await tx.menuItem.findUnique({
-      where: { id },
-      include: { optionGroups: { include: { options: true } }, pairings: true },
-    });
-    await audit(tx, actor, "updated", id, {
+    await syncCategories(tx, row.id, category.id, data.isSide);
+    await syncMedia(tx, row.id, data.imageUrl, data.name);
+    await syncPrice(
+      tx,
+      context,
+      row.id,
+      priceMinor,
+      actor?.id,
+      false,
+      before.basePriceMinor,
+    );
+    await syncIngredients(tx, context, row.id, data.ingredients);
+    await syncAllergens(tx, row.id, data.allergens);
+    await syncDietary(tx, row.id, data, actor?.id);
+    await syncOptionGroups(tx, context, row.id, data.optionGroups);
+    await syncPairings(tx, context.restaurantId, row.id, slug, data.pairingIds);
+    await syncBranchItem(tx, context, row.id, data.isActive);
+    await audit(tx, context, actor, "updated", row, {
       name: before.name,
-      category: before.category,
-      priceCents: before.priceCents,
-      isActive: before.isActive,
+      priceMinor: before.basePriceMinor,
+      isActive: !before.deletedAt,
     }, {
-      name: after?.name,
-      category: after?.category,
-      priceCents: after?.priceCents,
-      isActive: after?.isActive,
+      name: data.name,
+      priceMinor,
+      isActive: data.isActive,
     });
-    return after;
+
+    return publicAdminItem(row);
   });
 }
 
-export async function deactivateMenuItem(id, actor) {
+export async function deactivateMenuItem(slug, actor) {
   return withTransaction(async (tx) => {
-    const before = await tx.menuItem.findUnique({ where: { id }, select: { id: true, name: true, isActive: true } });
-    if (!before) throw new AdminMenuError("Dish not found.", 404, "NOT_FOUND");
-    if (!before.isActive) return before;
-    const after = await tx.menuItem.update({
-      where: { id },
-      data: { isActive: false },
-      select: { id: true, name: true, isActive: true },
+    const context = await defaultContext(tx);
+    const before = await tx.menuItem.findFirst({
+      where: { restaurantId: context.restaurantId, slug },
+      select: { id: true, slug: true, name: true, deletedAt: true },
     });
-    await audit(tx, actor, "deactivated", id, before, after);
-    return after;
+    if (!before) throw new AdminMenuError("Dish not found.", 404, "NOT_FOUND");
+    if (before.deletedAt) return publicAdminItem(before);
+
+    const row = await tx.menuItem.update({
+      where: { id: before.id },
+      data: { deletedAt: new Date() },
+      select: { id: true, slug: true, name: true, deletedAt: true },
+    });
+    await syncBranchItem(tx, context, row.id, false);
+    await audit(tx, context, actor, "deactivated", row, {
+      name: before.name,
+      isActive: true,
+    }, {
+      name: row.name,
+      isActive: false,
+    });
+    return publicAdminItem(row);
   });
 }

@@ -118,9 +118,10 @@ export default async function DishPage({ params }) {
     { label: "Origin", value: dish.categoryLabel },
     {
       label: "Allergens",
-      value: dish.allergens?.length
-        ? dish.allergens.join(", ")
-        : "None declared",
+      value:
+        dish.allergenStatus === "CONFIRMED" && dish.allergens?.length
+          ? dish.allergens.join(", ")
+          : "Allergen information not confirmed",
     },
     { label: "Serves", value: dish.servings || "1" },
   ];

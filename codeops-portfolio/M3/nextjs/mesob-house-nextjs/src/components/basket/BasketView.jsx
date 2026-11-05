@@ -47,8 +47,15 @@ export default function BasketView() {
       { label: `Items Subtotal (${itemCount} item${itemCount === 1 ? "" : "s"})`, value: etb.format(Number(totals.subtotal) || 0) },
       { label: "100% Teff Injera (4 Rolls)", value: "Included", tone: "positive" },
       { label: "Insulated Traditional Clay-Pak", value: "Free", tone: "positive" },
-      { label: "Delivery Fee (Bole Zone)", value: "Free", tone: "positive" },
-      { label: "City VAT & Tourism Levy (15%)", value: etb.format(Number(totals.vat) || 0) },
+      {
+        label: "Delivery Fee",
+        value: totals.delivery > 0 ? etb.format(Number(totals.delivery) || 0) : "Calculated at checkout",
+        tone: totals.delivery > 0 ? undefined : "positive",
+      },
+      ...(totals.serviceCharge > 0
+        ? [{ label: "Service Charge", value: etb.format(Number(totals.serviceCharge) || 0) }]
+        : []),
+      { label: "VAT Included (15%)", value: etb.format(Number(totals.vat) || 0) },
     ],
     coupon: totals.discount > 0 ? { label: `${couponCode.toUpperCase()} applied`, value: `− ${etb.format(Number(totals.discount) || 0)}` } : undefined,
     couponPlaceholder: "Have a coupon code? Try GURSHA2025",

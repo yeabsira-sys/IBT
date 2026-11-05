@@ -67,6 +67,12 @@ function sameDish(a, b) {
 const sameOptions = (a, b) =>
   JSON.stringify(a ?? {}) === JSON.stringify(b ?? {});
 
+const cartTotals = (state) =>
+  getCartTotals(state.cartItems, state.couponCode, {
+    fulfillment: state.checkout?.fulfillment ?? "delivery",
+    subCity: state.checkout?.delivery?.subCity ?? "",
+  });
+
 /** Merges persisted lines that describe the same dish with the same options. */
 function mergeCartLines(items = []) {
   const merged = [];
@@ -155,7 +161,10 @@ export const useStore = create(
       couponCode: "GURSHA2025",
       favorites: [],
       checkout: defaultCheckout,
-      totals: getCartTotals([], "GURSHA2025"),
+      totals: getCartTotals([], "GURSHA2025", {
+        fulfillment: defaultCheckout.fulfillment,
+        subCity: defaultCheckout.delivery.subCity,
+      }),
 
       addToCart: (source, quantity = 1, options, optionLabels) => {
         const next = cartItemFrom(source, quantity, options, optionLabels);
@@ -173,7 +182,7 @@ export const useStore = create(
             : [...state.cartItems, next];
           return {
             cartItems,
-            totals: getCartTotals(cartItems, state.couponCode),
+            totals: cartTotals({ ...state, cartItems }),
           };
         });
       },
@@ -185,7 +194,7 @@ export const useStore = create(
           );
           return {
             cartItems,
-            totals: getCartTotals(cartItems, state.couponCode),
+            totals: cartTotals({ ...state, cartItems }),
           };
         });
       },
@@ -194,19 +203,19 @@ export const useStore = create(
           const cartItems = state.cartItems.filter((item) => item.key !== key);
           return {
             cartItems,
-            totals: getCartTotals(cartItems, state.couponCode),
+            totals: cartTotals({ ...state, cartItems }),
           };
         }),
       clearCart: () =>
         set((state) => ({
           cartItems: [],
-          totals: getCartTotals([], state.couponCode),
+          totals: cartTotals({ ...state, cartItems: [] }),
         })),
       setCartNote: (cartNote) => set({ cartNote }),
       setCouponCode: (couponCode) =>
         set((state) => ({
           couponCode,
-          totals: getCartTotals(state.cartItems, couponCode),
+          totals: cartTotals({ ...state, couponCode }),
         })),
 
       toggleFavorite: (dish) => {
@@ -219,14 +228,18 @@ export const useStore = create(
       },
 
       updateCheckout: (section, values) =>
-        set((state) => ({
-          checkout: {
+        set((state) => {
+          const checkout = {
             ...state.checkout,
             [section]: { ...state.checkout[section], ...values },
-          },
-        })),
+          };
+          return { checkout, totals: cartTotals({ ...state, checkout }) };
+        }),
       updateCheckoutValue: (key, value) =>
-        set((state) => ({ checkout: { ...state.checkout, [key]: value } })),
+        set((state) => {
+          const checkout = { ...state.checkout, [key]: value };
+          return { checkout, totals: cartTotals({ ...state, checkout }) };
+        }),
     }),
     {
       name: "mesob-house-store",
@@ -266,7 +279,10 @@ export const useStore = create(
           // Never let a malformed saved cart block hydration.
           next.cartItems = Array.isArray(next.cartItems) ? next.cartItems : [];
         }
-        next.totals = getCartTotals(next.cartItems, next.couponCode);
+        next.totals = cartTotals({
+          ...next,
+          checkout: next.checkout ?? defaultCheckout,
+        });
         return next;
       },
     },

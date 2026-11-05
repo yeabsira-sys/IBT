@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
-import { getEligibleOrderForReview, getReviewForUser } from "@/lib/reviews";
+import {
+  getEligibleOrderForReview,
+  getReviewForUser,
+  resolveMenuItemIdentifier,
+} from "@/lib/reviews";
 
 const reviewSchema = z.object({
   menuItemId: z.string().trim().min(1, "Choose a dish.").max(120),
@@ -47,9 +51,17 @@ export async function submitReview(payload) {
   }
 
   const { menuItemId, rating, message } = parsed.data;
+  const menuItem = await resolveMenuItemIdentifier(menuItemId);
+  if (!menuItem) {
+    return {
+      ok: false,
+      code: "INVALID",
+      message: "That dish is no longer on the menu.",
+    };
+  }
   const [qualifyingOrder, existingReview] = await Promise.all([
-    getEligibleOrderForReview(user.id, menuItemId),
-    getReviewForUser(menuItemId, user.id),
+    getEligibleOrderForReview(user.id, menuItem.id),
+    getReviewForUser(menuItem.id, user.id),
   ]);
   if (!qualifyingOrder) {
     return {
@@ -63,10 +75,10 @@ export async function submitReview(payload) {
   // New reviews go live immediately. An edit to a hidden/pending review goes
   // back through moderation instead of silently bypassing the admin decision.
   const status =
-    existingReview && existingReview.status !== "approved" ? "pending" : "approved";
+    existingReview && existingReview.status !== "approved" ? "PENDING" : "APPROVED";
 
   const row = await getPrisma().review.upsert({
-    where: { menuItemId_userId: { menuItemId, userId: user.id } },
+    where: { menuItemId_userId: { menuItemId: menuItem.id, userId: user.id } },
     update: {
       rating,
       message,
@@ -74,17 +86,20 @@ export async function submitReview(payload) {
       status,
     },
     create: {
-      menuItemId,
+      menuItemId: menuItem.id,
       userId: user.id,
       orderId: qualifyingOrder.id,
       rating,
       message,
       status,
     },
-    include: { user: { select: { fullName: true } } },
+    include: {
+      user: { select: { fullName: true } },
+      menuItem: { select: { slug: true, name: true } },
+    },
   });
 
-  revalidatePath(`/dish/${menuItemId}`);
+  revalidatePath(`/dish/${menuItem.slug}`);
   revalidatePath("/menu");
   revalidatePath("/");
   revalidatePath("/api/menu");
@@ -94,14 +109,14 @@ export async function submitReview(payload) {
   return {
     ok: true,
     message:
-      status === "approved"
+      status === "APPROVED"
         ? "Thank you — your review is live."
         : "Thank you — your updated review is awaiting moderation.",
     review: {
       id: row.id,
       rating: row.rating,
       message: row.message,
-      status: row.status,
+      status: row.status.toLowerCase(),
       createdAt: row.createdAt.toISOString(),
       author: row.user?.fullName || user.fullName,
       verified: Boolean(row.orderId),

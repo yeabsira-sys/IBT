@@ -1,26 +1,26 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
 import { getPrisma } from "./prisma";
 import { setDbActor, withTransaction } from "./db";
 import {
   ORDER_STATUSES,
-  isCancellable,
   isTerminal,
   nextStatuses,
 } from "./orderStatus";
 import { buildAdminCharts, buildKitchenCharts } from "./analytics";
+import { createOrderSnapshot } from "./orders/snapshot";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const iso = (value) => (value ? new Date(value).toISOString() : null);
-const toCents = (value) =>
-  Math.round((Number(String(value ?? 0).replace(/,/g, "")) || 0) * 100);
-const fromCents = (value) => Number(value ?? 0) / 100;
+const fromMinor = (value) => Number(value ?? 0) / 100;
 
-const ACTIVE_STATUSES = [
-  "received",
-  "preparing",
-  "ready",
-  "out_for_delivery",
+const ACTIVE_DB_STATUSES = [
+  "RECEIVED",
+  "PREPARING",
+  "READY",
+  "OUT_FOR_DELIVERY",
 ];
 
 const orderInclude = {
@@ -28,9 +28,14 @@ const orderInclude = {
     orderBy: { lineNo: "asc" },
     select: {
       menuItemId: true,
+      menuItemSlug: true,
       itemName: true,
-      unitPriceCents: true,
+      unitPriceMinor: true,
       quantity: true,
+      options: true,
+      taxMinor: true,
+      discountMinor: true,
+      lineTotalMinor: true,
     },
   },
   statusHistory: {
@@ -40,57 +45,86 @@ const orderInclude = {
       changedAt: true,
       changedBy: true,
       changedByName: true,
+      note: true,
     },
   },
+  promotion: { select: { code: true, name: true } },
 };
+
+function orderWhere(orderId) {
+  const value = String(orderId ?? "");
+  return UUID_RE.test(value) ? { id: value } : { publicId: value };
+}
 
 function mapOrder(row) {
   if (!row) return null;
+  const serviceCharge = fromMinor(row.serviceChargeMinor);
+  const deliveryFee = fromMinor(row.deliveryFeeMinor);
+  const tax = fromMinor(row.taxMinor);
   return {
-    id: row.id,
+    id: row.publicId ?? row.id,
+    orderUuid: row.id,
+    publicId: row.publicId,
     userId: row.userId,
     customer: {
       name: row.customerName,
       email: row.customerEmail,
       phone: row.customerPhone,
     },
-    status: row.status,
+    status: String(row.status).toLowerCase(),
+    paymentStatus: String(row.paymentStatus ?? "PENDING").toLowerCase(),
     items: (row.items ?? []).map((item) => ({
-      id: item.menuItemId,
+      id: item.menuItemSlug,
+      menuItemId: item.menuItemId,
       name: item.itemName,
-      price: fromCents(item.unitPriceCents),
+      price: fromMinor(item.unitPriceMinor),
       quantity: item.quantity,
+      lineTotal: fromMinor(item.lineTotalMinor ?? item.unitPriceMinor * item.quantity),
+      options: item.options ?? [],
     })),
     totals: {
-      subtotal: fromCents(row.subtotalCents),
-      injera: fromCents(row.injeraCents),
-      packaging: fromCents(row.packagingCents),
-      vat: fromCents(row.vatCents),
-      discount: fromCents(row.discountCents),
-      total: fromCents(row.totalCents),
+      subtotal: fromMinor(row.subtotalMinor),
+      injera: 0,
+      packaging: 0,
+      serviceCharge,
+      delivery: deliveryFee,
+      vat: tax,
+      tax,
+      discount: fromMinor(row.discountMinor),
+      total: fromMinor(row.totalMinor),
+      currency: row.currency,
+      taxInclusive: row.taxInclusive,
+      taxRateBasisPoints: row.taxRateBasisPoints,
     },
-    couponCode: row.couponCode,
+    couponCode: row.promotion?.code ?? null,
+    promotion: row.promotion ?? null,
     note: row.note,
-    fulfillment: row.fulfillment,
+    fulfillment: String(row.fulfillment).toLowerCase(),
     contact: {
       name: row.contactName,
       phone: row.contactPhone,
       email: row.contactEmail,
     },
     delivery: {
-      subCity: row.deliverySubCity,
-      street: row.deliveryStreet,
+      subCity: row.deliveryZoneName,
+      street: row.deliveryAddressLine,
       landmark: row.deliveryLandmark,
-      timing: row.deliveryTiming,
+      timing: row.scheduledFor ? "scheduled" : "immediate",
+      scheduledFor: iso(row.scheduledFor),
+      deliveryStaffId: row.deliveryStaffId,
     },
     method: row.paymentMethod,
     createdAt: iso(row.createdAt),
     updatedAt: iso(row.updatedAt),
+    confirmedAt: iso(row.confirmedAt),
+    completedAt: iso(row.completedAt),
+    cancelledAt: iso(row.cancelledAt),
     statusHistory: (row.statusHistory ?? []).map((entry) => ({
-      status: entry.status,
+      status: String(entry.status).toLowerCase(),
       at: iso(entry.changedAt),
       by: entry.changedBy,
       byName: entry.changedByName,
+      note: entry.note,
     })),
   };
 }
@@ -116,11 +150,76 @@ function startOfAddisDay(now = new Date()) {
   return new Date(`${part("year")}-${part("month")}-${part("day")}T00:00:00+03:00`);
 }
 
-/** Inserts an order for the signed-in customer. */
+async function defaultBranch(prisma) {
+  const slug = process.env.MESOB_RESTAURANT_SLUG || "mesob-house";
+  const restaurant = await prisma.restaurant.findFirst({
+    where: { slug, status: "ACTIVE" },
+    select: { id: true, name: true },
+  });
+  if (!restaurant) {
+    throw new Error(
+      `No active restaurant found for slug "${slug}". Run npm run db:seed.`,
+    );
+  }
+  const branch =
+    (await prisma.branch.findFirst({
+      where: {
+        restaurantId: restaurant.id,
+        isDefault: true,
+        status: "ACTIVE",
+      },
+      select: { id: true, slug: true, name: true },
+    })) ??
+    (await prisma.branch.findFirst({
+      where: { restaurantId: restaurant.id, status: "ACTIVE" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, slug: true, name: true },
+    }));
+  if (!branch) {
+    throw new Error(
+      `No active branch found for "${restaurant.name}". Run npm run db:seed.`,
+    );
+  }
+  return { restaurant, branch };
+}
+
+function normalizedArea(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function resolveDeliveryZone(prisma, branchId, subCity) {
+  const zones = await prisma.deliveryZone.findMany({
+    where: { branchId, isActive: true },
+    select: { id: true, name: true },
+    orderBy: { sortOrder: "asc" },
+  });
+  const area = normalizedArea(subCity);
+  return (
+    zones.find((zone) => normalizedArea(zone.name) === area) ??
+    zones.find(
+      (zone) =>
+        area.includes(normalizedArea(zone.name)) ||
+        normalizedArea(zone.name).includes(area),
+    ) ??
+    null
+  );
+}
+
+function scheduledTime(timing) {
+  if (timing !== "scheduled") return null;
+  const at = new Date();
+  at.setHours(at.getHours() + 2);
+  return at;
+}
+
+/** Inserts an immutable order snapshot for the signed-in customer. */
 export async function createOrder({
   user,
   items,
-  totals,
   couponCode,
   note,
   fulfillment,
@@ -128,77 +227,65 @@ export async function createOrder({
   delivery,
   method,
 }) {
-  const normalizedItems = items.map((item) => ({
-    id: String(item.id),
-    name: String(item.name ?? item.id),
-    priceCents: toCents(item.price),
-    quantity: Math.trunc(Number(item.quantity) || 0),
-  }));
+  const prisma = getPrisma();
+  const { branch } = await defaultBranch(prisma);
+  const deliveryMode = fulfillment === "pickup" ? "PICKUP" : "DELIVERY";
+  const zone =
+    deliveryMode === "DELIVERY"
+      ? await resolveDeliveryZone(prisma, branch.id, delivery?.subCity)
+      : null;
 
-  if (!normalizedItems.length) {
-    throw new Error("An order must contain at least one item.");
+  if (deliveryMode === "DELIVERY" && !zone) {
+    throw new Error(
+      "That delivery area is not available. Choose another sub-city.",
+    );
   }
 
-  const orderNote = String(note ?? "").slice(0, 500);
-  const normalizedCoupon = couponCode
-    ? String(couponCode).trim().toUpperCase()
-    : null;
+  const snapshot = await createOrderSnapshot({
+    actor: {
+      userId: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone ?? "",
+      accountType: user.accountType ?? "CUSTOMER",
+    },
+    restaurantSlug: process.env.MESOB_RESTAURANT_SLUG || "mesob-house",
+    branchSlug: branch.slug,
+    fulfillment: deliveryMode,
+    contact: {
+      name: contact?.name ?? user.fullName,
+      phone: contact?.phone ?? user.phone ?? "",
+      email: contact?.email ?? user.email,
+    },
+    delivery:
+      deliveryMode === "DELIVERY"
+        ? {
+            zoneId: zone.id,
+            addressLine: [delivery?.street, delivery?.subCity]
+              .filter(Boolean)
+              .join(", "),
+            landmark: delivery?.landmark ?? "",
+            scheduledFor: scheduledTime(delivery?.timing),
+          }
+        : undefined,
+    paymentMethod: method,
+    couponCode: couponCode || null,
+    note: note || null,
+    items: items.map((item) => ({
+      menuItemSlug: String(item.menuItemSlug ?? item.id),
+      quantity: Number(item.quantity),
+      options: (item.options ?? []).map((option) => ({
+        groupKey: option.groupKey ?? option.group,
+        optionValue: option.optionValue ?? option.value,
+      })),
+    })),
+  });
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const orderId = `MH-${randomUUID().slice(0, 8).toUpperCase()}`;
-
-    try {
-      return await withTransaction(async (tx) => {
-        await setDbActor(tx, user);
-
-        await tx.order.create({
-          data: {
-            id: orderId,
-            user: { connect: { id: user.id } },
-            fulfillment,
-            customerName: user.fullName,
-            customerEmail: user.email,
-            customerPhone: user.phone ?? "",
-            contactName: contact?.name ?? user.fullName,
-            contactPhone: contact?.phone ?? user.phone ?? "",
-            contactEmail: contact?.email ?? user.email,
-            deliverySubCity: delivery?.subCity ?? "",
-            deliveryStreet: delivery?.street ?? "",
-            deliveryLandmark: delivery?.landmark ?? "",
-            deliveryTiming: delivery?.timing ?? "immediate",
-            paymentMethod: method,
-            couponCode: normalizedCoupon,
-            note: orderNote,
-            subtotalCents: toCents(totals?.subtotal),
-            injeraCents: toCents(totals?.injera),
-            packagingCents: toCents(totals?.packaging),
-            vatCents: toCents(totals?.vat),
-            discountCents: toCents(totals?.discount),
-            items: {
-              create: normalizedItems.map((item, index) => ({
-                lineNo: index + 1,
-                itemName: item.name,
-                unitPriceCents: item.priceCents,
-                quantity: item.quantity,
-                menuItem: { connect: { id: item.id } },
-              })),
-            },
-          },
-        });
-
-        const row = await tx.order.findUnique({
-          where: { id: orderId },
-          include: orderInclude,
-        });
-        return mapOrder(row);
-      });
-    } catch (error) {
-      const retryable = error?.code === "P2002" && attempt < 2;
-      if (!retryable) throw error;
-    }
-  }
-
-  throw new Error("Could not allocate a unique order id.");
+  const row = await prisma.order.findUnique({
+    where: { id: snapshot.id },
+    include: orderInclude,
+  });
+  return mapOrder(row);
 }
 
 /** The only customer order read: scoped to the session's user id. */
@@ -209,15 +296,15 @@ export async function getOrdersForUser(userId) {
 /** Ownership is part of the lookup, not a check the caller can forget. */
 export async function getOrderForUser(userId, orderId) {
   const row = await getPrisma().order.findFirst({
-    where: { id: orderId, userId },
+    where: { ...orderWhere(orderId), userId },
     include: orderInclude,
   });
   return mapOrder(row);
 }
 
 export async function getOrderById(orderId) {
-  const row = await getPrisma().order.findUnique({
-    where: { id: orderId },
+  const row = await getPrisma().order.findFirst({
+    where: orderWhere(orderId),
     include: orderInclude,
   });
   return mapOrder(row);
@@ -230,7 +317,7 @@ export async function getAllOrders() {
 /** Active queue for /kitchen; completed and cancelled orders are archived. */
 export async function getKitchenOrders() {
   return selectOrders(
-    { status: { in: ACTIVE_STATUSES } },
+    { status: { in: ACTIVE_DB_STATUSES } },
     { createdAt: "asc" },
   );
 }
@@ -238,9 +325,6 @@ export async function getKitchenOrders() {
 /**
  * One read for the kitchen page and its polled API: the live queue plus the
  * small chart summaries. Only the summaries cross to the client.
- *
- * The two predicates are separate so the partial live-queue index and the
- * created-at index can each do their job; the result is deduplicated by id.
  */
 export async function getKitchenOverview() {
   const [active, today] = await Promise.all([
@@ -267,16 +351,18 @@ export async function cancelOrderForUser(orderId, userId) {
   return withTransaction(async (tx) => {
     await setDbActor(tx, { id: userId, role: "customer" });
 
-    // Conditional update instead of SELECT ... FOR UPDATE: only the request
-    // that still sees `received` can cancel, and the trigger checks the role.
     const updated = await tx.order.updateMany({
-      where: { id: orderId, userId, status: "received" },
-      data: { status: "cancelled" },
+      where: {
+        ...orderWhere(orderId),
+        userId,
+        status: "RECEIVED",
+      },
+      data: { status: "CANCELLED", cancelledAt: new Date() },
     });
 
     if (updated.count === 0) {
       const existing = await tx.order.findFirst({
-        where: { id: orderId, userId },
+        where: { ...orderWhere(orderId), userId },
         select: { status: true },
       });
       if (!existing) {
@@ -290,8 +376,26 @@ export async function cancelOrderForUser(orderId, userId) {
       };
     }
 
+    const target = await tx.order.findFirstOrThrow({
+      where: { ...orderWhere(orderId), userId },
+      select: { id: true },
+    });
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { fullName: true },
+    });
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId: target.id,
+        status: "CANCELLED",
+        changedBy: userId,
+        changedByName: user?.fullName ?? "Customer",
+        note: "Cancelled by customer",
+      },
+    });
+
     const row = await tx.order.findUnique({
-      where: { id: orderId },
+      where: { id: target.id },
       include: orderInclude,
     });
     return { ok: true, order: mapOrder(row) };
@@ -317,29 +421,44 @@ export async function updateOrderStatus(orderId, status, staff) {
   return withTransaction(async (tx) => {
     await setDbActor(tx, staff);
 
-    const current = await tx.order.findUnique({
-      where: { id: orderId },
-      select: { status: true, fulfillment: true },
+    const current = await tx.order.findFirst({
+      where: orderWhere(orderId),
+      select: {
+        id: true,
+        status: true,
+        fulfillment: true,
+        confirmedAt: true,
+      },
     });
     if (!current) {
       return { ok: false, code: "NOT_FOUND", message: "Order not found." };
     }
 
-    const allowed = nextStatuses(current.status, current.fulfillment);
-    if (staff.role === "admin" && !isTerminal(current.status)) {
+    const currentStatus = String(current.status).toLowerCase();
+    const fulfillment = String(current.fulfillment).toLowerCase();
+    const allowed = nextStatuses(currentStatus, fulfillment);
+    if (staff.role === "admin" && !isTerminal(currentStatus)) {
       allowed.push("cancelled");
     }
     if (!allowed.includes(status)) {
       return {
         ok: false,
         code: "INVALID_TRANSITION",
-        message: `An order in "${current.status}" cannot move to "${status}".`,
+        message: `An order in "${currentStatus}" cannot move to "${status}".`,
       };
     }
 
+    const now = new Date();
     const updated = await tx.order.updateMany({
-      where: { id: orderId, status: current.status },
-      data: { status },
+      where: { id: current.id, status: current.status },
+      data: {
+        status: status.toUpperCase(),
+        ...(status === "preparing" && !current.confirmedAt
+          ? { confirmedAt: now }
+          : {}),
+        ...(status === "completed" ? { completedAt: now } : {}),
+        ...(status === "cancelled" ? { cancelledAt: now } : {}),
+      },
     });
     if (updated.count === 0) {
       return {
@@ -349,8 +468,18 @@ export async function updateOrderStatus(orderId, status, staff) {
       };
     }
 
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId: current.id,
+        status: status.toUpperCase(),
+        changedBy: staff.id,
+        changedByName: staff.fullName ?? "",
+        note: `Status changed to ${status}`,
+      },
+    });
+
     const row = await tx.order.findUnique({
-      where: { id: orderId },
+      where: { id: current.id },
       include: orderInclude,
     });
     return { ok: true, order: mapOrder(row) };
@@ -362,10 +491,10 @@ export async function getAdminStats() {
     getPrisma().order.groupBy({
       by: ["status"],
       _count: { _all: true },
-      _sum: { totalCents: true },
+      _sum: { totalMinor: true },
     }),
     getPrisma().user.groupBy({
-      by: ["role"],
+      by: ["accountType"],
       _count: { _all: true },
     }),
     selectOrders(undefined, { createdAt: "asc" }),
@@ -373,24 +502,26 @@ export async function getAdminStats() {
 
   const counts = Object.fromEntries(
     statusRows.map((row) => [
-      row.status,
+      String(row.status).toLowerCase(),
       {
         count: row._count._all,
-        totalCents: Number(row._sum.totalCents ?? 0),
+        totalMinor: Number(row._sum.totalMinor ?? 0),
       },
     ]),
   );
   const orders = statusRows.reduce((total, row) => total + row._count._all, 0);
-  const active = ACTIVE_STATUSES.reduce(
-    (total, status) => total + (counts[status]?.count ?? 0),
+  const active = ACTIVE_DB_STATUSES.reduce(
+    (total, status) =>
+      total + (counts[status.toLowerCase()]?.count ?? 0),
     0,
   );
-  const pipelineCents = ACTIVE_STATUSES.reduce(
-    (total, status) => total + (counts[status]?.totalCents ?? 0),
+  const pipelineMinor = ACTIVE_DB_STATUSES.reduce(
+    (total, status) =>
+      total + (counts[status.toLowerCase()]?.totalMinor ?? 0),
     0,
   );
   const users = Object.fromEntries(
-    userRows.map((row) => [row.role, row._count._all]),
+    userRows.map((row) => [row.accountType, row._count._all]),
   );
 
   return {
@@ -398,10 +529,10 @@ export async function getAdminStats() {
     active,
     completed: counts.completed?.count ?? 0,
     cancelled: counts.cancelled?.count ?? 0,
-    revenue: fromCents(counts.completed?.totalCents ?? 0),
-    pipeline: fromCents(pipelineCents),
-    customers: users.customer ?? 0,
-    staff: (users.employee ?? 0) + (users.admin ?? 0),
+    revenue: fromMinor(counts.completed?.totalMinor ?? 0),
+    pipeline: fromMinor(pipelineMinor),
+    customers: users.CUSTOMER ?? 0,
+    staff: users.STAFF ?? 0,
     recent: allOrders.slice(-6).reverse(),
     charts: buildAdminCharts(allOrders),
   };

@@ -9,9 +9,13 @@ const DATABASE_URL =
   process.env.POSTGRES_PRISMA_URL ||
   "";
 
-const globalForPrisma = globalThis;
+type PrismaGlobal = typeof globalThis & {
+  __mesobPrisma?: PrismaClient;
+};
 
-function createPrismaClient() {
+const globalForPrisma = globalThis as PrismaGlobal;
+
+function createPrismaClient(): PrismaClient {
   if (!DATABASE_URL) {
     throw new Error(
       "DATABASE_URL is required. The JSON-file fallback has been removed; " +
@@ -32,7 +36,10 @@ function createPrismaClient() {
       connectionTimeoutMillis: 15_000,
       ssl: local || sslDisabled ? false : { rejectUnauthorized: false },
     }),
-    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["warn", "error"]
+        : ["error"],
   });
 }
 
@@ -41,20 +48,17 @@ function createPrismaClient() {
  * is cached on globalThis so Next's dev server and route handlers reuse the
  * same pg pool across hot reloads.
  */
-export function getPrisma() {
+export function getPrisma(): PrismaClient {
   if (!globalForPrisma.__mesobPrisma) {
     globalForPrisma.__mesobPrisma = createPrismaClient();
   }
   return globalForPrisma.__mesobPrisma;
 }
 
-export const prisma = new Proxy(
-  {},
-  {
-    get(_target, property) {
-      const client = getPrisma();
-      const value = client[property];
-      return typeof value === "function" ? value.bind(client) : value;
-    },
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, property) {
+    const client = getPrisma();
+    const value = client[property as keyof PrismaClient];
+    return typeof value === "function" ? value.bind(client) : value;
   },
-);
+});

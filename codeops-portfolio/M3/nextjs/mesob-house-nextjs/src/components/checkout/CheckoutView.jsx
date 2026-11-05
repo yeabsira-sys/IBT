@@ -137,9 +137,29 @@ export default function CheckoutView({ user }) {
         tone: "positive",
       },
       {
-        label: "City VAT & Tourism Levy (15%)",
+        label: totals.taxInclusive === false
+          ? "City VAT & Tourism Levy (15%)"
+          : "VAT Included (15%)",
         value: etb.format(Number(totals.vat) || 0),
       },
+      ...(totals.serviceCharge > 0
+        ? [
+            {
+              label: "Service Charge",
+              value: etb.format(Number(totals.serviceCharge) || 0),
+            },
+          ]
+        : []),
+      ...(checkout.fulfillment === "delivery"
+        ? [
+            {
+              label: "Delivery Fee",
+              value: totals.delivery > 0
+                ? etb.format(Number(totals.delivery) || 0)
+                : "Choose a sub-city",
+            },
+          ]
+        : []),
       ...(totals.discount > 0
         ? [
             {

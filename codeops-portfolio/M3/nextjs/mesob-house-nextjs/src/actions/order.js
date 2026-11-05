@@ -2,43 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
-import { getAllDishes } from "@/lib/menu";
 import { checkoutSchema } from "@/lib/schemas";
-import { getCartTotals } from "@/lib/pricing";
 import { cancelOrderForUser, createOrder } from "@/lib/orders";
 
-function chosenOptions(dish, selections) {
-  const chosen = {};
-  const labels = [];
-  let deltaCents = 0;
-
-  for (const group of dish.optionGroups ?? []) {
-    const raw = selections?.[group.key];
-    let values = Array.isArray(raw) ? raw : raw ? [raw] : [];
-    values = [...new Set(values.map(String).filter(Boolean))];
-
-    if (!values.length) {
-      const fallback = dish.optionDefaults?.[group.key];
-      values = Array.isArray(fallback) ? fallback : fallback ? [fallback] : [];
-    }
-    if (!group.multi) values = values.slice(0, 1);
-    else values = values.slice(0, group.max);
-
+function optionSelections(selections) {
+  const options = [];
+  for (const [groupKey, raw] of Object.entries(selections ?? {})) {
+    const values = Array.isArray(raw) ? raw : raw ? [raw] : [];
     for (const value of values) {
-      const option = group.options.find((item) => item.value === value);
-      if (!option) {
-        return {
-          error: `The ${group.title} choice is no longer available. Please reopen the dish and choose again.`,
-        };
+      const optionValue = String(value ?? "").trim();
+      if (groupKey && optionValue) {
+        options.push({ groupKey, optionValue });
       }
-      deltaCents += option.priceDeltaCents ?? 0;
-      labels.push(`${group.title}: ${option.title}`);
     }
-
-    chosen[group.key] = group.multi ? values : values[0] ?? "";
   }
-
-  return { chosen, labels, deltaCents };
+  return options;
 }
 
 export async function submitOrder(payload) {
@@ -61,66 +39,59 @@ export async function submitOrder(payload) {
     };
   }
 
-  const { dishes } = await getAllDishes();
-  const menuById = new Map(dishes.map((dish) => [String(dish.id), dish]));
-  const items = [];
+  const items = parsed.data.items.map((line) => ({
+    menuItemSlug: String(line.id),
+    quantity: line.quantity,
+    options: optionSelections(line.options),
+  }));
 
-  for (const line of parsed.data.items) {
-    const dish = menuById.get(String(line.id));
-    if (!dish) {
-      return {
-        ok: false,
-        code: "DISH_UNAVAILABLE",
-        message: `"${line.name}" is no longer on today's menu. Remove it and try again.`,
-      };
-    }
-
-    const selection = chosenOptions(dish, line.options);
-    if (selection.error) {
-      return {
-        ok: false,
-        code: "OPTION_UNAVAILABLE",
-        message: selection.error,
-      };
-    }
-
-    const unitPriceCents = dish.priceCents + selection.deltaCents;
-    items.push({
-      id: String(dish.id),
-      name: selection.labels.length
-        ? `${dish.name} (${selection.labels.join(", ")})`
-        : dish.name,
-      price: unitPriceCents / 100,
-      quantity: line.quantity,
-      options: selection.chosen,
-      optionLabels: selection.labels,
+  try {
+    const order = await createOrder({
+      user,
+      items,
+      couponCode: parsed.data.couponCode,
+      note: parsed.data.note,
+      fulfillment: parsed.data.fulfillment,
+      contact: parsed.data.contact,
+      delivery: parsed.data.delivery,
+      method: parsed.data.method,
     });
+
+    if (!order) {
+      return {
+        ok: false,
+        code: "ORDER_FAILED",
+        message: "The kitchen could not create that order. Please try again.",
+      };
+    }
+
+    revalidatePath("/orders");
+    revalidatePath(`/orders/${order.id}`);
+    revalidatePath("/kitchen");
+    revalidatePath("/admin");
+    revalidatePath("/admin/orders");
+
+    return {
+      ok: true,
+      message: `Order ${order.id} is confirmed. Our kitchen is preparing your feast.`,
+      order,
+    };
+  } catch (error) {
+    if (error?.name === "OrderSnapshotError") {
+      return {
+        ok: false,
+        code: error.code ?? "ORDER_FAILED",
+        message: error.message,
+      };
+    }
+    return {
+      ok: false,
+      code: "ORDER_FAILED",
+      message: error?.message?.includes("delivery area")
+        ? error.message
+        : "The kitchen could not create that order. Please try again.",
+    };
   }
-
-  const totals = getCartTotals(items, parsed.data.couponCode);
-  const order = await createOrder({
-    user,
-    items,
-    totals,
-    couponCode: parsed.data.couponCode,
-    note: parsed.data.note,
-    fulfillment: parsed.data.fulfillment,
-    contact: parsed.data.contact,
-    delivery: parsed.data.delivery,
-    method: parsed.data.method,
-  });
-
-  revalidatePath("/orders");
-  revalidatePath(`/orders/${order.id}`);
-  revalidatePath("/kitchen");
-  revalidatePath("/admin");
-  revalidatePath("/admin/orders");
-
-  return {
-    ok: true,
-    message: `Order ${order.id} is confirmed. Our kitchen is preparing your feast.`,
-    order,
-  };
 }
 
 /** Customer cancellation — ownership and status are enforced inside the query helper. */

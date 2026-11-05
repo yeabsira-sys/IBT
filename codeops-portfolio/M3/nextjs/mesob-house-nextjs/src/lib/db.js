@@ -7,6 +7,7 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import { getPrisma } from "./prisma";
+import { legacyRoleFor } from "./policy";
 import { ROLES } from "./roles";
 
 const SESSION_DAYS = 7;
@@ -14,6 +15,8 @@ const REMEMBER_DAYS = 30;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const USER_INCLUDE = { roleAssignments: true };
 
 const iso = (value) => (value ? new Date(value).toISOString() : null);
 
@@ -33,7 +36,11 @@ export function withTransaction(fn, options = undefined) {
  */
 export async function setDbActor(client, actor) {
   const actorId = actor?.id ? String(actor.id) : "";
-  const actorRole = actor?.role ? String(actor.role) : "";
+  const actorRole = actor?.role
+    ? String(actor.role)
+    : actor?.accountType
+      ? legacyRoleFor(actor)
+      : "";
   await client.$queryRaw`
     SELECT
       set_config('app.actor_id', ${actorId}, true),
@@ -75,13 +82,25 @@ export const hashToken = (token) =>
 
 function mapUser(row) {
   if (!row) return null;
+  const grants = (row.roleAssignments ?? []).map((assignment) => ({
+    role: assignment.role,
+    restaurantId: assignment.restaurantId,
+    branchId: assignment.branchId,
+  }));
+  const accountType = row.accountType ?? "CUSTOMER";
   return {
     id: row.id,
     fullName: row.fullName,
     email: row.email,
     phone: row.phone,
     passwordHash: row.passwordHash,
-    role: row.role,
+    accountType,
+    grants,
+    role: legacyRoleFor({
+      userId: row.id,
+      accountType,
+      grants,
+    }),
     preference: row.preference,
     provider: row.provider,
     createdAt: iso(row.createdAt),
@@ -97,6 +116,8 @@ export function toSafeUser(user) {
     fullName: user.fullName,
     email: user.email,
     phone: user.phone,
+    accountType: user.accountType ?? "CUSTOMER",
+    grants: user.grants ?? [],
     role: user.role,
     preference: user.preference ?? null,
     provider: user.provider ?? null,
@@ -104,11 +125,40 @@ export function toSafeUser(user) {
   };
 }
 
+async function defaultScope(client) {
+  const slug = process.env.MESOB_RESTAURANT_SLUG || "mesob-house";
+  const restaurant = await client.restaurant.findFirst({
+    where: { slug, status: "ACTIVE" },
+    select: { id: true },
+  });
+  if (!restaurant) {
+    throw new Error(
+      `No active restaurant found for slug "${slug}". Run npm run db:seed.`,
+    );
+  }
+  const branch =
+    (await client.branch.findFirst({
+      where: {
+        restaurantId: restaurant.id,
+        isDefault: true,
+        status: "ACTIVE",
+      },
+      select: { id: true },
+    })) ??
+    (await client.branch.findFirst({
+      where: { restaurantId: restaurant.id, status: "ACTIVE" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    }));
+  return { restaurantId: restaurant.id, branchId: branch?.id ?? null };
+}
+
 export async function findUserByEmail(email) {
   const normalized = normalizeEmail(email);
   if (!normalized) return null;
   const row = await getPrisma().user.findFirst({
     where: { email: normalized },
+    include: USER_INCLUDE,
   });
   return mapUser(row);
 }
@@ -118,6 +168,7 @@ export async function findUserByPhone(phone) {
   if (!normalized) return null;
   const row = await getPrisma().user.findFirst({
     where: { phone: normalized },
+    include: USER_INCLUDE,
   });
   return mapUser(row);
 }
@@ -127,11 +178,9 @@ export async function findUserByIdentifier(identifier) {
   const phone = normalizePhone(identifier);
   const row = await getPrisma().user.findFirst({
     where: {
-      OR: [
-        { email },
-        ...(phone ? [{ phone }] : []),
-      ],
+      OR: [{ email }, ...(phone ? [{ phone }] : [])],
     },
+    include: USER_INCLUDE,
   });
   return mapUser(row);
 }
@@ -140,6 +189,7 @@ export async function findUserById(id) {
   if (!id || !UUID_RE.test(String(id))) return null;
   const row = await getPrisma().user.findUnique({
     where: { id: String(id) },
+    include: USER_INCLUDE,
   });
   return mapUser(row);
 }
@@ -153,18 +203,38 @@ export async function createUser(values) {
   const phone = normalizePhone(values.phone);
   const role = ROLES.includes(values.role) ? values.role : "customer";
   const passwordHash = values.password ? hashPassword(values.password) : null;
+  const accountType = role === "customer" ? "CUSTOMER" : "STAFF";
 
   try {
-    const row = await getPrisma().user.create({
-      data: {
-        fullName: String(values.fullName ?? "").trim(),
-        email,
-        phone,
-        passwordHash,
-        role,
-        preference: values.preference ?? null,
-        provider: values.provider ?? "password",
-      },
+    const row = await getPrisma().$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          fullName: String(values.fullName ?? "").trim(),
+          email,
+          phone,
+          passwordHash,
+          accountType,
+          preference: values.preference ?? null,
+          provider: values.provider ?? "password",
+        },
+      });
+
+      if (role !== "customer") {
+        const scope = await defaultScope(tx);
+        await tx.roleAssignment.create({
+          data: {
+            userId: created.id,
+            role: role === "admin" ? "RESTAURANT_OWNER" : "KITCHEN_STAFF",
+            restaurantId: scope.restaurantId,
+            branchId: role === "admin" ? null : scope.branchId,
+          },
+        });
+      }
+
+      return tx.user.findUniqueOrThrow({
+        where: { id: created.id },
+        include: USER_INCLUDE,
+      });
     });
     return { ok: true, user: mapUser(row) };
   } catch (error) {
@@ -217,10 +287,16 @@ export async function findOrCreateSocialUser(provider) {
 export async function listUsers() {
   const rows = await getPrisma().user.findMany({
     orderBy: { createdAt: "asc" },
+    include: USER_INCLUDE,
   });
   return rows.map((row) => toSafeUser(mapUser(row)));
 }
 
+/**
+ * The admin UI still exposes customer/employee/admin. Map that choice onto the
+ * richer account type and role assignment model. A branch-level employee is a
+ * kitchen grant on the default branch; an admin is a restaurant owner grant.
+ */
 export async function updateUserRole(userId, role, actor = null) {
   if (!ROLES.includes(role)) return { ok: false, message: "Unknown role." };
   if (!UUID_RE.test(String(userId))) {
@@ -230,9 +306,37 @@ export async function updateUserRole(userId, role, actor = null) {
   return withTransaction(async (tx) => {
     if (actor) await setDbActor(tx, actor);
     try {
-      const row = await tx.user.update({
+      const existing = await tx.user.findUnique({
         where: { id: String(userId) },
-        data: { role },
+        select: { id: true },
+      });
+      if (!existing) return { ok: false, message: "User not found." };
+
+      await tx.user.update({
+        where: { id: String(userId) },
+        data: {
+          accountType: role === "customer" ? "CUSTOMER" : "STAFF",
+        },
+      });
+      await tx.roleAssignment.deleteMany({
+        where: { userId: String(userId) },
+      });
+
+      if (role !== "customer") {
+        const scope = await defaultScope(tx);
+        await tx.roleAssignment.create({
+          data: {
+            userId: String(userId),
+            role: role === "admin" ? "RESTAURANT_OWNER" : "KITCHEN_STAFF",
+            restaurantId: scope.restaurantId,
+            branchId: role === "admin" ? null : scope.branchId,
+          },
+        });
+      }
+
+      const row = await tx.user.findUniqueOrThrow({
+        where: { id: String(userId) },
+        include: USER_INCLUDE,
       });
       return { ok: true, user: toSafeUser(mapUser(row)) };
     } catch (error) {
@@ -271,7 +375,7 @@ export async function getSessionUserByToken(token) {
       revokedAt: null,
       expiresAt: { gt: new Date() },
     },
-    include: { user: true },
+    include: { user: { include: USER_INCLUDE } },
   });
 
   return toSafeUser(mapUser(row?.user));
