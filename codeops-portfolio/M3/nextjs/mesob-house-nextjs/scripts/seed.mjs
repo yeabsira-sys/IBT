@@ -143,6 +143,7 @@ const ACCOUNTS = [
     key: "owner",
     fullName: "Mesob House Owner",
     email: process.env.SEED_ADMIN_EMAIL || "owner@mesob.house",
+    phone: "911000001",
     password: process.env.SEED_ADMIN_PASSWORD || "MesobOwner2026!",
     accountType: "STAFF",
     role: "RESTAURANT_OWNER",
@@ -152,6 +153,7 @@ const ACCOUNTS = [
     key: "kitchen",
     fullName: "Mesob Kitchen",
     email: process.env.SEED_KITCHEN_EMAIL || "kitchen@mesob.house",
+    phone: "911000002",
     password: process.env.SEED_KITCHEN_PASSWORD || "MesobKitchen2026!",
     accountType: "STAFF",
     role: "KITCHEN_STAFF",
@@ -161,6 +163,7 @@ const ACCOUNTS = [
     key: "delivery",
     fullName: "Mesob Delivery",
     email: process.env.SEED_DELIVERY_EMAIL || "delivery@mesob.house",
+    phone: "911000004",
     password: process.env.SEED_DELIVERY_PASSWORD || "MesobDelivery2026!",
     accountType: "STAFF",
     role: "DELIVERY_STAFF",
@@ -170,6 +173,7 @@ const ACCOUNTS = [
     key: "guest",
     fullName: "Mesob Guest",
     email: process.env.SEED_GUEST_EMAIL || "guest@mesob.house",
+    phone: "911000003",
     password: process.env.SEED_GUEST_PASSWORD || "MesobGuest2026!",
     accountType: "CUSTOMER",
     role: null,
@@ -330,9 +334,10 @@ async function main() {
           client,
           `INSERT INTO users (
             full_name, email, phone, password_hash, account_type
-          ) VALUES ($1,$2,NULL,$3,$4)
+          ) VALUES ($1,$2,$3,$4,$5)
           ON CONFLICT (email) DO UPDATE SET
             full_name = EXCLUDED.full_name,
+            phone = EXCLUDED.phone,
             password_hash = EXCLUDED.password_hash,
             account_type = EXCLUDED.account_type,
             updated_at = now()
@@ -340,6 +345,7 @@ async function main() {
           [
             account.fullName,
             account.email.toLowerCase(),
+            account.phone,
             hashPassword(account.password),
             account.accountType,
           ],

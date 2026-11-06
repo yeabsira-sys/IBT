@@ -1,11 +1,18 @@
 # Mesob House — Architecture Rebuild
 
 **Milestone 1 — Audit and design**
-**Status:** Approved for implementation; database reset still gated on local-target confirmation
+**Status:** Design implemented; see [`DB_REBUILD_REPORT.md`](./DB_REBUILD_REPORT.md) for the applied baseline, seed and verification results
 **Date:** 2026-11-05
 
 This document is the design gate required by the new specification. It is the
 implementation contract for the rebuild.
+
+> **Implementation note (2026-11-06):** the rebuild described here is complete.
+> The old numbered SQL migration runner and legacy import scripts have been
+> retired; `prisma/migrations/20261105140000_baseline/` is now the schema
+> authority. Sections below that describe the pre-rebuild audit remain as
+> design history, not as the current runtime architecture. Current operational
+> details live in [`DATA.md`](../DATA.md).
 
 ---
 

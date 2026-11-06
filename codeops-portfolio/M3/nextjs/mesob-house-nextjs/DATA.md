@@ -1,180 +1,287 @@
 # Data, Caching and Fetching
 
-This document explains where data lives, how it is fetched, which SWR keys are live, and how persistence works. The app is Postgres-only after the normalized migration, and runtime persistence goes through Prisma ORM. `.data/mesob-house.json` is retained only as the one-time legacy import and reconciliation source; it is not read at runtime.
+This document explains where data lives, how it is fetched, which SWR keys are live, and how the rebuilt persistence layer is migrated and seeded. The app is Postgres-only and runtime persistence goes through Prisma ORM.
 
 ## 1. Two kinds of data
 
 | Kind | Source | Rendering / cache | Examples |
 | --- | --- | --- | --- |
-| Public catalogue | Prisma ORM -> Postgres (`menu_categories`, `menu_items`, option groups, pairings, reviews) | Server Components; menu/home ISR 5 min; dish pages dynamic for review state; React `cache` per request | dishes, specials, dish pages, sitemap |
-| Private operational data | Prisma ORM -> Postgres normalized tables | Dynamic server rendering + SWR polling + SSE order stream | users, sessions, orders, kitchen queue, admin stats |
+| Public catalogue | Prisma ORM -> Postgres (`restaurants`, `branches`, `menus`, `menu_items`, prices, options, reviews) | Server Components; menu/home ISR 5 min; dish pages dynamic for review state; React `cache` per request | dishes, specials, dish pages, sitemap |
+| Private operational data | Prisma ORM -> Postgres | Dynamic server rendering + SWR polling + SSE order stream | users, sessions, role assignments, orders, kitchen queue, admin stats |
 
 `src/lib/menu.js` reads the catalogue on the server through Prisma, so the browser never calls a separate menu backend. Admin menu writes live in `src/lib/adminMenu.js`; public review reads and admin moderation live in `src/lib/reviews.js`.
 
-## 2. Postgres schema
+## 2. Database lifecycle
 
-The repository runs versioned SQL migrations from `migrations/`; it does not
-create tables on request. `DATABASE_URL` is required. If it is missing,
-`/api/health` returns `503` and the persistence layer throws instead of falling
-back to a file.
+The schema is owned by **Prisma Migrate**, with one clean baseline:
 
-Application reads and writes use Prisma Client (`prisma/schema.prisma`) through
-the `@prisma/adapter-pg` driver adapter. SQL migrations remain the schema
-authority because Prisma cannot express generated columns, PL/pgSQL triggers,
-check constraints, or expression/partial indexes. The schema mirrors those
-tables for the client; `scripts/db-migrate.mjs` owns their creation.
+```text
+prisma/
+  schema.prisma
+  migrations/
+    20261105140000_baseline/migration.sql
+```
 
-| Table | Contents | Important constraints |
-| --- | --- | --- |
-| `users` | accounts and roles | case-insensitive unique email, unique non-empty phone, `user_role` enum |
-| `sessions` | opaque login sessions | unique SHA-256 token hash, FK to users, `revoked_at`, expiry |
-| `menu_items` | menu catalogue | text id, integer cents, active flag, category slug, search/filter arrays |
-| `menu_categories` | category labels and ordering | text slug PK, active flag |
-| `menu_option_groups` / `menu_options` | per-dish choices and add-on prices | unique `(menu_item_id, key)` / `(group_id, value)`, non-negative price delta |
-| `menu_pairings` | suggested companion dishes | composite PK, no self-pairing |
-| `reviews` | verified 1–5 star reviews | unique `(menu_item_id, user_id)`, status enum, completed-order trigger |
-| `orders` | order header and customer/contact/delivery snapshot | FK to users, status/fulfillment enums, generated total |
-| `order_items` | line items | FK to orders and menu, unique `(order_id, line_no)` |
-| `order_status_history` | per-order timeline | FK to orders/users, unique `(order_id, status, changed_at)` |
-| `audit_log` | order/role audit | actor, role, before/after JSON, entity/time indexes |
+The baseline replaces the retired numbered SQL migration runner. It creates the
+full schema, including the invariants Prisma cannot express:
+
+- 43 application models, 26 enums and 44 public tables (including
+  `_prisma_migrations`);
+- generated `orders.total_minor` and `order_items.line_total_minor`;
+- scope-validation triggers for role assignments, prices, categories, options,
+  branch inventory, branch menu items, availability and orders;
+- effective-date overlap triggers for menu prices and tax rates;
+- the verified-review trigger;
+- 34 triggers and 18 check constraints in total, plus the indexes used by the
+  catalogue, order, kitchen and admin queries.
+
+Prisma Client (`src/lib/prisma.js`, using `@prisma/adapter-pg`) is the
+application data path. SQL triggers and constraints are the final authority for
+the invariants they enforce.
+
+### Commands
+
+```bash
+npm run db:deploy   # prisma migrate deploy: apply the baseline
+npm run db:status   # prisma migrate status
+npm run db:seed     # idempotent catalogue, branch and demo-account seed
+npm run db:reset    # LOCAL ONLY: drop/recreate, migrate, seed
+```
+
+`DATABASE_URL` is required. A missing URL fails closed instead of falling back to
+a file. `scripts/seed.mjs` refuses a non-local target unless `--allow-remote` is
+passed. `scripts/reset-local-db.mjs` only targets a local database and uses
+`prisma migrate reset --force --skip-seed` before applying the seed.
+
+The legacy `.data/mesob-house.json` document and the old import,
+reconciliation and custom-migration scripts are no longer part of the runtime
+or deployment path. There is no backward-compatibility import layer.
+
+### Seed contents
+
+`scripts/seed.mjs` is idempotent and currently seeds:
+
+- one restaurant, one branch (`Bole Medhanialem`, `Africa/Addis_Ababa`) and one
+  active menu publication;
+- six categories and 26 menu items, with 26 prices, media, translations and
+  branch listings;
+- four reusable option groups, 13 options and 57 pairings;
+- 71 ingredients, 111 item-ingredient links, 14 allergen codes, 15
+  item-allergen rows and 13 dietary claims;
+- VAT 15% as an inclusive default tax category/rate;
+- five radius-based delivery zones;
+- the `GURSHA2025` fixed ETB 200 promotion (minimum order ETB 500);
+- four demo accounts: admin, kitchen, delivery and guest.
+
+All monetary values are integer minor units. The default currency is ETB and
+currency is stored on every priced row; no implicit FX is applied.
+
+## 3. Schema overview
+
+### Tenancy and access
+
+| Table | What it holds |
+| --- | --- |
+| `restaurants` | One restaurant business; default currency and status |
+| `branches` | Branch address, timezone, operating configuration and service-charge settings |
+| `branch_operating_hours` | Branch opening hours |
+| `menu_publications` | Which menu is published to which branch and when |
+| `users` | Customer or staff account, scrypt password hash |
+| `sessions` | SHA-256 token hash, user, expiry, revocation |
+| `role_assignments` | Staff role and optional branch scope |
+
+`AccountType` separates `CUSTOMER` from `STAFF`; `StaffRole` carries
+`RESTAURANT_OWNER`, `BRANCH_MANAGER`, `KITCHEN_STAFF`, `DELIVERY_STAFF` and
+`CASHIER`. The existing UI still uses the legacy `customer | employee | admin`
+shape, produced by `legacyRoleFor()` from the account type and role assignment.
+
+### Catalogue
+
+| Table group | What it holds |
+| --- | --- |
+| `menus`, `menu_categories`, `menu_item_categories` | Menu/category structure; a dish can belong to more than one category |
+| `menu_items` | Restaurant-level dish master, base price fallback, spice, badges and soft-delete state |
+| `menu_item_translations` | Localized name/description copy |
+| `menu_item_media` | Gallery images and primary image |
+| `ingredients`, `menu_item_ingredients` | Ingredient master and dish composition |
+| `allergens`, `menu_item_allergens` | Admin-confirmed allergen declarations |
+| `dietary_attributes`, `menu_item_dietary_attributes` | Dietary claims with verification state |
+| `nutrition` | Optional nutrition data and its source |
+| `menu_option_groups`, `menu_options`, `menu_item_option_groups` | Reusable option groups linked to dishes |
+| `menu_pairings` | Suggested companion dishes |
+
+Public allergen rules are in `src/lib/catalog/disclosure.ts`: a dish shows
+`CONFIRMED` only when an admin has confirmed its allergen rows. Absence of rows
+is never treated as "allergen-free"; the UI shows "Allergen information has not
+been confirmed."
+
+### Branch overrides
+
+| Table | What it holds |
+| --- | --- |
+| `branch_menu_items` | Branch listing, enabled flag, availability status and temporary unavailability |
+| `menu_item_availability` | Effective-dated day/time availability windows |
+| `branch_menu_option_availability` | Branch-level option availability |
+| `inventory_items`, `branch_inventory` | Stock definition and per-branch quantity |
+| `menu_item_inventory`, `inventory_transactions` | Recipe links and stock movements |
+| `inventory_transfers`, `inventory_transfer_lines` | Branch-to-branch transfers |
+
+The catalogue stays central. Branches layer price, availability, stock and
+preparation overrides only. There is no duplicate `BranchMenuItem.priceOverride`;
+`MenuItemPrice` is the single price history source.
+
+### Pricing, tax, promotions and delivery
+
+| Table | What it holds |
+| --- | --- |
+| `menu_item_prices` | Effective-dated branch or catalog-wide price rows |
+| `tax_categories`, `tax_rates` | Effective-dated tax configuration in basis points |
+| `promotions` | Restaurant- or branch-scoped promotions, no stacking |
+| `delivery_zones` | Branch delivery radius, fee and minimum order |
+
+`src/lib/catalog/pricing.ts` resolves the effective price in this order:
+
+1. the latest active branch-specific `MenuItemPrice`;
+2. the latest active catalog-wide (`branchId = null`) `MenuItemPrice`;
+3. `MenuItem.basePriceMinor` only as a bootstrap fallback when no price row
+   exists.
+
+Expired rows are never silently used. A currency mismatch is an error.
+
+`src/lib/catalog/availability.ts` checks the branch listing, branch item status,
+temporary-unavailable window and effective-dated `menu_item_availability`
+windows in the branch timezone (`Africa/Addis_Ababa` by default).
+
+`src/lib/catalog/promotions.ts` picks at most one promotion. The highest
+discount wins; ties are resolved deterministically by priority/code.
+
+### Orders and reviews
+
+| Table | What it holds |
+| --- | --- |
+| `orders` | Order header, contact/delivery snapshot, money snapshot, status and fulfillment |
+| `order_items` | Immutable line snapshot: dish name/description, unit price, options, allergens, dietary data |
+| `order_status_history` | One row per status transition |
+| `reviews` | Verified 1-5 star review, unique per customer/dish, moderated |
+| `audit_log` | Catalogue and operational audit rows with before/after JSON |
+
+`src/lib/orders/snapshot.ts` resolves all dish prices, options, modifiers, tax,
+service charge and promotion server-side inside one transaction. The client sends
+slugs and option values only. `src/lib/orders/totals.ts` is the pure integer
+calculation used for the stored snapshot and for tests.
 
 ### Money
 
-All money columns are integers in cents (`price_cents`, `subtotal_cents`,
-`vat_cents`, `total_cents`). The app converts to birr only when mapping rows to
-the UI. `orders.total_cents` and `order_items.line_total_cents` are generated
-and stored, so a total cannot drift from its components.
+All money columns are integer minor units (`*_minor`, for example
+`subtotal_minor`, `tax_minor`, `total_minor`). The UI converts to birr at the
+repository/DTO boundary. There is no floating-point arithmetic in the order
+path.
+
+The stored totals follow these rules:
+
+- `subtotal_minor` is the menu gross before discount;
+- inclusive tax is informational and is not added again;
+- exclusive tax is added to the payable total;
+- mixed inclusive/exclusive lines are rejected;
+- a percentage service charge is calculated on the discounted subtotal;
+- a taxable service charge joins the tax base;
+- discounts cannot make the order negative.
+
+`orders.total_minor` and `order_items.line_total_minor` are generated by
+Postgres and stored, so a header total cannot silently drift from its
+components.
 
 ### Status transitions
 
-`orders.status` is an `order_status` enum. A `BEFORE INSERT OR UPDATE OF status`
-trigger enforces the state machine in the database:
+The database stores uppercase `OrderStatus` values. The existing UI/API keeps
+lowercase legacy statuses and fulfillment values.
 
 ```text
-received -> preparing -> ready -> out_for_delivery -> completed
-received -> cancelled       (customer only while received)
-any non-terminal -> cancelled (admin only)
+RECEIVED -> PREPARING -> READY -> OUT_FOR_DELIVERY -> COMPLETED
+RECEIVED -> CANCELLED       (customer only while received)
+any non-terminal -> CANCELLED (admin)
 ```
 
-Customers cannot advance an order. Employees cannot cancel. A terminal order
-cannot be rewritten. The application still performs role checks before it
-issues a write. Each Prisma transaction calls `set_config('app.actor_id', ...,
-true)` and `set_config('app.actor_role', ..., true)` through `$queryRaw`; this
-is the only raw statement in the runtime repositories, and it keeps the actor
-visible to the trigger and audit rows in the same transaction.
+Pickup orders skip `OUT_FOR_DELIVERY`. The application checks role and transition
+rules in `src/lib/orders.js`; it inserts each `order_status_history` row
+explicitly in the same transaction. The kitchen/admin status routes and the
+customer cancellation route both go through that module.
 
 ### Sessions
 
 `createSessionRecord()` inserts a random 256-bit token and stores only its
-SHA-256 hash. Sign-out calls `deleteSessionByToken()`, which sets `revoked_at`
-rather than deleting the row. `getSessionUserByToken()` requires
-`revoked_at IS NULL AND expires_at > now()`. Expired rows are ignored
-immediately and can be cleaned up operationally.
+SHA-256 hash. Sign-out sets `revoked_at` rather than deleting the row.
+`getSessionUserByToken()` requires `revoked_at IS NULL AND expires_at > now()`.
+Expired rows are ignored immediately and can be cleaned up operationally.
 
-### Migrations and legacy import
-
-```bash
-npm run db:migrate                    # apply pending SQL migrations
-npm run db:status                     # show applied/pending and checksums
-npm run db:import -- --file .data/mesob-house.json
-npm run db:reconcile -- --file .data/mesob-house.json
-npm run prisma:generate               # regenerate Prisma Client after schema edits
-```
-
-`001_core.sql` creates the enums, tables, foreign keys, checks, generated
-totals and triggers. `002_indexes.sql` adds the query indexes.
-`003_covering_indexes.sql` replaces the area-revenue index with a covering
-index and adds the top-customer covering index. `004_menu_and_reviews.sql`
-expands the catalogue (categories, option groups, pairings, reviews) and seeds
-the canonical dishes. `005_review_purchase_integrity.sql` adds the trigger that
-only accepts reviews backed by a completed order containing the dish. The
-migration runner records checksums in `schema_migrations`.
-
-`prisma/schema.prisma` is the Prisma Client model, not the migration source.
-When a migration changes a table, update the schema to match and run
-`npm run prisma:generate`. `postinstall` also regenerates the client so a fresh
-deployment has it. The database-only features live in SQL:
-
-- generated `orders.total_cents` / `order_items.line_total_cents`;
-- order status, created/updated-at and audit/history triggers;
-- check constraints and the expression index on `lower(btrim(email))`;
-- partial and covering indexes.
-
-Operational scripts for migration, bulk import, reconciliation, `EXPLAIN`,
-backup/restore and independent invariant checks still use `pg`/SQL. They are
-verification tooling, not the application data path.
-
-The importer is transactional and sets `app.importing = 'on'` so historical
-timestamps, statuses and history rows are preserved. The migration, import,
-seed and restore scripts refuse a non-local host unless `--allow-remote` is
-passed, so a local test cannot accidentally write to Neon.
-
-The detailed results are in
-[`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md) and
-[`docs/DB_PERFORMANCE.md`](./docs/DB_PERFORMANCE.md).
-
-## 3. Menu data and ISR
+## 4. Menu data and ISR
 
 `src/lib/menu.js` reads the catalogue from Postgres through Prisma:
 
-- `getMenu()` returns active dishes, active categories, option groups/defaults, pairings and approved review aggregates.
-- `getSpecials()` filters the same catalogue by `is_special`.
-- `getAllDishes()` is the canonical checkout list; the order action resolves every id and price from it.
-- The functions use React `cache`, so one request pass does not repeat the same query.
-- `/` and `/menu` keep a 5-minute ISR window. `/dish/[slug]` is `force-dynamic` because it renders the signed-in customer's review state.
-- Admin menu writes and review moderation call `revalidatePath`, so changed dishes and ratings appear immediately instead of waiting for ISR.
-- `POST /api/revalidate` remains available for an external scheduler; it calls `revalidatePath` for `/`, `/menu` and the public menu APIs.
+- `getMenu()` returns active dishes, categories, option groups/defaults,
+  pairings, branch price/availability and approved review aggregates.
+- `getSpecials()` filters the same catalogue by `isSpecial`.
+- `getAllDishes()` is the canonical checkout list.
+- The functions use React `cache`, so one request pass does not repeat the same
+  query.
+- `/` and `/menu` keep a 5-minute ISR window. `/dish/[slug]` is
+  `force-dynamic` because it renders the signed-in customer's review state.
+- Admin menu writes and review moderation call `revalidatePath`, so changed
+  dishes and ratings appear immediately instead of waiting for ISR.
 
-The order action calls `getAllDishes()` as well. That is deliberate: the same cached menu that renders a dish page is the authority for the price stored in an order.
+The order action does not trust the client's price. It resolves every line
+through the same branch price/availability functions used by the public
+catalogue.
 
-## 4. Server rendering vs client fetching
+## 5. Server rendering vs client fetching
 
 | Route / component | Initial data | Live update |
 | --- | --- | --- |
 | `/` | Server Component; specials from `getSpecials()` | none (ISR) |
 | `/menu` | Server Component; full dish list from `getMenu()` | debounced SWR search after typing |
-| `/dish/[slug]` | Dynamic Server Component; DB dish, options, pairings and approved reviews | review submit refreshes the route; guest/customer state is never shared |
+| `/dish/[slug]` | Dynamic Server Component; DB dish, options, pairings and approved reviews | review submit refreshes the route |
 | Navbar session | `useSession()` SWR, seeded by `/api/auth/session` | revalidate on focus; mutated after sign-in/out |
 | `/account` | Server page guard + user prop | `mutate(SESSION_KEY)` after sign-out |
 | `/orders` | Server page guard + `getOrdersForUser` | SWR `/api/orders`, 10 s while active |
 | `/orders/[id]` | Server page guard + `getOrderForUser` | SSE `/api/orders/[id]/stream`, checks every 2 s, closes on terminal |
-| `/kitchen` | Server page guard + `getKitchenOverview` (queue + chart summaries) | SWR `/api/kitchen/orders`, 8 s |
-| `/admin` | Server page guard + `getAdminStats` (metrics + chart summaries) | SWR `/api/admin/stats`, 15 s |
+| `/kitchen` | Server page guard + `getKitchenOverview` | SWR `/api/kitchen/orders`, 8 s |
+| `/admin` | Server page guard + `getAdminStats` | SWR `/api/admin/stats`, 15 s |
 | `/admin/orders` | Server page guard + `getAllOrders` | SWR `/api/admin/orders`, 10 s |
 | `/admin/users` | Server page guard + `listUsers` | SWR `/api/admin/users`, 30 s |
 
 ### Why not make every page client-rendered?
 
-The public catalogue is mostly static and benefits from ISR, streaming and zero client fetch on first paint. The private pages need a server session check before any HTML is sent, so they are dynamic. SWR then handles only the changing part, seeded with server data via `fallbackData` to avoid a loading flash. The active order detail uses SSE instead: the server sends the initial order and pushes changes, so the page does not need a client fetch loop.
+The public catalogue is mostly static and benefits from ISR, streaming and zero
+client fetch on first paint. The private pages need a server session check before
+any HTML is sent, so they are dynamic. SWR then handles only the changing part,
+seeded with server data via `fallbackData` to avoid a loading flash. The active
+order detail uses SSE instead: the server sends the initial order and pushes
+changes, so the page does not need a client fetch loop.
 
 ### Dashboard chart summaries
 
-`src/lib/analytics.js` is server-only. It turns the full order table into the
-small arrays the charts need; the browser never receives the raw orders just
-to draw a dashboard.
+`src/lib/analytics.js` is server-only. It turns the fetched orders into the small
+arrays the charts need; the browser never receives the raw orders just to draw a
+dashboard.
 
 | Summary | Used by | Shape | Rules |
 | --- | --- | --- | --- |
 | `ordersPerDay` | Admin | 14 rows: `{ date, label, orders }` | All orders placed in the last 14 Addis days |
-| `revenueByArea` | Admin | Up to 6 rows: `{ area, orders, revenue }` | Completed orders only; pickup is its own `Pickup (Bole)` bucket |
-| `bestSellingItems` | Admin | Up to 8 rows: `{ id, name, quantity, revenue, rank }` | Completed orders only; grouped by item and ranked by units sold |
-| `menuItemShare` | Admin | One row per sold item: `{ id, name, quantity, revenue, rank, share }` | Every menu item with completed sales; `share` is the fraction of completed units sold and all shares add up to 1 |
-| `topCustomers` | Admin | Up to 10 rows: `{ id, name, email, orders, revenue, rank }` | Completed orders only; grouped by customer and ranked by lifetime spend |
-| `queueByStatus` | Kitchen | 4 rows: `{ status, label, tickets }` | Active tickets only |
-| `ordersByHour` | Kitchen | 12 rows: `{ hour, label, orders }` | Every order received today, bucketed into two-hour Addis slots |
+| `revenueByArea` | Admin | Up to 6 rows: `{ area, orders, revenue }` | Completed orders only; pickup is its own bucket |
+| `bestSellingItems` | Admin | Up to 8 rows | Completed orders only; ranked by units sold |
+| `menuItemShare` | Admin | One row per sold item | Completed units; shares add up to 1 |
+| `topCustomers` | Admin | Up to 10 rows | Completed orders only; lifetime spend |
+| `queueByStatus` | Kitchen | 4 rows | Active tickets only |
+| `ordersByHour` | Kitchen | 12 rows | Every order received today, two-hour Addis slots |
 
 Date and hour bucketing uses `Africa/Addis_Ababa`, not the server timezone.
-`getAdminStats()` returns these under `charts`; `getKitchenOverview()` returns
-`{ orders, charts }` and `/api/kitchen/orders` responds with
-`{ data: orders, charts }`. The existing SWR polls therefore refresh the
-charts with the queue/metrics instead of adding a second request.
 
-## 5. SWR keys, intervals and SSE
+## 6. SWR keys, intervals and SSE
 
 | SWR key | Used by | Interval | Notes |
 | --- | --- | --- | --- |
 | `/api/auth/session` | `useSession` / navbar | on focus | `shouldRetryOnError: false`; `mutate` after auth actions |
-| `/api/menu/search?q=…&category=…` | `MenuBrowser` | on key change only | 300 ms debounce; `keepPreviousData: true`; no focus revalidation |
+| `/api/menu/search?q=…&category=…` | `MenuBrowser` | on key change only | 300 ms debounce; `keepPreviousData: true` |
 | `/api/orders` | `OrdersLive` | 10 s while any order is active | stops when all orders are terminal |
 | `/api/kitchen/orders` | `KitchenBoard` | 8 s | employee/admin queue plus chart summaries |
 | `/api/admin/stats` | `AdminOverview` | 15 s | metrics plus chart summaries |
@@ -187,16 +294,21 @@ current order immediately, then checks the database every 2 seconds and sends a
 frame only when `updatedAt` changes. The route and client both close the stream
 once the order is `completed` or `cancelled`.
 
-`src/lib/fetcher.js` is shared: it sends `accept: application/json`, includes cookies, parses JSON, and throws an `Error` with `status` and `body` on non-2xx. That lets components distinguish 401/403/404/409 without parsing strings.
+`src/lib/fetcher.js` is shared: it sends `accept: application/json`, includes
+cookies, parses JSON, and throws an `Error` with `status` and `body` on non-2xx.
 
 ### Mutations and revalidation
 
-- **Sign-in/register/sign-out** call the server action, then `mutate(SESSION_KEY)` so the navbar updates immediately. Sign-out also clears the client store's auth keys (the store was bumped to version 4 for that migration).
-- **Order creation** is a Server Action. It calls `revalidatePath` for `/orders`, `/orders/[id]`, `/kitchen`, `/admin` and `/admin/orders`, then the checkout page navigates to the new order.
-- **Customer cancel** calls `POST /api/orders/[id]/cancel`, then `mutate()` on the list SWR key; the detail page's SSE stream also receives the cancelled status.
-- **Kitchen/admin status changes** call `PATCH`, then `mutate()` on their queue key. The next poll also picks up changes made by another user.
+- **Sign-in/register/sign-out** call the server action, then `mutate(SESSION_KEY)`.
+- **Order creation** is a Server Action. It calls `revalidatePath` for `/orders`,
+  `/orders/[id]`, `/kitchen`, `/admin` and `/admin/orders`, then the checkout page
+  navigates to the new order.
+- **Customer cancel** calls `POST /api/orders/[id]/cancel`, then `mutate()` on the
+  list SWR key; the detail page's SSE stream also receives the cancelled status.
+- **Kitchen/admin status changes** call `PATCH`, then `mutate()` on their queue
+  key. The next poll also picks up changes made by another user.
 
-## 6. Search debounce
+## 7. Search debounce
 
 `MenuBrowser` keeps two values: the immediate input and a 300 ms debounced value.
 
@@ -207,73 +319,71 @@ const searchKey = debouncedSearch
   : null;
 ```
 
-`searchKey` is `null` for an empty query, so clearing the box does not make a request; the server-seeded list is shown again. While a request is in flight, the component keeps the previous results (`keepPreviousData`) and displays “Searching the live menu…”.
+`searchKey` is `null` for an empty query, so clearing the box does not make a
+request; the server-seeded list is shown again. While a request is in flight, the
+component keeps the previous results (`keepPreviousData`) and displays
+"Searching the live menu…".
 
-The search API itself filters name, native name, description and category, and returns `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`.
+The search API filters name, native name, description and category and returns
+`Cache-Control: public, s-maxage=60, stale-while-revalidate=300`.
 
-## 7. Data validation
+## 8. Data validation
 
-- **Auth forms** use `signInSchema` and `registerSchema` from `src/lib/schemas.js` with Zod.
-- **Checkout** uses `checkoutSchema`. The server re-validates the whole payload, including item quantity bounds and fulfillment-specific fields.
-- **Dish ids** are resolved against `getAllDishes()`. Unknown ids return `DISH_UNAVAILABLE`.
-- **Prices and totals** are recomputed with `getCartTotals`; client totals are display-only.
-- **Order status** is validated against `nextStatuses(status, fulfillment)` in the app and again by the Postgres trigger. Admins may additionally cancel a non-terminal order; customers may cancel only `received`; employees cannot cancel.
-- **Roles** are validated against `ROLES` in `src/lib/roles.js` and the `user_role` enum.
+- **Auth forms** use Zod schemas from `src/lib/schemas.js`.
+- **Checkout** uses `checkoutSchema`. The server re-validates the whole payload,
+  including item quantity bounds and fulfillment-specific fields.
+- **Dish slugs and option values** are resolved against the live catalogue;
+  unknown values return `DISH_UNAVAILABLE` or `INVALID_OPTION`.
+- **Prices and totals** are recomputed by `createOrderSnapshot()` and
+  `calculateOrderTotals()`; client totals are display-only.
+- **Order status** is validated by `nextStatuses(status, fulfillment)` and the
+  role checks in `src/lib/orders.js`.
+- **Roles** are validated by `AccountType`, `StaffRole` and the central policy
+  module in `src/lib/policy.ts`.
 
-## 8. Data retention and privacy
+## 9. Data retention and privacy
 
-- Sign-out revokes a session by setting `sessions.revoked_at`; the row is kept for audit. Expired/revoked rows are rejected by every lookup and can be removed by an operational cleanup job.
-- Orders keep an `order_status_history` timeline with the acting user id and display name; `audit_log` records order creation, status changes and role changes.
-- `toSafeUser` is the only user shape sent to the browser; `password_hash` and session rows never leave the server.
-- `.data/` is ignored by Git. It is the legacy import/reconciliation input, not a runtime store.
-- Customer order APIs return `404` for another user's id rather than `403`, so the endpoint cannot confirm that an order exists.
+- Sign-out revokes a session by setting `sessions.revoked_at`; the row is kept
+  for audit.
+- Orders keep an `order_status_history` timeline with the acting user id and
+  display name; `audit_log` records catalogue changes and operational actions.
+- `toSafeUser()` is the only user shape sent to the browser; `passwordHash` and
+  session rows never leave the server.
+- Customer order APIs return `404` for another user's id rather than `403`, so
+  the endpoint cannot confirm that an order exists.
+- The old `.data/` document is ignored by Git and is not read at runtime.
 
-## 9. Operational checklist
+## 10. Operational checklist
 
-### Date-dispersed test orders
-
-`scripts/seed-orders.mjs` fills the normalized Postgres tables with realistic
-orders for chart and queue testing. It replaces the orders table by default,
-keeps the imported admin/employee/guest accounts, and adds `@mesob.test` demo
-customers with the shared password `Guest123!`. It writes only to Postgres;
-the old `--file` mode is gone.
-
-The script loads `.env.local` and `.env`, prints the target, and refuses a
-non-local database unless `--allow-remote` is passed. Its connection pool uses
-two connections because one is held for validation while the seed writes run
-in a second transaction.
+### Fresh local database
 
 ```bash
-# 1,500 orders over 120 days, plus 24 demo customers
-npm run seed:orders
-
-# A bigger or smaller spread
-npm run seed:orders -- --count 2500 --days 180 --customers 30
-
-# Keep existing orders and append another batch
-npm run seed:orders -- --keep-orders
-
-# Remove only the @mesob.test demo orders/customers
-npm run seed:orders:clear
-npm run seed:orders -- --clear --dry-run
-
-# Inspect what would be generated without writing
-npm run seed:orders -- --count 25 --days 5 --customers 3 --dry-run
+# Start local Postgres, then:
+npm run db:reset     # local target only; migrates + seeds
 ```
 
-Every past day gets at least one order, with more weight on recent dates.
-Today receives a separate batch, including active tickets for the kitchen
-queue, so both dashboards have data immediately. Demo customers use
-`diner01@mesob.test` through `diner24@mesob.test` by default.
+### Existing empty database
 
-The smoke test for the rewritten script is in
-[`docs/seed-orders-smoke.txt`](./docs/seed-orders-smoke.txt): a scratch database
-seeded 25 orders, the dry-run reported 25 demo orders and 50 demo customers,
-the clear removed only those rows, and a post-clear dry run reported zero demo
-accounts before creating its preview set.
+```bash
+npm run db:deploy
+npm run db:seed
+```
 
-For production, take a verified backup, run migrations on a staging copy, set
-`PG_POOL_MAX` for the host, and schedule session/audit retention. The rest of
-the application stays unchanged because all persistence is behind the Prisma
-client in `src/lib/prisma.js`, with user/session operations in `src/lib/db.js`
-and order operations in `src/lib/orders.js`.
+### Verification
+
+```bash
+npm run typecheck
+npm run test
+npm run build
+npm run smoke:orders
+npm run smoke:admin-menu
+```
+
+The two smoke scripts exercise the order snapshot/status flow and the admin
+catalogue CRUD/price-history flow against the seeded local database. They clean
+up their own test rows and are intentionally local development checks.
+
+For production, take a verified backup, apply `prisma migrate deploy` on a
+staging copy, run the seed only for a demo environment, and rotate the demo
+credentials. The detailed rebuild record is in
+[`docs/DB_REBUILD_REPORT.md`](./docs/DB_REBUILD_REPORT.md).

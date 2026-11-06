@@ -220,5 +220,5 @@ Before merging a performance-sensitive change:
 - **No Lighthouse score yet.** The environment has no Chrome/Lighthouse binary. The local API timings above are real, but the assessment still needs a deployed Lighthouse run with mobile and desktop presets.
 - **No throttled mobile measurement.** A 4G/CPU-throttled run will be slower than these warm local numbers.
 - **Warm server.** The first request after a cold start may pay the initial Prisma/Postgres query; ISR hides it for the shared menu after the first render.
-- **Postgres.** Queries use the indexes documented in [`docs/DB_PERFORMANCE.md`](./docs/DB_PERFORMANCE.md); the measured plans are local and warm, not production capacity numbers.
+- **Postgres.** Queries use the baseline indexes documented in [`DATA.md`](./DATA.md); the measured plans are local and warm, not production capacity numbers.
 - **No RUM.** There is no real-user monitoring; field LCP/CLS/INP would require a deployment with analytics. -->

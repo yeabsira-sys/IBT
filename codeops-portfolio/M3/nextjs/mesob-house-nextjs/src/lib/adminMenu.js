@@ -199,13 +199,14 @@ const ALLERGEN_CODES = {
   sesame: "sesame",
   peanut: "peanuts",
   peanuts: "peanuts",
-  "tree nuts": "tree-nuts",
-  nut: "tree-nuts",
-  nuts: "tree-nuts",
+  "tree nuts": "nuts",
+  nut: "nuts",
+  nuts: "nuts",
   fish: "fish",
   shellfish: "shellfish",
-  soy: "soy",
-  soya: "soy",
+  soy: "soybeans",
+  soya: "soybeans",
+  soybeans: "soybeans",
 };
 
 function allergenCode(name) {
@@ -322,14 +323,26 @@ async function syncMedia(client, menuItemId, imageUrl, name) {
 }
 
 async function syncPrice(client, context, menuItemId, priceMinor, actorId, force = false, previousPrice = null) {
-  if (!force && previousPrice === priceMinor) return;
+  const current = await client.menuItemPrice.findFirst({
+    where: { menuItemId, branchId: null, validUntil: null },
+    orderBy: { validFrom: "desc" },
+    select: { priceMinor: true },
+  });
+
+  if (!force && (previousPrice ?? current?.priceMinor) === priceMinor) return;
+
+  const now = new Date();
+  await client.menuItemPrice.updateMany({
+    where: { menuItemId, branchId: null, validUntil: null },
+    data: { validUntil: now },
+  });
   await client.menuItemPrice.create({
     data: {
       menuItemId,
       branchId: null,
       priceMinor,
       currency: context.currency,
-      validFrom: new Date(),
+      validFrom: now,
       createdBy: actorId ?? null,
     },
   });
@@ -610,7 +623,7 @@ export async function createMenuItem(input, actor) {
       select: { id: true, slug: true, name: true, deletedAt: true },
     });
 
-    await syncCategories(tx, row.id, category.id, data.isSide);
+    await syncCategories(tx, context.restaurantId, row.id, category.id, data.isSide);
     await syncMedia(tx, row.id, data.imageUrl, data.name);
     await syncPrice(tx, context, row.id, priceMinor, actor?.id, true);
     await syncIngredients(tx, context, row.id, data.ingredients);
@@ -674,7 +687,7 @@ export async function updateMenuItem(slug, input, actor) {
       select: { id: true, slug: true, name: true, deletedAt: true },
     });
 
-    await syncCategories(tx, row.id, category.id, data.isSide);
+    await syncCategories(tx, context.restaurantId, row.id, category.id, data.isSide);
     await syncMedia(tx, row.id, data.imageUrl, data.name);
     await syncPrice(
       tx,

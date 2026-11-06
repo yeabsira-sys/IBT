@@ -14,7 +14,9 @@
     "db:reset": "node scripts/reset-local-db.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "smoke:orders": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/order-smoke.mjs",
+    "smoke:admin-menu": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/admin-menu-smoke.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

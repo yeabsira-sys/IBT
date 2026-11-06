@@ -24,7 +24,7 @@
 2. **The server owns security and money.** Sessions, roles, prices, ownership and status transitions are checked in `src/lib` and the API/actions.
 3. **The browser store is only a draft.** Cart, favourites and checkout form state live in Zustand/localStorage; real users, sessions and orders live in normalized Postgres tables.
 4. **SWR and SSE are only for live refresh.** The first page render is server-rendered; SWR keeps order, kitchen and admin views current, while the active order detail uses an authenticated SSE stream.
-5. **`src/lib/prisma.js` is the persistence boundary.** It owns the Prisma Client and pg adapter; `src/lib/db.js` and `src/lib/orders.js` expose user, session and order operations on top of it, including the actor context used by database triggers.
+5. **`src/lib/prisma.js` is the persistence boundary.** It owns the Prisma Client and pg adapter; `src/lib/catalog/*`, `src/lib/orders.js`, `src/lib/orders/*`, `src/lib/db.js` and `src/lib/policy.ts` expose the catalogue, order, user, session and authorization operations on top of it.
 
 ---
 
@@ -46,7 +46,7 @@ It has two sides:
    - Kitchen queue for employees and admins
    - Admin dashboard, all-orders view and user-role management
 
-The project uses **normalized PostgreSQL tables through Prisma ORM**. `DATABASE_URL` is required: there is no file or `/tmp` fallback. Versioned SQL migrations create the schema and its triggers/generated columns, a legacy import moves the old document into it, and the app reads and writes the tables through Prisma Client in `src/lib/prisma.js`, `src/lib/db.js` and `src/lib/orders.js`.
+The project uses **normalized PostgreSQL tables through Prisma ORM**. `DATABASE_URL` is required: there is no file or `/tmp` fallback. Prisma Migrate owns schema history; one baseline migration also creates the triggers, generated columns, checks and indexes Prisma cannot express. `scripts/seed.mjs` rebuilds the demo restaurant, branch, catalogue and accounts. The app reads and writes the tables through Prisma Client in `src/lib/prisma.js`, `src/lib/db.js`, `src/lib/orders.js` and the catalogue/policy modules in `src/lib/catalog` and `src/lib/policy.ts`.
 
 ---
 
@@ -336,6 +336,13 @@ The proxy is a routing layer, not the security boundary. It verifies the session
 | `employee` | `/account` (sign out), `/kitchen`; public shop and customer-only pages redirect to `/kitchen`                                          |
 | `admin`    | `/account` (sign out), `/kitchen`, `/admin`, `/admin/orders`, `/admin/menu`, `/admin/reviews`, `/admin/users`; public shop and customer-only pages redirect to `/admin` |
 
+The database uses a richer model than the legacy UI: `AccountType` separates
+customers from staff, and `RoleAssignment` carries `RESTAURANT_OWNER`,
+`BRANCH_MANAGER`, `KITCHEN_STAFF`, `DELIVERY_STAFF` or `CASHIER` with an optional
+branch. `legacyRoleFor()` in `src/lib/policy.ts` maps that back to the three UI
+roles. The seeded delivery account (`delivery@mesob.house`) therefore uses the
+employee portal while retaining its delivery role in the database.
+
 Staff accounts are intentionally not customer accounts. The public menu APIs (`/api/menu*`) and customer order APIs (`/api/orders*`) return `403` for staff sessions. `/api/auth/session`, `/api/health` and `/api/revalidate` remain reachable.
 
 The role check lives in `proxy.js`, not `(shop)/layout.jsx`, so the public shop keeps its static/ISR rendering.
@@ -383,65 +390,96 @@ Rules:
 - Staff use `nextStatuses(status, fulfillment)` to know the legal next step.
 - Pickup orders skip `out_for_delivery`.
 - Admins may cancel any non-terminal order.
-- Every transition is appended to `statusHistory`.
+- Every transition is appended to `statusHistory` in the same transaction.
+
+The database stores uppercase `OrderStatus` values (`RECEIVED`, `PREPARING`,
+etc.). The existing UI/API keeps the lowercase legacy statuses, and
+`src/lib/orders.js` maps between the two at the DTO boundary. Fulfillment is
+mapped the same way (`DELIVERY`/`PICKUP` <-> `delivery`/`pickup`).
 
 Files:
 
 - [`src/lib/orderStatus.js`](./src/lib/orderStatus.js)
 - [`src/lib/orders.js`](./src/lib/orders.js)
+- [`src/lib/orders/snapshot.ts`](./src/lib/orders/snapshot.ts)
+- [`src/lib/orders/totals.ts`](./src/lib/orders/totals.ts)
 
 ---
 
 ## 6. Data model
 
-Persistence is normalized PostgreSQL. The schema is created by versioned
-migrations in `migrations/`:
+Persistence is normalized PostgreSQL. Prisma Migrate owns schema history through
+one baseline at `prisma/migrations/20261105140000_baseline/`. The schema is
+grouped as follows:
 
-| Table | What it holds |
+| Group | Tables |
 | --- | --- |
-| `users` | account, role, scrypt password hash |
-| `sessions` | SHA-256 token hash, user, expiry, `revoked_at` |
-| `menu_items` | menu catalogue with integer-cent prices |
-| `orders` | order header, customer/contact/delivery snapshot, generated total |
-| `order_items` | item snapshot, quantity, generated line total |
-| `order_status_history` | one row per status transition |
-| `audit_log` | order creation, status changes, role changes |
+| Tenancy/access | `restaurants`, `branches`, `branch_operating_hours`, `menu_publications`, `users`, `sessions`, `role_assignments` |
+| Catalogue | `menus`, `menu_categories`, `menu_items`, `menu_item_translations`, `menu_item_media`, `ingredients`, `allergens`, `dietary_attributes`, `nutrition`, `menu_option_groups`, `menu_options`, `menu_pairings` |
+| Branch overrides | `branch_menu_items`, `menu_item_availability`, `branch_menu_option_availability`, `branch_inventory`, `inventory_items`, `inventory_transactions`, `inventory_transfers`, `inventory_transfer_lines` |
+| Pricing/tax/promotions | `menu_item_prices`, `tax_categories`, `tax_rates`, `promotions`, `delivery_zones` |
+| Orders/reviews | `orders`, `order_items`, `order_status_history`, `reviews`, `audit_log` |
 
-Money is stored as integer cents and converted to birr only at the repository
-boundary. The API still exposes a nested order shape:
+Money is stored as integer minor units (`*_minor`) and converted to birr only at
+the repository/DTO boundary. Tax rates use basis points. The API still exposes a
+nested order shape with legacy field names:
 
 ```json
 {
   "id": "MH-1A2B3C4D",
-  "userId": "uuid",
+  "orderUuid": "uuid",
   "status": "received",
-  "items": [{ "id": "doro-wat", "name": "Doro Wat", "price": 650, "quantity": 2 }],
-  "totals": { "subtotal": 1300, "injera": 0, "packaging": 0, "vat": 195, "discount": 0, "total": 1495 },
+  "items": [{ "id": "doro-wat", "menuItemId": "uuid", "name": "Doro Wat", "price": 650, "quantity": 2 }],
+  "totals": {
+    "subtotal": 1300,
+    "discount": 0,
+    "serviceCharge": 0,
+    "vat": 195,
+    "delivery": 50,
+    "total": 1545,
+    "currency": "ETB",
+    "taxInclusive": true,
+    "taxRateBasisPoints": 1500
+  },
   "fulfillment": "delivery",
   "delivery": { "subCity": "...", "street": "...", "landmark": "...", "timing": "immediate" },
   "statusHistory": [{ "status": "received", "at": "...", "by": "uuid", "byName": "Guest Diner" }]
 }
 ```
 
+### Catalogue and branch resolution
+
+The catalogue is restaurant-level. A branch may override listing, availability,
+stock and price, but not the dish master. `src/lib/catalog/pricing.ts` resolves a
+branch price first, then a catalog-wide price, then `MenuItem.basePriceMinor` as
+a bootstrap fallback. `src/lib/catalog/availability.ts` applies branch listing,
+status and time windows in the branch timezone. `src/lib/catalog/disclosure.ts`
+never treats missing allergen rows as "allergen-free"; unconfirmed dishes show a
+warning instead. `src/lib/catalog/promotions.ts` selects at most one best
+promotion.
+
 ### Users and sessions
 
-`mapUser()` converts a Prisma `User` model to the app's user shape.
+`mapUser()` converts a Prisma `User` model to the app's legacy user shape.
 `toSafeUser()` is the only user shape that reaches the browser; it removes
 `passwordHash`. Session tokens are random 256-bit values; only their SHA-256
 hash is stored. Sign-out sets `revoked_at` instead of deleting the row.
 
 ### Orders and transitions
 
-Order writes go through [`src/lib/orders.js`](./src/lib/orders.js), which uses
-Prisma nested writes for `orders` and `order_items`; the triggers write
-`order_status_history` / `audit_log`. `createOrder()` runs in a Prisma
-transaction with `setDbActor()`; a status update does the same. Cancellation
-uses a conditional `updateMany` on `status = 'received'` instead of
-`SELECT ... FOR UPDATE`, so concurrent callers cannot both win. The Postgres
-trigger remains the final authority, so an API bug cannot smuggle in an invalid
-transition.
+Order writes go through [`src/lib/orders.js`](./src/lib/orders.js) and
+[`src/lib/orders/snapshot.ts`](./src/lib/orders/snapshot.ts). The snapshot
+resolves every dish price, option, allergen/dietary disclosure, promotion, tax
+and service charge server-side in one transaction; the client sends only slugs
+and option values. `src/lib/orders/totals.ts` performs the integer totals
+calculation.
 
-The database enforces:
+`orders.total_minor` and `order_items.line_total_minor` are generated by
+Postgres. `order_status_history` rows are inserted explicitly by `orders.js` in
+the same transaction; the baseline no longer has a trigger that writes history
+automatically.
+
+The application enforces:
 
 ```text
 received -> preparing -> ready -> out_for_delivery -> completed
@@ -449,21 +487,25 @@ received -> cancelled       (customer only while received)
 any non-terminal -> cancelled (admin only)
 ```
 
+Pickup skips `out_for_delivery`. Cancellation uses a conditional `updateMany` on
+`status = 'received'`, so concurrent callers cannot both win.
+
 ### Why the repository is split
 
 - [`src/lib/prisma.js`](./src/lib/prisma.js) owns the cached Prisma Client,
   `PrismaPg` adapter and database URL / pool configuration.
 - [`src/lib/db.js`](./src/lib/db.js) owns user/session repositories, password
   hashing, transactions and actor context.
-- [`src/lib/orders.js`](./src/lib/orders.js) owns Prisma order reads, the
-  kitchen/admin views, analytics inputs and the checkout transaction.
+- [`src/lib/policy.ts`](./src/lib/policy.ts) owns permissions, branch scope and
+  the legacy-role adapter.
+- [`src/lib/catalog/`](./src/lib/catalog) owns price, availability, promotion
+  and disclosure resolvers.
+- [`src/lib/orders.js`](./src/lib/orders.js) owns order reads/writes, the
+  kitchen/admin views and the checkout transaction.
 - `analytics.js` is a pure server-side transformer over the fetched rows.
 
-More detail, including the migration report and EXPLAIN plans:
-[`DATA.md`](./DATA.md), [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md),
-[`docs/DB_PERFORMANCE.md`](./docs/DB_PERFORMANCE.md).
-
-More detail: [`DATA.md`](./DATA.md).
+More detail: [`DATA.md`](./DATA.md) and
+[`docs/DB_REBUILD_REPORT.md`](./docs/DB_REBUILD_REPORT.md).
 
 ---
 
@@ -767,26 +809,27 @@ Read in this order:
 ```bash
 npm install
 cp .env.example .env.local
-# set DATABASE_URL to a Postgres database
-npm run db:migrate
-# only when moving an existing deployment:
-npm run db:import -- --file .data/mesob-house.json
+# set DATABASE_URL to a local Postgres database
+npm run db:deploy
+npm run db:seed
 npm run dev
 ```
 
-Open <http://localhost:3000>. The app does not create tables or seed accounts
-on the first request. If you have no legacy document, register a customer and
-promote that account with SQL, or import your production export.
+Open <http://localhost:3000>. The app does not create tables or seed accounts on
+the first request. For a fresh local database, `npm run db:reset` combines the
+local reset, migration and seed.
 
 ### Demo accounts
 
-| Role     | Email                 | Mobile      | Password      |
-| -------- | --------------------- | ----------- | ------------- |
-| Admin    | `admin@mesob.house`   | `911000001` | `Admin123!`   |
-| Employee | `kitchen@mesob.house` | `911000002` | `Kitchen123!` |
-| Customer | `guest@mesob.house`   | `911000003` | `Guest123!`   |
+| Role     | Email                  | Mobile      | Password             |
+| -------- | ---------------------- | ----------- | -------------------- |
+| Admin    | `admin@mesob.house`    | `911000001` | `Admin123!`          |
+| Employee | `kitchen@mesob.house`  | `911000002` | `Kitchen123!`        |
+| Delivery | `delivery@mesob.house` | `911000004` | `MesobDelivery2026!` |
+| Customer | `guest@mesob.house`    | `911000003` | `Guest123!`          |
 
-You can sign in with the email tab or the mobile tab.
+You can sign in with the email tab or the mobile tab. Password/mobile overrides
+come from `SEED_*` environment variables when the seed runs.
 
 ### Useful commands
 
@@ -794,24 +837,20 @@ You can sign in with the email tab or the mobile tab.
 npm run dev                 # development server
 npm run build               # production build
 npm start                   # serve the production build
-npm run db:migrate          # apply versioned migrations
-npm run db:status           # show applied/pending migrations
-npm run db:import           # import the legacy document
-npm run db:reconcile        # compare source and Postgres counts/revenue
-npm run seed:orders         # replace orders with 1,500 test orders + 24 demo customers
-npm run seed:orders:clear   # remove @mesob.test demo orders/customers
-npm run db:load-test        # 50 concurrent checkouts
-npm run db:verify           # trigger invariants + session revocation
-npm run db:backup-drill     # pg_dump/pg_restore comparison
+npm run db:deploy           # apply Prisma Migrate migrations
+npm run db:status           # show migration status
+npm run db:seed             # idempotent catalogue/branch/demo seed
+npm run db:reset            # LOCAL ONLY: drop/recreate, migrate, seed
+npm run typecheck           # TypeScript check
+npm run test                # Vitest unit tests
+npm run smoke:orders        # order snapshot/status smoke test
+npm run smoke:admin-menu    # admin catalogue CRUD/price-history smoke test
 ```
 
-`seed:orders` writes only to Postgres. It prints the target and refuses a
-remote host unless `--allow-remote` is passed. `--dry-run` generates the same
-set without writing; `--clear --dry-run` reports what would be removed.
-
-The seed script never changes imported admin/employee/guest passwords. The
-migration, import, seed and restore commands are documented in
-[`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md).
+`db:reset` and `db:seed` refuse a non-local target unless `--allow-remote` is
+passed. The seed updates the demo users' passwords and phones but does not touch
+application orders. The rebuild and verification record is in
+[`docs/DB_REBUILD_REPORT.md`](./docs/DB_REBUILD_REPORT.md).
 
 ---
 
@@ -838,36 +877,44 @@ migration, import, seed and restore commands are documented in
 
 1. Update `ORDER_STATUSES` and `STATUS_META` in `src/lib/orderStatus.js`.
 2. Update `nextStatuses()`.
-3. Update `updateOrderStatus()` if admins need special rules.
-4. Update the kitchen columns and labels.
-5. Update `buildKitchenCharts()` in `src/lib/analytics.js`.
-6. Update the seed script if you want test data in the new status.
+3. Update the uppercase `OrderStatus` enum in `prisma/schema.prisma` and the
+   mapping in `src/lib/orders.js` if the database vocabulary changes.
+4. Update `updateOrderStatus()` and the explicit `order_status_history` write.
+5. Update the kitchen columns and labels.
+6. Update `buildKitchenCharts()` in `src/lib/analytics.js`.
+7. Add or adjust a smoke check in `scripts/order-smoke.mjs`.
 
 ### Change pricing
 
-Edit `src/lib/pricing.js`. The same function is used by:
+Pricing is split by responsibility:
 
-- the cart total
-- the checkout summary
-- the server-side order creation
+- `src/lib/catalog/pricing.ts` resolves the effective branch/catalog/base price.
+- `src/lib/catalog/promotions.ts` picks the single best promotion.
+- `src/lib/orders/totals.ts` performs the integer tax, service-charge, discount
+  and total arithmetic.
+- `src/lib/orders/snapshot.ts` resolves and stores the immutable order snapshot.
 
-That keeps the displayed total and the stored total consistent.
+The cart/checkout display uses the same outputs; client totals are never trusted
+for order creation.
 
 ### Extend the database
 
-Add a new numbered migration; never edit an applied file because its checksum
-is recorded. Keep the repository boundaries intact:
+Create a new Prisma migration; never edit an applied baseline, because Prisma
+records its checksum and history. Keep the boundaries intact:
 
-- `prisma/schema.prisma`: Prisma models that mirror the migrated tables
+- `prisma/schema.prisma`: canonical models
+- `prisma/migrations/`: Prisma Migrate history
 - `src/lib/prisma.js`: Prisma Client, `PrismaPg` adapter and pool configuration
 - `src/lib/db.js`: users, sessions, password hashing, actor context
-- `src/lib/orders.js`: order reads/writes, kitchen/admin queries, checkout
+- `src/lib/policy.ts`: roles, permissions and branch scope
+- `src/lib/catalog/`: pricing, availability, promotion and disclosure rules
+- `src/lib/orders.js` + `src/lib/orders/`: order reads/writes and snapshots
 - `src/lib/analytics.js`: pure summaries over fetched rows
 
-Export the new data through `toSafeUser()` or `mapOrder()` rather than leaking
-Prisma models to components. Run `npm run db:migrate`, update the Prisma schema
-if the table shape changed, run `npm run prisma:generate`, then run the
-reconciliation and the build.
+Export new data through `toSafeUser()` or `mapOrder()` rather than leaking
+Prisma models to components. After a schema edit run `npx prisma migrate dev`,
+`npm run prisma:generate`, `npm run typecheck`, `npm run test` and
+`npm run build`.
 
 ---
 
@@ -880,9 +927,11 @@ reconciliation and the build.
 | Signed in but still see guest UI          | `useSession`, `/api/auth/session`, SWR mutate after sign-in                                                                             |
 | `403` from kitchen/admin API              | Role check in `src/lib/auth.js` and the route handler                                                                                   |
 | Another user's order returns `404`        | Correct: ownership is part of `getOrderForUser`                                                                                         |
-| Order total differs from the cart         | `src/lib/pricing.js` and `submitOrder`                                                                                                  |
+| Order total differs from the cart         | `src/lib/orders/totals.ts`, `src/lib/orders/snapshot.ts` and `submitOrder`                                                               |
 | Cart disappears after refresh             | `StoreHydrator`, `skipHydration`, localStorage                                                                                          |
 | Menu is stale                             | ISR `revalidate`, `/api/revalidate`, admin `revalidatePath("/menu")`                                                                     |
+| Price is wrong for one branch             | `src/lib/catalog/pricing.ts`, `menu_item_prices` windows, `MenuItem.basePriceMinor`                                                      |
+| Dish should be unavailable                | `branch_menu_items`, `menu_item_availability`, `src/lib/catalog/availability.ts`                                                        |
 | Menu search fires too often               | `useDebouncedValue` and the SWR key                                                                                                     |
 | Kitchen queue does not update             | SWR interval, `/api/kitchen/orders`, `mutate()` after PATCH                                                                             |
 | Order detail stays on “Reconnecting…”     | Session cookie, `/api/orders/[id]/stream`, `proxy.js`, server logs                                                                      |
@@ -898,14 +947,14 @@ reconciliation and the build.
 
 This project is shaped like a production app, but some parts are deliberately local:
 
-- **Database** — Postgres is required. The schema, migrations, legacy import and validation scripts are real; the demo deployment still depends on an operator running them against a managed database.
+- **Database** — Postgres is required. The Prisma baseline, seed, policy/catalog modules and smoke tests are real; the demo deployment still depends on an operator running the migration and seed against a managed database.
 - **Payments** — the checkout records a payment method; there is no real Telebirr/CBE/card gateway.
 - **Email and SMS** — no real receipt or rider notifications are sent.
 - **Social sign-in** — the Telebirr/Google buttons create demo customer sessions, not real OAuth sessions.
 - **Reservations** — the marketing copy mentions them, but there is no reservation backend.
-- **Automated tests** — there is no test suite; verification is a production build plus manual smoke checks.
+- **Automated tests** — there is a Vitest unit suite for pricing, availability, promotions, disclosure, policy and totals, plus two local end-to-end smoke scripts. Browser/API coverage is still manual.
 
-For a real deployment, replace the database, add a payment provider, add notification services, and add automated tests.
+For a real deployment, replace the demo database/credentials, add a payment provider, add notification services, and expand the automated and browser test coverage.
 
 ---
 
@@ -916,9 +965,9 @@ For a real deployment, replace the database, add a payment provider, add notific
 | [`README.md`](./README.md)               | Setup, routes, demo accounts, deployment notes         |
 | [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md) | This big-picture guide                                 |
 | [`AUTH.md`](./AUTH.md)                   | Sessions, password hashing, route guards, attack tests |
-| [`DATA.md`](./DATA.md)                   | Postgres schema, ISR, SWR, caching, seed data          |
-| [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md) | Reconciliation, load, invariants, restore drill |
-| [`docs/DB_PERFORMANCE.md`](./docs/DB_PERFORMANCE.md) | EXPLAIN plans and index rationale                    |
+| [`DATA.md`](./DATA.md)                   | Prisma schema, seed, ISR, SWR, caching, validation     |
+| [`docs/DB_REBUILD_REPORT.md`](./docs/DB_REBUILD_REPORT.md) | Baseline, seed counts, smoke tests, rebuild record |
+| [`docs/ARCHITECTURE_REBUILD.md`](./docs/ARCHITECTURE_REBUILD.md) | Design rationale and target model          |
 | [`PERF.md`](./PERF.md)                   | Build size, Lighthouse notes, performance decisions    |
 
 ---

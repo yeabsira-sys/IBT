@@ -28,7 +28,7 @@ const env = { ...process.env, DATABASE_URL: databaseUrl };
 
 const migrate = spawnSync(
   process.platform === "win32" ? "npx.cmd" : "npx",
-  ["prisma", "migrate", "reset", "--force", "--skip-seed"],
+  ["prisma", "migrate", "reset", "--force"],
   { env, stdio: "inherit" },
 );
 if (migrate.status !== 0) {

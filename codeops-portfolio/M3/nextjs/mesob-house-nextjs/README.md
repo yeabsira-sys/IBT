@@ -25,7 +25,7 @@ DEPLOYED ON ONRENDER [mesob-house / addis-eats](https://addis-eats-9f08.onrender
 - **Shared formatters + CSV export** — `src/lib/format.js` builds the `etb`, `when`, `relative` and `number` formatters once; `/orders`, an individual order page, and `/admin/orders` can download order history through `src/lib/csv.js`, which quotes commas, quotes and newlines correctly.
 - **Leaflet delivery map** — a browser-only map on `/orders/[id]` with restaurant, destination and illustrative courier markers, plus the same route and address as text. See [`MAPS.md`](./MAPS.md).
 - **Metadata and discovery** — per-page metadata, per-dish Open Graph cards, JSON-LD `MenuItem`, sitemap, robots rules, web manifest, private-page `noindex`.
-- **Documentation** — [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md) is the big-picture codebase tour; [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md), [`PERF.md`](./PERF.md), [`MAPS.md`](./MAPS.md), and [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md) cover security, data/caching, performance, the map, and the database migration.
+- **Documentation** — [`PROJECT_GUIDE.md`](./PROJECT_GUIDE.md) is the big-picture codebase tour; [`AUTH.md`](./AUTH.md), [`DATA.md`](./DATA.md), [`PERF.md`](./PERF.md), [`MAPS.md`](./MAPS.md), and [`docs/DB_REBUILD_REPORT.md`](./docs/DB_REBUILD_REPORT.md) cover security, data/caching, performance, the map, and the database rebuild.
 
 ## Stack
 
@@ -46,25 +46,22 @@ DEPLOYED ON ONRENDER [mesob-house / addis-eats](https://addis-eats-9f08.onrender
 npm install
 cp .env.example .env.local
 # Set DATABASE_URL in .env.local to a Postgres database.
-npm run db:migrate
-# First migration of an existing deployment: import the legacy document.
-npm run db:import -- --file .data/mesob-house.json
-# npm install already runs prisma generate; this refreshes it after schema edits.
-npm run prisma:generate
+npm run db:deploy
+npm run db:seed
 npm run dev
 ```
 
 Open <http://localhost:3000>. Runtime queries use Prisma Client through the
-`PrismaPg` adapter. SQL migrations remain authoritative for triggers, generated
-columns, checks and partial indexes. The app is Postgres-only; it no longer
-creates a JSON file or seeds accounts on first request. If you do not have the
-legacy document, register a customer and promote that account:
+`PrismaPg` adapter. Prisma Migrate owns schema history; the baseline migration
+also supplies the triggers, generated columns, checks and indexes Prisma cannot
+express. The app is Postgres-only; it does not create a JSON file or seed
+accounts on first request.
 
-```sql
-UPDATE users SET role = 'admin' WHERE lower(email) = lower('you@example.com');
-```
+For a fresh local database, `npm run db:reset` combines migrate, reset and seed.
+Both reset and seed refuse remote targets unless `--allow-remote` is passed.
 
-See [`DATA.md`](./DATA.md) and [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md).
+See [`DATA.md`](./DATA.md) and
+[`docs/DB_REBUILD_REPORT.md`](./docs/DB_REBUILD_REPORT.md).
 
 The menu catalogue is read from Postgres through Prisma. `/menu` and the home specials keep a 5-minute ISR cache; dish pages are dynamic because they carry the signed-in customer's review state. Admin edits call `revalidatePath`, so a saved dish or moderated review is visible immediately.
 
@@ -74,11 +71,12 @@ The menu catalogue is read from Postgres through Prisma. `/menu` and the home sp
 | -------- | --------------------- | ----------- | ------------- | ------------------------------------------- |
 | Admin    | `admin@mesob.house`   | `911000001` | `Admin123!`   | `/account` (sign out), `/kitchen`, `/admin` |
 | Employee | `kitchen@mesob.house` | `911000002` | `Kitchen123!` | `/account` (sign out), `/kitchen`           |
+| Delivery | `delivery@mesob.house`| `911000004` | `MesobDelivery2026!` | `/account` (sign out), `/kitchen`    |
 | Customer | `guest@mesob.house`   | `911000003` | `Guest123!`   | public shop, account, checkout, own orders  |
 
 Sign in with either the email (Email tab) or the nine digits after `+251` (Mobile tab).
 
-> These accounts are present in the legacy document used for the first import. Change their passwords in the database before deploying. `SEED_*_EMAIL` / `SEED_*_PASSWORD` are used by the verification scripts, not to create accounts automatically.
+> These accounts are created by `scripts/seed.mjs` (with `SEED_*_EMAIL` / `SEED_*_PASSWORD` overrides) and are for local development only. Change their passwords before any shared or production deployment.
 
 ## Routes
 
@@ -200,23 +198,21 @@ npm run build    # production build
 npm start        # serve the production build
 
 npm run prisma:generate  # regenerate Prisma Client from prisma/schema.prisma
-npm run db:migrate       # apply versioned SQL migrations
-npm run db:status        # show applied/pending migrations
-npm run db:import        # import the legacy document (transactional)
-npm run db:reconcile     # compare legacy counts/revenue to Postgres
-npm run db:explain       # EXPLAIN ANALYZE the kitchen/admin/analytics queries
-npm run db:load-test     # 50 concurrent Server Action checkouts
-npm run db:verify        # trigger invariants + session revocation
-npm run db:backup-drill  # pg_dump/pg_restore and counter comparison
-npm run seed:orders      # generate test orders in Postgres
+npm run db:deploy       # apply Prisma Migrate migrations
+npm run db:status       # show migration status
+npm run db:seed         # idempotent catalogue/branch/demo-account seed
+npm run db:reset        # LOCAL ONLY: drop/recreate, migrate and seed
+npm run typecheck       # TypeScript check
+npm run test            # Vitest unit tests
+npm run smoke:orders    # end-to-end order snapshot/status smoke test
+npm run smoke:admin-menu # admin catalogue CRUD/price-history smoke test
 ```
 
-Application reads/writes use Prisma. Migration, import, seed, EXPLAIN,
-reconciliation and restore scripts intentionally use SQL because they operate on
-schema features or independent verification rather than application records.
-Migration, import, seed, and restore scripts refuse non-local targets unless
-`--allow-remote` is passed. This prevents an accidental write to the Neon
-production database. See [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md).
+Application reads and writes use Prisma. The baseline migration intentionally
+uses SQL for generated columns, triggers, checks and indexes. Seed, reset and
+smoke scripts refuse non-local targets unless `--allow-remote` is passed. This
+prevents an accidental write to the production database. See
+[`docs/DB_REBUILD_REPORT.md`](./docs/DB_REBUILD_REPORT.md).
 
 ## Environment variables
 
@@ -242,31 +238,30 @@ deployment checkout.
 
 1. Create a Postgres database and copy its connection string.
 2. Set `DATABASE_URL` in the Vercel project's environment variables. `POSTGRES_URL` also works.
-3. Run the versioned migrations against a staging copy first:
+3. Run the baseline migration against a staging copy first:
 
    ```bash
-   DATABASE_URL=postgres://... npm run db:migrate
-   DATABASE_URL=postgres://... npm run db:import -- --file /path/to/legacy-mesob-house.json
-   DATABASE_URL=postgres://... npm run db:reconcile -- --file /path/to/legacy-mesob-house.json
+   DATABASE_URL=postgres://... npm run db:deploy
+   # Demo/staging only: seed the sample restaurant, branch and accounts.
+   DATABASE_URL=postgres://... npm run db:seed -- --allow-remote
    ```
 
-   The scripts refuse a non-local host unless `--allow-remote` is passed. Take and verify a backup before the first remote import.
+   The seed refuses a non-local host unless `--allow-remote` is passed. Take and verify a backup before the first remote migration.
 
 4. Redeploy, then verify `/api/health` reports `{"database":"postgres"}`.
 5. Set `NEXT_PUBLIC_SITE_URL` and `APP_ORIGIN` to the public HTTPS origin, for example `https://mesob-house-phi.vercel.app`. Do not reuse the `http://localhost:3000` values from `.env` in Vercel.
-6. Set a strong `REVALIDATE_SECRET` and change the imported demo passwords.
+6. Set a strong `REVALIDATE_SECRET` and change the demo passwords.
 7. Replace the public OpenStreetMap tile URL with a production tile provider; keep the attribution.
 8. Run the Lighthouse/deployed checks in [`PERF.md`](./PERF.md).
 
-The schema, index rationale, reconciliation, 50-checkout load test, trigger/session
-checks, and restore drill are documented in
-[`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md).
+The schema, seed counts, smoke tests and local rebuild record are documented in
+[`docs/DB_REBUILD_REPORT.md`](./docs/DB_REBUILD_REPORT.md).
 
 ## Verification
 
 The final local production build succeeded. Runtime checks covered:
 
-- seeded sign-in for all three roles, registration, sign-out;
+- seeded sign-in for all demo accounts, registration, sign-out;
 - signed-out redirects from `/orders`, `/kitchen`, `/admin`;
 - customer redirect away from `/kitchen` and `/admin`;
 - staff redirect away from public shop and customer-only pages, while `/account` stays available for sign-out;
@@ -286,17 +281,16 @@ The final local production build succeeded. Runtime checks covered:
 
 Database checks:
 
-- the legacy import reconciles 3,000 orders, 7,387 items, 13,188 history rows, 55 users, 6 sessions, and both revenue totals exactly;
-- 50 simultaneous checkouts produced 50 HTTP 200 responses and 50 unique persisted orders, with zero lost orders;
-- invalid transitions are rejected by SQLSTATE, valid staff transitions are accepted, and the transaction rolls back cleanly;
-- signing out sets `sessions.revoked_at` and the old cookie no longer authenticates;
-- a `pg_dump`/`pg_restore` copy matches every table and revenue counter;
-- `EXPLAIN ANALYZE` plans are recorded before and after the selected indexes;
-- the Prisma repositories passed create/read/cancel/transition, generated-total,
-  trigger-history, duplicate-account, role-audit and session-revocation smoke
-  checks against the local database.
+- one Prisma Migrate baseline applied cleanly to a fresh PostgreSQL database;
+- the seed is idempotent and leaves 26 menu items, 26 prices, 4 option groups,
+  71 ingredients, five delivery zones and four demo accounts;
+- the order smoke test created, priced, cancelled and completed real orders;
+- inclusive VAT, discount, service-charge and delivery-fee arithmetic stayed
+  exact in integer minor units;
+- the admin smoke test created, updated, price-versioned and retired a dish
+  without leaving test rows behind;
+- the full unit suite (43 tests) and the production build passed.
 
-See [`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md),
-[`docs/DB_PERFORMANCE.md`](./docs/DB_PERFORMANCE.md),
+See [`docs/DB_REBUILD_REPORT.md`](./docs/DB_REBUILD_REPORT.md),
 [`AUTH.md`](./AUTH.md) for the attack table, and [`PERF.md`](./PERF.md) for
 measured timings.

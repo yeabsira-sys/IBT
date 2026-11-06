@@ -21,18 +21,19 @@ const USER_INCLUDE = { roleAssignments: true };
 const iso = (value) => (value ? new Date(value).toISOString() : null);
 
 /**
- * Transactions are owned by Prisma. The database still enforces the status
- * machine and writes history/audit rows, so every write transaction sets the
- * actor in a transaction-local Postgres setting before touching a row.
+ * Transactions are owned by Prisma. The application validates order role and
+ * transition rules, while the baseline still enforces scope and price/tax
+ * invariants. Every write transaction can set the actor in a transaction-local
+ * Postgres setting before touching a row.
  */
 export function withTransaction(fn, options = undefined) {
   return getPrisma().$transaction(fn, options);
 }
 
 /**
- * The order and user triggers read the actor from transaction-local settings.
- * This is the one place where a raw statement is required: Prisma's model API
- * cannot emit `set_config(..., true)`.
+ * The actor is exposed to any trigger or audit helper that reads the
+ * transaction-local settings. This is the one place where a raw statement is
+ * required: Prisma's model API cannot emit `set_config(..., true)`.
  */
 export async function setDbActor(client, actor) {
   const actorId = actor?.id ? String(actor.id) : "";

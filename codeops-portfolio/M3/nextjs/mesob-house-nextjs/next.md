@@ -5,8 +5,14 @@
 > real files in this project and explains **what the code does, why it was
 > written that way, and what would break if you changed it carelessly**.
 >
-> Versions in this repo: **Next.js 16.4.2**, **React 19.3.1**, JavaScript/JSX
-> (not TypeScript), App Router, `src/` directory.
+> Versions in this repo: **Next.js 16.4.2**, **React 19.3.1**, App Router,
+> `src/` directory. The UI remains JavaScript/JSX; the database, policy,
+> catalogue and order backend is TypeScript.
+>
+> **Note:** the persistence sections below describe the current Prisma Migrate
+> baseline only where updated. For the rebuilt data model see
+> [`DATA.md`](./DATA.md) and
+> [`docs/DB_REBUILD_REPORT.md`](./docs/DB_REBUILD_REPORT.md).
 
 ---
 
@@ -2135,23 +2141,22 @@ Change these before any real deployment.
 ### 20.2 Postgres-only persistence
 
 `src/lib/prisma.js` requires `DATABASE_URL`; there is no file or `/tmp`
-fallback. Runtime queries use Prisma Client with the `PrismaPg` adapter. The
-schema is created by versioned SQL migrations, not at startup:
+fallback. Runtime queries use Prisma Client with the `PrismaPg` adapter. Prisma
+Migrate owns schema history through one baseline, not a custom runner:
 
 ```bash
-npm run db:migrate
-npm run db:import -- --file .data/mesob-house.json   # existing deployment only
-npm run db:reconcile -- --file .data/mesob-house.json
+npm run db:deploy
+npm run db:seed
 npm run prisma:generate
 ```
 
-Users, sessions, menu items, orders, line items, status history and audit rows
-live in separate tables. Money is stored as integer cents, order totals are
-generated, status transitions are enforced by a trigger, and sign-out revokes
-the session row. Prisma cannot model triggers or generated columns, so those
-remain in the SQL migrations; the Prisma schema mirrors the tables for the
+Users, sessions, branches, catalogue rows, prices, promotions, orders, line
+items, status history and audit rows live in separate tables. Money is stored as
+integer minor units, order totals are generated, and sign-out revokes the
+session row. Prisma cannot model triggers or generated columns, so those remain
+in the baseline SQL migration; the Prisma schema mirrors the tables for the
 client. See [`DATA.md`](./DATA.md) and
-[`docs/DB_MIGRATION_REPORT.md`](./docs/DB_MIGRATION_REPORT.md).
+[`docs/DB_REBUILD_REPORT.md`](./docs/DB_REBUILD_REPORT.md).
 
 ### 20.3 Build and run
 
@@ -2160,21 +2165,12 @@ npm install
 npm run dev        # http://localhost:3000
 npm run build      # production build
 npm start          # production server
-npm run seed:orders             # generate demo orders
-npm run seed:orders:clear       # clear them
+npm run db:reset   # LOCAL ONLY: migrate + seed a fresh database
+npm run test       # Vitest unit suite
 ```
 
-The seed script supports:
-
-```bash
-npm run seed:orders -- --count 2500 --days 180 --customers 30
-npm run seed:orders -- --keep-orders
-npm run seed:orders -- --dry-run
-npm run seed:orders -- --clear --dry-run
-```
-
-It writes normalized Postgres tables only and refuses a remote host unless
-`--allow-remote` is passed.
+The seed creates the demo catalogue, branch and accounts. It is idempotent and
+refuses a remote host unless `--allow-remote` is passed.
 
 ### 20.4 `next.config.mjs`
 
@@ -2235,15 +2231,12 @@ The menu is backend-owned; there is no client fallback catalogue. Check:
 
 ### "The admin pie chart is empty"
 
-The chart only counts **completed** orders. A fresh local `.data` store can
-have zero completed orders, so the card correctly renders its empty state.
+The chart only counts **completed** orders. A fresh database can have zero
+completed orders, so the card correctly renders its empty state.
 
-```bash
-npm run seed:orders
-```
-
-or complete an order through the UI, then reload `/admin`. The chart should
-show one slice per sold item, with shares totaling 100%.
+Place an order through the UI and advance it through the kitchen queue to
+`completed`, then reload `/admin`. The chart should show one slice per sold
+item, with shares totaling 100%.
 
 ### "Live status never updates"
 
